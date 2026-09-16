@@ -55,6 +55,78 @@ export default function SearchPage() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedProfIds, setSavedProfIds] = useState<string[]>([]);
   const [professorsList, setProfessorsList] = useState<Professor[]>(mockDb.professors);
+  const [isRestored, setIsRestored] = useState(false);
+
+  // Restore saved search filters & results from sessionStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedState = sessionStorage.getItem('profmatch_search_state');
+        if (savedState) {
+          const parsed = JSON.parse(savedState);
+          if (parsed.naturalQuery !== undefined) setNaturalQuery(parsed.naturalQuery);
+          if (parsed.country !== undefined) setCountry(parsed.country);
+          if (parsed.region !== undefined) setRegion(parsed.region);
+          if (parsed.selectedDomain !== undefined) setSelectedDomain(parsed.selectedDomain);
+          if (parsed.selectedDiscipline !== undefined) setSelectedDiscipline(parsed.selectedDiscipline);
+          if (parsed.customField !== undefined) setCustomField(parsed.customField);
+          if (parsed.interdisciplinary !== undefined) setInterdisciplinary(parsed.interdisciplinary);
+          if (parsed.recruitingOnly !== undefined) setRecruitingOnly(parsed.recruitingOnly);
+          if (parsed.verifiedOnly !== undefined) setVerifiedOnly(parsed.verifiedOnly);
+          if (parsed.emailVerifiedOnly !== undefined) setEmailVerifiedOnly(parsed.emailVerifiedOnly);
+          if (parsed.savedOnly !== undefined) setSavedOnly(parsed.savedOnly);
+          if (parsed.professorsList && Array.isArray(parsed.professorsList) && parsed.professorsList.length > 0) {
+            setProfessorsList(parsed.professorsList);
+          }
+        }
+      } catch (e) {
+        console.error('Failed to restore search state:', e);
+      } finally {
+        setIsRestored(true);
+      }
+    }
+  }, []);
+
+  // Save current search state to sessionStorage whenever filters or results change
+  useEffect(() => {
+    if (typeof window !== 'undefined' && isRestored) {
+      try {
+        sessionStorage.setItem(
+          'profmatch_search_state',
+          JSON.stringify({
+            naturalQuery,
+            country,
+            region,
+            selectedDomain,
+            selectedDiscipline,
+            customField,
+            interdisciplinary,
+            recruitingOnly,
+            verifiedOnly,
+            emailVerifiedOnly,
+            savedOnly,
+            professorsList,
+          })
+        );
+      } catch (e) {
+        console.error('Failed to persist search state:', e);
+      }
+    }
+  }, [
+    naturalQuery,
+    country,
+    region,
+    selectedDomain,
+    selectedDiscipline,
+    customField,
+    interdisciplinary,
+    recruitingOnly,
+    verifiedOnly,
+    emailVerifiedOnly,
+    savedOnly,
+    professorsList,
+    isRestored,
+  ]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -205,6 +277,11 @@ export default function SearchPage() {
   };
 
   const handleResetFilters = () => {
+    if (typeof window !== 'undefined') {
+      try {
+        sessionStorage.removeItem('profmatch_search_state');
+      } catch {}
+    }
     setCountry('Global (All Countries)');
     setRegion('');
     setSelectedDomain('All Domains');
