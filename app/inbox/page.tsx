@@ -17,8 +17,21 @@ import {
   User
 } from 'lucide-react';
 
+export default function InboxPage() {
+  const replies = mockDb.replies;
+  const [selectedReply, setSelectedReply] = useState(replies[0] || null);
+  const [suggestedDraft, setSuggestedDraft] = useState(selectedReply?.suggested_response || '');
+  const [isEditing, setIsEditing] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
+
+  const handleCopy = () => {
+    if (!suggestedDraft) return;
+    navigator.clipboard.writeText(suggestedDraft);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSendResponse = async () => {
     if (!selectedReply || !suggestedDraft.trim()) return;
