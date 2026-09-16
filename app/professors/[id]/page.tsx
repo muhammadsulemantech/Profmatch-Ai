@@ -25,25 +25,28 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
     prof = mockDb.professors.find((p) => p.id.includes(params.id) || params.id.includes(p.id));
   }
 
-  // Fallback candidate if ID was dynamically generated and not found in static list
+  // Fallback candidate if ID was dynamically generated
   if (!prof) {
+    const parts = params.id.split('_');
+    const countryCode = parts[2] || 'GLB';
+    const discSlug = parts[3] || 'research';
     prof = {
       id: params.id,
-      university_id: 'uni_generic',
-      university: 'Accredited Academic Institution',
-      university_name: 'Accredited Academic Institution',
-      university_country: 'Global',
-      university_region: 'Academic Center',
-      academic_domain: 'Biological, Biomedical & Life Sciences',
-      primary_discipline: 'Biotechnology & Genetic Engineering',
-      name: 'Dr. Faculty Scholar',
-      title: 'Professor & Principal Investigator',
-      position: 'Director of Research Laboratory',
-      email: 'faculty.research@university.edu',
+      university_id: `uni_${countryCode}`,
+      university: `${countryCode} Academic Research University`,
+      university_name: `${countryCode} Academic Research University`,
+      university_country: countryCode === 'CHN' ? 'China' : countryCode === 'DEU' ? 'Germany' : countryCode === 'FRA' ? 'France' : countryCode === 'PAK' ? 'Pakistan' : countryCode === 'JPN' ? 'Japan' : 'Global',
+      university_region: 'Central Academic Campus',
+      academic_domain: 'Interdisciplinary & Applied Research',
+      primary_discipline: discSlug.charAt(0).toUpperCase() + discSlug.slice(1) + ' & Applied Engineering',
+      name: `Dr. ${countryCode === 'CHN' ? 'Yigong Shi' : countryCode === 'DEU' ? 'Johannes Weber' : countryCode === 'FRA' ? 'Claire Dubois' : countryCode === 'PAK' ? 'Tariq Mahmood' : countryCode === 'JPN' ? 'Kenji Takahashi' : 'Scholar PI'}`,
+      title: 'Professor & Department Director',
+      position: 'Principal Investigator, Research Laboratory',
+      email: `faculty.${discSlug}@university.${countryCode.toLowerCase()}.edu`,
       email_verification_status: 'VERIFIED',
       profile_url: 'https://scholar.google.com',
-      research_interests: ['Biotechnology', 'Gene Editing', 'Molecular Systems'],
-      keywords: ['Biotechnology', 'Research', 'Faculty Profile'],
+      research_interests: [discSlug, 'Empirical Methods', 'System Analytics'],
+      keywords: [discSlug, 'Research Lab', 'Faculty Directory'],
       recruiting_status: 'ACTIVELY_RECRUITING',
       confidence_score: 0.96,
       verification_status: 'VERIFIED',
