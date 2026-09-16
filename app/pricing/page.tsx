@@ -1,7 +1,7 @@
 import { getAllSiteContent } from '@/lib/cms/content-service';
 import { mockDb } from '@/lib/supabase/mock-db';
 import Link from 'next/link';
-import { Check, ShieldCheck, Award, Building2, HelpCircle } from 'lucide-react';
+import { Check, ShieldCheck, Award, Building2, HelpCircle, Sparkles } from 'lucide-react';
 
 export const metadata = {
   title: 'Academic Plans & Subscriptions — ProfMatch AI',
@@ -13,17 +13,18 @@ export default async function PricingPage() {
   const pricing = content.pricing || mockDb.siteContent.pricing;
 
   return (
-    <div className="min-h-screen bg-[#F8F7F3] text-[#172033] py-16">
+    <div className="min-h-screen bg-[#080B11] text-slate-100 py-16 selection:bg-emerald-500/25 selection:text-emerald-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-16">
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded text-[11px] font-semibold uppercase tracking-wider bg-[#F1F2EE] text-[#5C8F86] border border-[#E5E7EB]">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+            <Sparkles className="w-3.5 h-3.5" />
             <span>Transparent Academic Subscriptions</span>
           </div>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-[#172033] tracking-tight">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold text-white tracking-tight">
             Designed for serious researchers.
           </h1>
-          <p className="text-sm sm:text-base text-[#556070] font-light leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
             No recurring hidden lock-ins. Grounded entirely on verifiable university records, official faculty publications, and ethical one-to-one outreach standards.
           </p>
         </div>
@@ -35,40 +36,40 @@ export default async function PricingPage() {
             return (
               <div
                 key={idx}
-                className={`bg-white rounded p-8 flex flex-col justify-between border transition-shadow shadow-sm ${
+                className={`rounded-2xl p-8 flex flex-col justify-between transition-all ${
                   isHighlight
-                    ? 'border-[#3157A4] ring-1 ring-[#3157A4]/20 shadow-md relative'
-                    : 'border-[#E5E7EB]'
+                    ? 'bg-slate-900 border-2 border-emerald-500 shadow-xl shadow-emerald-500/10 relative'
+                    : 'bg-slate-900/60 border border-slate-800 hover:border-slate-700'
                 }`}
               >
                 <div>
                   {isHighlight && (
                     <div className="mb-4">
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-semibold bg-[#EBF2FE] text-[#3157A4] border border-[#D1E0FC]">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
                         Recommended for 2026/2027 Cycle
                       </span>
                     </div>
                   )}
-                  <h2 className="text-xl font-serif font-bold text-[#172033]">{plan.name}</h2>
-                  <p className="text-xs text-[#556070] mt-1.5 min-h-[32px] font-light leading-relaxed">
+                  <h2 className="text-xl font-heading font-bold text-white">{plan.name}</h2>
+                  <p className="text-xs text-slate-400 mt-1.5 min-h-[32px] leading-relaxed">
                     {plan.description}
                   </p>
 
-                  <div className="mt-6 mb-6 pb-6 border-b border-[#E5E7EB]">
+                  <div className="mt-6 mb-6 pb-6 border-b border-slate-800">
                     <div className="flex items-baseline">
-                      <span className="text-4xl font-serif font-bold text-[#172033]">{plan.price}</span>
-                      <span className="text-xs text-[#556070] ml-1.5 font-light">/ {plan.period}</span>
+                      <span className="text-4xl font-heading font-bold text-white">{plan.price}</span>
+                      <span className="text-xs text-slate-400 ml-1.5">/ {plan.period}</span>
                     </div>
                   </div>
 
-                  <div className="text-xs font-semibold text-[#172033] uppercase tracking-wider mb-3">
+                  <div className="text-xs font-semibold text-slate-300 uppercase tracking-wider mb-3">
                     Included capabilities:
                   </div>
-                  <ul className="space-y-3 text-xs text-[#556070] mb-8 font-light">
+                  <ul className="space-y-3 text-xs text-slate-300 mb-8">
                     {plan.features.map((feat: string, fIdx: number) => (
                       <li key={fIdx} className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-[#5C8F86] shrink-0 mt-0.5" />
-                        <span className="leading-snug text-[#172033]">{feat}</span>
+                        <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span className="leading-snug text-slate-200">{feat}</span>
                       </li>
                     ))}
                   </ul>
@@ -80,10 +81,10 @@ export default async function PricingPage() {
                       ? '/signup'
                       : `/checkout?plan=${(plan.tier || 'student').toLowerCase()}`
                   }
-                  className={`w-full py-2.5 rounded text-center text-xs font-medium transition-all shadow-sm ${
+                  className={`w-full py-3 rounded-xl text-center text-xs font-bold transition-all shadow-md ${
                     isHighlight
-                      ? 'bg-[#3157A4] hover:bg-[#254587] text-white'
-                      : 'bg-[#FAF9F5] hover:bg-[#F1F2EE] text-[#172033] border border-[#E5E7EB]'
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-emerald-500/20'
+                      : 'bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
                   }`}
                 >
                   {plan.cta}
@@ -94,31 +95,31 @@ export default async function PricingPage() {
         </div>
 
         {/* Institutional Trust & Ethics Guarantee Section */}
-        <div className="bg-[#F1F2EE] border border-[#E5E7EB] rounded p-8 sm:p-10">
+        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-8 sm:p-10 space-y-4">
           <div className="max-w-3xl mx-auto text-center space-y-4">
-            <ShieldCheck className="w-8 h-8 text-[#5C8F86] mx-auto" />
-            <h3 className="text-xl font-serif font-bold text-[#172033]">
-              The ProfMatch Academic Ethics & Accuracy Commitment
+            <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto" />
+            <h3 className="text-xl font-heading font-bold text-white">
+              The ProfMatch Academic Ethics &amp; Accuracy Commitment
             </h3>
-            <p className="text-xs sm:text-sm text-[#556070] font-light leading-relaxed">
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
               We strictly enforce rate limits to protect faculty inboxes and maintain the highest academic reputation for our applicants. We never generate generic spam or guess unverified email addresses.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-left">
-              <div className="bg-white p-4 rounded border border-[#E5E7EB]">
-                <div className="font-semibold text-xs text-[#172033]">100% Verifiable Records</div>
-                <div className="text-[11px] text-[#556070] mt-1 font-light">
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-semibold text-xs text-white">100% Verifiable Records</div>
+                <div className="text-[11px] text-slate-400">
                   Every faculty profile links directly to institutional homepages and official publications.
                 </div>
               </div>
-              <div className="bg-white p-4 rounded border border-[#E5E7EB]">
-                <div className="font-semibold text-xs text-[#172033]">Ethical Rate Limiting</div>
-                <div className="text-[11px] text-[#556070] mt-1 font-light">
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-semibold text-xs text-white">Ethical Rate Limiting</div>
+                <div className="text-[11px] text-slate-400">
                   Prevents automated mass emailing to uphold academic integrity standards.
                 </div>
               </div>
-              <div className="bg-white p-4 rounded border border-[#E5E7EB]">
-                <div className="font-semibold text-xs text-[#172033]">Local & Global Payments</div>
-                <div className="text-[11px] text-[#556070] mt-1 font-light">
+              <div className="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-1">
+                <div className="font-semibold text-xs text-white">Local &amp; Global Payments</div>
+                <div className="text-[11px] text-slate-400">
                   Supports Pakistan local payment methods (JazzCash, IBAN) and international cards.
                 </div>
               </div>
