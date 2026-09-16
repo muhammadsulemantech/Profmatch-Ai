@@ -150,11 +150,19 @@ export default function AdminDashboardPage() {
   const countries = useMemo(() => getAllCountries(), []);
 
   useEffect(() => {
-    fetchAdminData();
+    fetchAdminData(false);
+    const interval = setInterval(() => {
+      fetchAdminData(true);
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchAdminData = async () => {
-    setLoading(true);
+  useEffect(() => {
+    fetchAdminData(true);
+  }, [activeTab]);
+
+  const fetchAdminData = async (isSilent: boolean = false) => {
+    if (!isSilent) setLoading(true);
     try {
       // 1. Fetch settings
       const sRes = await fetch('/api/admin/settings');
@@ -228,9 +236,9 @@ export default function AdminDashboardPage() {
         if (payData.orders) setAdminOrders(payData.orders);
       }
     } catch {
-      showNotice('error', 'Error syncing admin telemetry from server.');
+      if (!isSilent) showNotice('error', 'Error syncing admin telemetry from server.');
     } finally {
-      setLoading(false);
+      if (!isSilent) setLoading(false);
     }
   };
 
@@ -452,33 +460,33 @@ export default function AdminDashboardPage() {
   }, [professors, selectedCountryFilter, adminSearchQuery]);
 
   return (
-    <div className="min-h-screen bg-[#F8F7F3] text-[#172033] py-8">
+    <div className="min-h-screen bg-[#080B11] text-slate-100 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Top Banner Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#E5E7EB] pb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded text-[11px] font-semibold bg-[#F1F2EE] text-[#5C8F86] border border-[#E5E7EB] mb-2">
-              <Lock className="w-3 h-3 text-[#3157A4]" /> Global Governance & Telemetry Console
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 mb-2">
+              <Lock className="w-3 h-3 text-emerald-400" /> Global Governance &amp; Telemetry Console
             </div>
-            <h1 className="text-2xl sm:text-3xl font-serif font-bold text-[#172033] tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
               Platform Administration
             </h1>
-            <p className="text-xs text-[#556070] mt-1 font-light">
+            <p className="text-xs text-slate-400 mt-1 font-light">
               Global institutional registry, verification telemetry, editorial content, and immutable security audit stream.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
             <button
-              onClick={fetchAdminData}
-              className="p-2.5 rounded bg-white border border-[#E5E7EB] text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE] transition-colors shadow-sm"
+              onClick={() => fetchAdminData(false)}
+              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shadow-sm"
               title="Refresh Telemetry"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
             </button>
             <button
               onClick={handleAdminLogout}
-              className="px-4 py-2 rounded bg-white hover:bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm"
+              className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
             >
               <LogOut className="w-3.5 h-3.5" /> Sign Out
             </button>
@@ -488,16 +496,16 @@ export default function AdminDashboardPage() {
         {/* Alert Notices */}
         {notification && (
           <div
-            className={`p-4 rounded text-xs flex items-center gap-2.5 border transition-all ${
+            className={`p-4 rounded-xl text-xs flex items-center gap-2.5 border transition-all ${
               notification.type === 'success'
-                ? 'bg-[#F0FDF4] border-[#BBF7D0] text-[#166534]'
-                : 'bg-[#FEF2F2] border-[#FECACA] text-[#991B1B]'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : 'bg-rose-500/10 border-rose-500/30 text-rose-300'
             }`}
           >
             {notification.type === 'success' ? (
-              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
             ) : (
-              <AlertCircle className="w-4 h-4 shrink-0" />
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             )}
             <span>{notification.message}</span>
           </div>
@@ -505,124 +513,124 @@ export default function AdminDashboardPage() {
 
         {/* Metric Cards */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded border border-[#E5E7EB] shadow-sm">
-            <p className="text-xs font-medium text-[#556070] flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-[#3157A4]" /> Global Universities
+          <div className="glass-panel bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-xl">
+            <p className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+              <Globe className="w-3.5 h-3.5 text-emerald-400" /> Global Universities
             </p>
-            <p className="text-2xl font-serif font-bold text-[#172033] mt-1">{universities.length}</p>
-            <p className="text-[11px] text-[#5C8F86] mt-1 flex items-center gap-1">
+            <p className="text-2xl font-extrabold text-white mt-1">{universities.length}</p>
+            <p className="text-[11px] text-emerald-400 mt-1 flex items-center gap-1">
               <Check className="w-3 h-3" /> Across 190+ countries
             </p>
           </div>
 
-          <div className="bg-white p-4 rounded border border-[#E5E7EB] shadow-sm">
-            <p className="text-xs font-medium text-[#556070] flex items-center gap-1.5">
-              <FileCheck className="w-3.5 h-3.5 text-[#5C8F86]" /> Verified Faculty
+          <div className="glass-panel bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-xl">
+            <p className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+              <FileCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Faculty
             </p>
-            <p className="text-2xl font-serif font-bold text-[#172033] mt-1">
+            <p className="text-2xl font-extrabold text-white mt-1">
               {dataQuality.verifiedProfessors} / {dataQuality.totalProfessors}
             </p>
-            <p className="text-[11px] text-[#3157A4] mt-1">100% Verifiable sources</p>
+            <p className="text-[11px] text-emerald-400 mt-1">100% Verifiable sources</p>
           </div>
 
-          <div className="bg-white p-4 rounded border border-[#E5E7EB] shadow-sm">
-            <p className="text-xs font-medium text-[#556070]">Feature Switches</p>
-            <p className="text-2xl font-serif font-bold text-[#172033] mt-1">
+          <div className="glass-panel bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-xl">
+            <p className="text-xs font-medium text-slate-400">Feature Switches</p>
+            <p className="text-2xl font-extrabold text-white mt-1">
               {flags.filter(f => f.is_enabled).length} / {flags.length || 6}
             </p>
-            <p className="text-[11px] text-[#B45309] mt-1">Operational flags active</p>
+            <p className="text-[11px] text-amber-400 mt-1">Operational flags active</p>
           </div>
 
-          <div className="bg-white p-4 rounded border border-[#E5E7EB] shadow-sm">
-            <p className="text-xs font-medium text-[#556070]">Security Audit Logs</p>
-            <p className="text-2xl font-serif font-bold text-[#172033] mt-1">{auditLogs.length || 1}</p>
-            <p className="text-[11px] text-[#5C8F86] mt-1">Immutable audit records</p>
+          <div className="glass-panel bg-slate-900/60 p-4 rounded-2xl border border-slate-800 shadow-xl">
+            <p className="text-xs font-medium text-slate-400">Security Audit Logs</p>
+            <p className="text-2xl font-extrabold text-white mt-1">{auditLogs.length || 1}</p>
+            <p className="text-[11px] text-emerald-400 mt-1">Immutable audit records</p>
           </div>
         </div>
 
         {/* Tabs Navigation */}
-        <div className="flex border-b border-[#E5E7EB] gap-1.5 overflow-x-auto pb-1 text-xs">
+        <div className="flex border-b border-slate-800 gap-1.5 overflow-x-auto pb-1 text-xs">
           <button
             onClick={() => setActiveTab('settings')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'settings'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <Settings className="w-3.5 h-3.5" /> Global Settings
           </button>
           <button
             onClick={() => setActiveTab('globalData')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'globalData'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
-            <Database className="w-3.5 h-3.5" /> Global Data & Quality
+            <Database className="w-3.5 h-3.5" /> Global Data &amp; Quality
           </button>
           <button
             onClick={() => setActiveTab('paymentMethods')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'paymentMethods'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <Wallet className="w-3.5 h-3.5" /> Payment Methods
           </button>
           <button
             onClick={() => setActiveTab('orders')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'orders'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
-            <CreditCard className="w-3.5 h-3.5" /> Orders & Payments
+            <CreditCard className="w-3.5 h-3.5" /> Orders &amp; Payments
             {adminPayments.filter(p => p.status === 'PENDING').length > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-[#B45309] text-white font-bold text-[10px]">
+              <span className="px-1.5 py-0.2 rounded-full bg-amber-500 text-slate-950 font-bold text-[10px]">
                 {adminPayments.filter(p => p.status === 'PENDING').length}
               </span>
             )}
           </button>
           <button
             onClick={() => setActiveTab('content')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'content'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <FileEdit className="w-3.5 h-3.5" /> Content CMS
           </button>
           <button
             onClick={() => setActiveTab('flags')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'flags'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <Flag className="w-3.5 h-3.5" /> Feature Flags
           </button>
           <button
             onClick={() => setActiveTab('users')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'users'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <Users className="w-3.5 h-3.5" /> User Accounts
           </button>
           <button
             onClick={() => setActiveTab('audit')}
-            className={`px-3.5 py-2 rounded flex items-center gap-2 transition-all whitespace-nowrap font-medium ${
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 transition-all whitespace-nowrap font-semibold ${
               activeTab === 'audit'
-                ? 'bg-[#3157A4] text-white shadow-sm'
-                : 'text-[#556070] hover:text-[#172033] hover:bg-[#F1F2EE]'
+                ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                : 'text-slate-400 hover:text-white hover:bg-slate-900/80'
             }`}
           >
             <Activity className="w-3.5 h-3.5" /> Audit Stream
