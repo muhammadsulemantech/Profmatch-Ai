@@ -240,16 +240,7 @@ export default function ProfilePage() {
     const combinedList = Array.from(new Set([...KEYWORD_SUGGESTIONS, ...allDomainDisciplines]));
 
     if (!newInterest.trim()) {
-      return [
-        'Artificial Intelligence & NLP',
-        'CRISPR Assays & Genome Editing',
-        'Sustainable Cities & Urban Planning',
-        'Applied Econometrics & Finance',
-        'Renewable Energy & Solar Cells',
-        'Oncology & Cancer Research',
-        'Quantum Computing & Information',
-        'Robotics & Autonomous Systems'
-      ].filter(s => !interests.includes(s));
+      return combinedList.filter(s => !interests.includes(s));
     }
 
     const rawQ = newInterest.toLowerCase().trim();
@@ -269,7 +260,7 @@ export default function ProfilePage() {
 
       // Handle token matches across words
       return tokens.every(token => lowerItem.includes(token)) || tokens.some(token => lowerItem.includes(token));
-    }).slice(0, 12);
+    });
   }, [newInterest, interests]);
 
   const saveInterestsToStorage = (updatedInterests: string[]) => {
@@ -618,9 +609,10 @@ export default function ProfilePage() {
 
                   {/* Autocomplete Suggestion Dropdown */}
                   {isSuggestionOpen && matchingSuggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-800">
-                      <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-950">
-                        Suggested Research Keywords
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden max-h-64 overflow-y-auto divide-y divide-slate-800">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-950 flex items-center justify-between sticky top-0 z-10 border-b border-slate-800">
+                        <span>Suggested Research Keywords</span>
+                        <span className="text-emerald-400 font-bold">{matchingSuggestions.length} Available</span>
                       </div>
                       {matchingSuggestions.map(item => (
                         <button
