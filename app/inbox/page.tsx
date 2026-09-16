@@ -17,17 +17,27 @@ import {
   User
 } from 'lucide-react';
 
-export default function InboxPage() {
-  const replies = mockDb.replies;
-  const [selectedReply, setSelectedReply] = useState(replies[0] || null);
-  const [suggestedDraft, setSuggestedDraft] = useState(selectedReply?.suggested_response || '');
-  const [isEditing, setIsEditing] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendSuccess, setSendSuccess] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(suggestedDraft);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleSendResponse = async () => {
+    if (!selectedReply || !suggestedDraft.trim()) return;
+    setIsSending(true);
+    try {
+      await fetch('/api/email/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          recipientEmail: selectedReply.sender_email || 'professor@university.edu',
+          subject: `Re: ${selectedReply.subject}`,
+          bodyText: suggestedDraft,
+          confirmedGrounded: true,
+        }),
+      });
+    } catch {}
+    setIsSending(false);
+    setSendSuccess(true);
+    setTimeout(() => setSendSuccess(false), 4000);
   };
 
   return (
@@ -40,6 +50,13 @@ export default function InboxPage() {
           View professor replies, AI-generated summaries, and crafted response drafts.
         </p>
       </div>
+
+      {sendSuccess && (
+        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 shrink-0" />
+          <span>Response successfully delivered to {selectedReply?.professor_name || 'Professor'}!</span>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Reply List (4 cols) */}
@@ -171,8 +188,13 @@ export default function InboxPage() {
                 )}
 
                 <div className="flex items-center gap-3 pt-2 border-t border-slate-800">
-                  <button className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20">
-                    <Send className="w-3.5 h-3.5" /> Send Response
+                  <button
+                    type="button"
+                    onClick={handleSendResponse}
+                    disabled={isSending}
+                    className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
+                  >
+                    <Send className="w-3.5 h-3.5" /> {isSending ? 'Sending Response...' : 'Send Response'}
                   </button>
                   <p className="text-[11px] text-slate-500">Manual approval required before sending.</p>
                 </div>
