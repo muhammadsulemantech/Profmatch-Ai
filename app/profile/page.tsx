@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { useAuth } from '@/lib/auth/auth-context';
 import {
   User,
   GraduationCap,
@@ -14,12 +15,38 @@ import {
   Sparkles,
   Plus,
   Trash2,
-  Layers
+  Layers,
+  Upload,
+  Check
 } from 'lucide-react';
 import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@/lib/geography/global-geography';
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
 
+const KEYWORD_SUGGESTIONS = [
+  'Artificial Intelligence & NLP',
+  'Large Language Models',
+  'Machine Learning & Deep Learning',
+  'Computer Vision & Image Processing',
+  'Robotics & Autonomous Systems',
+  'Reinforcement Learning',
+  'Quantum Computing & Information',
+  'Sustainable Cities & Urban Planning',
+  'CRISPR Assays & Genome Editing',
+  'Applied Econometrics & Financial Analytics',
+  'Climate Change Mitigation & Adaptation',
+  'Renewable Energy & Energy Storage',
+  'Bioinformatics & Computational Biology',
+  'Nanotechnology & Advanced Materials',
+  'Microelectronics & VLSI Design',
+  'Human-Computer Interaction (HCI)',
+  'Cybersecurity & Network Protocols',
+  'Biomedical Imaging & Neural Interfaces',
+  'Graph Neural Networks & RAG Systems',
+  'Data Science & Big Data Engineering'
+];
+
 export default function ProfilePage() {
+  const { user } = useAuth();
   const student = mockDb.studentProfiles[0];
   const academic = mockDb.academicProfiles[0];
   const research = mockDb.researchProfiles[0];
@@ -44,26 +71,132 @@ export default function ProfilePage() {
 
   const [thesisTitle, setThesisTitle] = useState(research.thesis_title || '');
   const [thesisAbstract, setThesisAbstract] = useState(research.thesis_abstract || '');
-  const [interests, setInterests] = useState<string[]>(research.research_interests || []);
+  const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
+  const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
+
+  // Active CV state
+  const [cvFile, setCvFile] = useState<{
+    file_name: string;
+    file_size: number;
+    uploaded_at: string;
+  }>({
+    file_name: cvDoc.file_name || 'Academic_Curriculum_Vitae_2026.pdf',
+    file_size: cvDoc.file_size || 142336,
+    uploaded_at: cvDoc.created_at || new Date().toISOString(),
+  });
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sync state with localStorage per user
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const userKey = user ? user.id : 'guest';
+    const profileKey = `profmatch_user_profile_${userKey}`;
+    const interestsKey = `profmatch_user_interests_${userKey}`;
+    const cvKey = `profmatch_user_cv_${userKey}`;
+
+    // Load interests
+    try {
+      const storedInterests = localStorage.getItem(interestsKey);
+      if (storedInterests) {
+        setInterests(JSON.parse(storedInterests));
+      } else {
+        setInterests(research.research_interests || ['Large Language Models', 'Retrieval-Augmented Generation', 'Factuality']);
+      }
+    } catch {
+      setInterests(research.research_interests || []);
+    }
+
+    // Load CV
+    try {
+      const storedCv = localStorage.getItem(cvKey);
+      if (storedCv) {
+        setCvFile(JSON.parse(storedCv));
+      }
+    } catch {}
+
+    // Load full profile if available
+    try {
+      const storedProfile = localStorage.getItem(profileKey);
+      if (storedProfile) {
+        const p = JSON.parse(storedProfile);
+        if (p.targetDegree) setTargetDegree(p.targetDegree);
+        if (p.targetCountry) setTargetCountry(p.targetCountry);
+        if (p.targetRegion) setTargetRegion(p.targetRegion);
+        if (p.academicDomain) setAcademicDomain(p.academicDomain);
+        if (p.desiredField) setDesiredField(p.desiredField);
+        if (p.fundingPref) setFundingPref(p.fundingPref);
+        if (p.bio) setBio(p.bio);
+        if (p.cgpa) setCgpa(p.cgpa);
+        if (p.currentDegree) setCurrentDegree(p.currentDegree);
+        if (p.major) setMajor(p.major);
+        if (p.university) setUniversity(p.university);
+        if (p.gradYear) setGradYear(p.gradYear);
+        if (p.thesisTitle) setThesisTitle(p.thesisTitle);
+        if (p.thesisAbstract) setThesisAbstract(p.thesisAbstract);
+      }
+    } catch {}
+  }, [user]);
 
   const selectedCountryObj = getCountryByNameOrCode(targetCountry);
   const availableRegions = selectedCountryObj ? getRegionsForCountry(selectedCountryObj.name) : [];
 
-  const handleAddInterest = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newInterest.trim() && !interests.includes(newInterest.trim())) {
-      setInterests([...interests, newInterest.trim()]);
+  // Filter autocomplete suggestions based on query
+  const matchingSuggestions = useMemo(() => {
+    if (!newInterest.trim()) return [];
+    const q = newInterest.toLowerCase().trim();
+    return KEYWORD_SUGGESTIONS.filter(
+      s => s.toLowerCase().includes(q) && !interests.includes(s)
+    );
+  }, [newInterest, interests]);
+
+  const saveInterestsToStorage = (updatedInterests: string[]) => {
+    if (typeof window !== 'undefined') {
+      const userKey = user ? user.id : 'guest';
+      localStorage.setItem(`profmatch_user_interests_${userKey}`, JSON.stringify(updatedInterests));
+    }
+    research.research_interests = updatedInterests;
+  };
+
+  const handleAddInterest = (itemToAdd?: string) => {
+    const target = (itemToAdd || newInterest).trim();
+    if (target && !interests.includes(target)) {
+      const updated = [...interests, target];
+      setInterests(updated);
+      saveInterestsToStorage(updated);
       setNewInterest('');
+      setIsSuggestionOpen(false);
     }
   };
 
   const handleRemoveInterest = (item: string) => {
-    setInterests(interests.filter(i => i !== item));
+    const updated = interests.filter(i => i !== item);
+    setInterests(updated);
+    saveInterestsToStorage(updated);
+  };
+
+  const handleCvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const newCv = {
+        file_name: file.name,
+        file_size: file.size,
+        uploaded_at: new Date().toISOString(),
+      };
+      setCvFile(newCv);
+      if (typeof window !== 'undefined') {
+        const userKey = user ? user.id : 'guest';
+        localStorage.setItem(`profmatch_user_cv_${userKey}`, JSON.stringify(newCv));
+      }
+      mockDb.studentDocuments[0].file_name = file.name;
+      mockDb.studentDocuments[0].file_size = file.size;
+    }
   };
 
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
+
     student.target_degree = targetDegree;
     student.target_country = targetCountry;
     student.target_state = targetRegion;
@@ -85,12 +218,34 @@ export default function ProfilePage() {
     research.academic_domain = academicDomain;
     research.primary_discipline = desiredField;
 
+    if (typeof window !== 'undefined') {
+      const userKey = user ? user.id : 'guest';
+      const fullProfile = {
+        targetDegree,
+        targetCountry,
+        targetRegion,
+        academicDomain,
+        desiredField,
+        fundingPref,
+        bio,
+        cgpa,
+        currentDegree,
+        major,
+        university,
+        gradYear,
+        thesisTitle,
+        thesisAbstract,
+        interests,
+      };
+      localStorage.setItem(`profmatch_user_profile_${userKey}`, JSON.stringify(fullProfile));
+    }
+
     setSaved(true);
     setTimeout(() => setSaved(false), 3500);
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 bg-[#080B11] text-slate-100 min-h-screen selection:bg-emerald-500/25 selection:text-emerald-300">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
@@ -98,17 +253,17 @@ export default function ProfilePage() {
             <Globe className="w-3 h-3" /> Universal Academic Grounding Profile
           </div>
           <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            <User className="w-6 h-6 text-emerald-400" /> Student Research & Geographic Profile
+            <User className="w-6 h-6 text-emerald-400" /> Student Research &amp; Geographic Profile
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            This profile data is directly injected into the Cold Email Generator to guarantee 100% personalized, fact-checked professor outreach across all countries and disciplines.
+            This profile data is directly injected into the Cold Email Generator to guarantee personalized, fact-checked professor outreach across all countries and disciplines.
           </p>
         </div>
 
         <button
           type="button"
           onClick={handleSave}
-          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all"
+          className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all"
         >
           <Save className="w-4 h-4" /> Save Profile
         </button>
@@ -123,7 +278,7 @@ export default function ProfilePage() {
 
       <form onSubmit={handleSave} className="space-y-8">
         {/* Section 1: Target Degree & Admissions Preferences */}
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <GraduationCap className="w-5 h-5 text-emerald-400" />
             <h2 className="text-base font-bold text-white">Target Academic Destination</h2>
@@ -135,7 +290,7 @@ export default function ProfilePage() {
               <select
                 value={targetDegree}
                 onChange={e => setTargetDegree(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="PhD">Ph.D. (Doctor of Philosophy / Doctorate)</option>
                 <option value="MS">M.S. / M.Sc. (Master of Science with Thesis)</option>
@@ -156,7 +311,7 @@ export default function ProfilePage() {
                   setTargetCountry(e.target.value);
                   setTargetRegion('');
                 }}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 {countries.map(c => (
                   <option key={c.code} value={c.name}>
@@ -174,7 +329,7 @@ export default function ProfilePage() {
                 <select
                   value={targetRegion}
                   onChange={e => setTargetRegion(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
                 >
                   <option value="">All Regions</option>
                   {availableRegions.map(r => (
@@ -189,7 +344,7 @@ export default function ProfilePage() {
                   value={targetRegion}
                   onChange={e => setTargetRegion(e.target.value)}
                   placeholder="e.g. Zurich, Tokyo, Ontario, Bavaria"
-                  className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
                 />
               )}
             </div>
@@ -201,7 +356,7 @@ export default function ProfilePage() {
               <select
                 value={academicDomain}
                 onChange={e => setAcademicDomain(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 {ACADEMIC_DOMAINS.map(d => (
                   <option key={d.id} value={d.name}>
@@ -218,7 +373,7 @@ export default function ProfilePage() {
                 value={desiredField}
                 onChange={e => setDesiredField(e.target.value)}
                 placeholder="e.g. Sustainable Urbanism, Molecular Assays, Econometrics"
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -227,7 +382,7 @@ export default function ProfilePage() {
               <select
                 value={fundingPref}
                 onChange={e => setFundingPref(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="Fully Funded (RA/TA)">Fully Funded (Research Assistantship / Teaching Assistantship)</option>
                 <option value="Fellowship / Scholarship">External Fellowship / Government Scholarship</option>
@@ -236,19 +391,19 @@ export default function ProfilePage() {
             </div>
 
             <div className="sm:col-span-2">
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Academic Bio & Statement of Purpose Summary</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Academic Bio &amp; Statement of Purpose Summary</label>
               <textarea
                 rows={3}
                 value={bio}
                 onChange={e => setBio(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
         </div>
 
         {/* Section 2: Current Academic History */}
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <Award className="w-5 h-5 text-amber-400" />
             <h2 className="text-base font-bold text-white">Undergraduate / Current Academic Credentials</h2>
@@ -261,17 +416,17 @@ export default function ProfilePage() {
                 type="text"
                 value={university}
                 onChange={e => setUniversity(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Degree & Major</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Degree &amp; Major</label>
               <input
                 type="text"
                 value={major}
                 onChange={e => setMajor(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -281,7 +436,7 @@ export default function ProfilePage() {
                 type="text"
                 value={cgpa}
                 onChange={e => setCgpa(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
@@ -291,17 +446,17 @@ export default function ProfilePage() {
                 type="number"
                 value={gradYear}
                 onChange={e => setGradYear(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
         </div>
 
         {/* Section 3: Research Focus & Thesis */}
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6">
           <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
             <BookOpen className="w-5 h-5 text-cyan-400" />
-            <h2 className="text-base font-bold text-white">Research Focus & Scholarly Keywords</h2>
+            <h2 className="text-base font-bold text-white">Research Focus &amp; Scholarly Keywords</h2>
           </div>
 
           <div className="space-y-4">
@@ -311,13 +466,14 @@ export default function ProfilePage() {
                 {interests.map(item => (
                   <span
                     key={item}
-                    className="inline-flex items-center gap-1 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
                   >
                     {item}
                     <button
                       type="button"
                       onClick={() => handleRemoveInterest(item)}
-                      className="text-slate-400 hover:text-rose-400"
+                      className="text-slate-400 hover:text-rose-400 transition-colors"
+                      title="Remove keyword"
                     >
                       <Trash2 className="w-3 h-3" />
                     </button>
@@ -325,20 +481,47 @@ export default function ProfilePage() {
                 ))}
               </div>
 
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  value={newInterest}
-                  onChange={e => setNewInterest(e.target.value)}
-                  placeholder="e.g. Sustainable Cities, CRISPR Assays, Applied Econometrics"
-                  className="flex-1 px-3.5 py-2 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                />
+              <div className="relative flex flex-col sm:flex-row gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={newInterest}
+                    onChange={e => {
+                      setNewInterest(e.target.value);
+                      setIsSuggestionOpen(true);
+                    }}
+                    onFocus={() => setIsSuggestionOpen(true)}
+                    placeholder="e.g. Sustainable Cities, CRISPR Assays, Applied Econometrics"
+                    className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                  />
+
+                  {/* Autocomplete Suggestion Dropdown */}
+                  {isSuggestionOpen && matchingSuggestions.length > 0 && (
+                    <div className="absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden max-h-52 overflow-y-auto divide-y divide-slate-800">
+                      <div className="px-3 py-1.5 text-[10px] font-semibold text-slate-400 uppercase tracking-wider bg-slate-950">
+                        Suggested Research Keywords
+                      </div>
+                      {matchingSuggestions.map(item => (
+                        <button
+                          key={item}
+                          type="button"
+                          onClick={() => handleAddInterest(item)}
+                          className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-emerald-500/15 hover:text-emerald-300 transition-colors flex items-center justify-between"
+                        >
+                          <span>{item}</span>
+                          <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <button
                   type="button"
-                  onClick={handleAddInterest}
-                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center gap-1"
+                  onClick={() => handleAddInterest()}
+                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shrink-0 transition-colors"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Add Keyword
+                  <Plus className="w-3.5 h-3.5 text-emerald-400" /> Add Keyword
                 </button>
               </div>
             </div>
@@ -349,52 +532,89 @@ export default function ProfilePage() {
                 type="text"
                 value={thesisTitle}
                 onChange={e => setThesisTitle(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Thesis Abstract & Analytical Methodology</label>
+              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Thesis Abstract &amp; Analytical Methodology</label>
               <textarea
                 rows={3}
                 value={thesisAbstract}
                 onChange={e => setThesisAbstract(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
             </div>
           </div>
         </div>
 
         {/* Section 4: Academic Documents */}
-        <div className="glass-panel p-6 sm:p-8 rounded-2xl border border-slate-800 space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
-            <FileText className="w-5 h-5 text-purple-400" />
-            <h2 className="text-base font-bold text-white">Attached Academic Curriculum Vitae</h2>
+        <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-purple-400" />
+              <h2 className="text-base font-bold text-white">Attached Academic Curriculum Vitae</h2>
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+            >
+              <Upload className="w-3.5 h-3.5" /> Upload / Replace CV
+            </button>
           </div>
 
-          <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 flex items-center justify-between">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.doc,.docx"
+            onChange={handleCvFileUpload}
+            className="hidden"
+          />
+
+          <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
                 <FileText className="w-5 h-5" />
               </div>
               <div>
-                <p className="text-xs font-bold text-white">{cvDoc.file_name}</p>
+                <p className="text-xs font-bold text-white">{cvFile.file_name}</p>
                 <p className="text-[11px] text-slate-400">
-                  {Math.round(cvDoc.file_size / 1024)} KB &bull; Uploaded for AI synthesis
+                  {Math.round(cvFile.file_size / 1024)} KB &bull; Uploaded {new Date(cvFile.uploaded_at).toLocaleDateString()}
                 </p>
               </div>
             </div>
 
-            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-              Active CV
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+                Active CV
+              </span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+                title="Upload New File"
+              >
+                <Upload className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Interactive Drag & Drop Upload Zone (Always Available) */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-1.5"
+          >
+            <Upload className="w-6 h-6 text-purple-400 mx-auto" />
+            <p className="text-xs font-semibold text-slate-200">Click to upload or drag &amp; drop your updated CV (PDF, DOCX)</p>
+            <p className="text-[10px] text-slate-500">Max file size 15MB &bull; Parsed in real-time by AI research agent</p>
           </div>
         </div>
 
         <div className="flex justify-end pt-4">
           <button
             type="submit"
-            className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all"
+            className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold flex items-center gap-2 shadow-lg shadow-emerald-500/25 hover:scale-[1.02] transition-all"
           >
             <Save className="w-4 h-4" /> Save All Profile Changes
           </button>

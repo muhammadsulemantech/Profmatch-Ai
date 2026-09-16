@@ -33,6 +33,7 @@ import {
   User,
   ShieldAlert
 } from 'lucide-react';
+import { Professor } from '@/types/database';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -42,6 +43,8 @@ export default function DashboardPage() {
   const [sentCount, setSentCount] = React.useState<number>(0);
   const [repliesCount, setRepliesCount] = React.useState<number>(0);
   const [positiveCount, setPositiveCount] = React.useState<number>(0);
+  const [savedProfessors, setSavedProfessors] = React.useState<Professor[]>([]);
+  const [sentEmailsList, setSentEmailsList] = React.useState<any[]>([]);
 
   const student = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
   const matches = mockDb.researchMatches;
@@ -57,12 +60,12 @@ export default function DashboardPage() {
       setSentCount(0);
       setRepliesCount(0);
       setPositiveCount(0);
+      setSavedProfessors([]);
+      setSentEmailsList([]);
       return;
     }
 
-    const isSampleDemoStudent = user.id === 'usr_student_001';
-
-    // 1. Saved Professors Count
+    // 1. Saved Professors Count & List
     const savedKey = `profmatch_saved_profs_${user.id}`;
     let savedIds: string[] = [];
     try {
@@ -70,12 +73,11 @@ export default function DashboardPage() {
       if (storedSaved) savedIds = JSON.parse(storedSaved);
     } catch {}
 
-    const totalSaved = isSampleDemoStudent && savedIds.length === 0
-      ? 24
-      : savedIds.length;
-    setSavedCount(totalSaved);
+    setSavedCount(savedIds.length);
+    const userSavedProfs = mockDb.professors.filter(p => savedIds.includes(p.id));
+    setSavedProfessors(userSavedProfs);
 
-    // 2. Sent Emails Count
+    // 2. Sent Emails Count & List
     const sentKey = `profmatch_sent_emails_${user.id}`;
     let localSent: any[] = [];
     try {
@@ -86,21 +88,17 @@ export default function DashboardPage() {
     const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
     const combinedEmailsMap = new Map();
     [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
-    const totalSent = combinedEmailsMap.size;
+    const userEmails = Array.from(combinedEmailsMap.values());
 
-    if (isSampleDemoStudent && totalSent === 0) {
-      setSentCount(8);
-      setRepliesCount(3);
-      setPositiveCount(2);
-    } else {
-      setSentCount(totalSent);
-      const userReps = mockDb.replies.filter(r => {
-        const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
-        return matchingEmail?.user_id === user.id;
-      });
-      setRepliesCount(userReps.length);
-      setPositiveCount(userReps.filter(r => r.sentiment === 'POSITIVE').length);
-    }
+    setSentCount(userEmails.length);
+    setSentEmailsList(userEmails);
+
+    const userReps = mockDb.replies.filter(r => {
+      const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
+      return matchingEmail?.user_id === user.id;
+    });
+    setRepliesCount(userReps.length);
+    setPositiveCount(userReps.filter(r => r.sentiment === 'POSITIVE').length);
   }, [user]);
 
   const handleProtectedAction = (actionName: string, path?: string, customFn?: () => void) => {
@@ -398,74 +396,93 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="space-y-3.5">
-                  {mockDb.professors.slice(0, 3).map((prof) => {
-                    const match = matches.find((m) => m.professor_id === prof.id);
-                    return (
-                      <div
-                        key={prof.id}
-                        className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex items-start gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-bold text-emerald-400 text-sm shrink-0">
-                              {prof.name.split(' ').map((n) => n[0]).slice(1, 3).join('')}
+                  {savedProfessors.length > 0 ? (
+                    savedProfessors.map((prof) => {
+                      const match = matches.find((m) => m.professor_id === prof.id);
+                      return (
+                        <div
+                          key={prof.id}
+                          className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-bold text-emerald-400 text-sm shrink-0">
+                                {prof.name.split(' ').map((n) => n[0]).slice(1, 3).join('')}
+                              </div>
+                              <div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleProtectedAction(`view profile for ${prof.name}`, `/professors/${prof.id}`)}
+                                  className="font-heading text-base font-bold text-white hover:text-emerald-400 transition-colors text-left"
+                                >
+                                  {prof.name}
+                                </button>
+                                <p className="text-xs text-slate-400">{prof.title}</p>
+                                <p className="text-xs text-emerald-400 font-medium">{prof.university_name}</p>
+                              </div>
                             </div>
-                            <div>
+
+                            {match && (
+                              <div className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded text-right">
+                                <span className="font-heading font-bold text-sm text-emerald-400 block leading-none">
+                                  {formatScore(match.overall_score)}
+                                </span>
+                                <span className="text-[9px] uppercase font-semibold text-emerald-500">Match</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Why this match */}
+                          {match && (
+                            <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300">
+                              <span className="font-semibold text-emerald-400">Overlap: </span>
+                              {match.explanation}
+                            </div>
+                          )}
+
+                          <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-xs">
+                            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              Saved in Faculty Shortlist
+                            </span>
+                            <div className="flex items-center gap-2">
                               <button
                                 type="button"
                                 onClick={() => handleProtectedAction(`view profile for ${prof.name}`, `/professors/${prof.id}`)}
-                                className="font-heading text-base font-bold text-white hover:text-emerald-400 transition-colors text-left"
+                                className="text-xs text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-800 transition-colors"
                               >
-                                {prof.name}
+                                Profile
                               </button>
-                              <p className="text-xs text-slate-400">{prof.title}</p>
-                              <p className="text-xs text-emerald-400 font-medium">{prof.university_name}</p>
+                              <button
+                                type="button"
+                                onClick={() => handleProtectedAction(`draft outreach for ${prof.name}`, `/outreach/generate?professorId=${prof.id}`)}
+                                className="text-xs text-slate-950 bg-emerald-500 hover:bg-emerald-400 px-3 py-1 rounded-lg font-semibold transition-colors"
+                              >
+                                Draft Email
+                              </button>
                             </div>
                           </div>
-
-                          {match && (
-                            <div className="bg-emerald-500/10 border border-emerald-500/25 px-2.5 py-1 rounded text-right">
-                              <span className="font-heading font-bold text-sm text-emerald-400 block leading-none">
-                                {formatScore(match.overall_score)}
-                              </span>
-                              <span className="text-[9px] uppercase font-semibold text-emerald-500">Match</span>
-                            </div>
-                          )}
                         </div>
-
-                        {/* Why this match */}
-                        {match && (
-                          <div className="p-2.5 rounded-lg bg-slate-950/80 border border-slate-800 text-xs text-slate-300">
-                            <span className="font-semibold text-emerald-400">Overlap: </span>
-                            {match.explanation}
-                          </div>
-                        )}
-
-                        <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-xs">
-                          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                            Verified institutional profile
-                          </span>
-                          <div className="flex items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => handleProtectedAction(`view profile for ${prof.name}`, `/professors/${prof.id}`)}
-                              className="text-xs text-slate-300 hover:text-white px-2.5 py-1 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-800 transition-colors"
-                            >
-                              Profile
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleProtectedAction(`draft outreach for ${prof.name}`, `/outreach/generate?professorId=${prof.id}`)}
-                              className="text-xs text-slate-950 bg-emerald-500 hover:bg-emerald-400 px-3 py-1 rounded-lg font-semibold transition-colors"
-                            >
-                              Draft Email
-                            </button>
-                          </div>
-                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="p-8 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+                      <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-emerald-400">
+                        <Bookmark className="w-6 h-6" />
                       </div>
-                    );
-                  })}
+                      <p className="text-sm font-bold text-white">No Bookmarked Faculty Yet</p>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Discover accredited professors and bookmark them to see real-time research overlap on your dashboard.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => handleProtectedAction('search all faculty matches', '/search')}
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all inline-flex items-center gap-1.5"
+                      >
+                        <Search className="w-3.5 h-3.5" /> Discover Faculty
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -481,21 +498,22 @@ export default function DashboardPage() {
                   </div>
 
                   <div className="space-y-2.5">
-                    <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
-                      <div className="flex justify-between font-medium">
-                        <span className="text-white">Follow-up with Prof. Durrett</span>
-                        <span className="text-emerald-400">Tomorrow</span>
+                    {sentEmailsList.length > 0 ? (
+                      sentEmailsList.slice(0, 2).map((e, idx) => (
+                        <div key={idx} className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
+                          <div className="flex justify-between font-medium">
+                            <span className="text-white">Follow-up for {e.recipient_name || 'Professor'}</span>
+                            <span className="text-emerald-400">Due in 7 days</span>
+                          </div>
+                          <p className="text-[11px] text-slate-400">Automated reminder sync active for sent outreach.</p>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1.5">
+                        <p className="text-xs font-semibold text-white">No Scheduled Follow-ups</p>
+                        <p className="text-[11px] text-slate-400">Generate and send cold emails to track follow-up actions in real time.</p>
                       </div>
-                      <p className="text-[11px] text-slate-400">Send research proposal summary for Fall 2027 lab openings.</p>
-                    </div>
-
-                    <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
-                      <div className="flex justify-between font-medium">
-                        <span className="text-white">Stanford CS Portal Deadline</span>
-                        <span className="text-amber-400">Dec 15, 2026</span>
-                      </div>
-                      <p className="text-[11px] text-slate-400">Submit official transcript and letters of recommendation.</p>
-                    </div>
+                    )}
                   </div>
                 </div>
 
@@ -507,27 +525,33 @@ export default function DashboardPage() {
                   </h3>
 
                   <div className="space-y-3 pt-1">
-                    <div className="flex items-start gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-white">Email draft approved for Dr. Anna Keller</p>
-                        <p className="text-[11px] text-slate-400">3 hours ago &bull; Technical University of Munich</p>
+                    {sentEmailsList.length > 0 || savedProfessors.length > 0 ? (
+                      <>
+                        {sentEmailsList.slice(0, 2).map((e, idx) => (
+                          <div key={`email_${idx}`} className="flex items-start gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-medium text-white">Outreach bhej di gayi for {e.recipient_name || 'Professor'}</p>
+                              <p className="text-[11px] text-slate-400">Real-time activity recorded</p>
+                            </div>
+                          </div>
+                        ))}
+                        {savedProfessors.slice(0, 2).map((p, idx) => (
+                          <div key={`saved_${idx}`} className="flex items-start gap-2.5">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
+                            <div>
+                              <p className="font-medium text-white">Shortlisted {p.name}</p>
+                              <p className="text-[11px] text-slate-400">{p.university_name}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </>
+                    ) : (
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 text-center space-y-1.5">
+                        <p className="text-xs font-semibold text-white">No Recent Activity Recorded</p>
+                        <p className="text-[11px] text-slate-400">Discover faculty or draft emails to populate your real-time activity log.</p>
                       </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-cyan-400 mt-1.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-white">Added 4 faculty to Renewable Energy campaign</p>
-                        <p className="text-[11px] text-slate-400">Yesterday &bull; ETH Zurich &amp; TU Munich</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2.5">
-                      <span className="w-2 h-2 rounded-full bg-purple-400 mt-1.5 shrink-0" />
-                      <div>
-                        <p className="font-medium text-white">Created graduate profile target: Fall 2027 MS</p>
-                        <p className="text-[11px] text-slate-400">3 days ago</p>
-                      </div>
-                    </div>
+                    )}
                   </div>
                 </div>
               </div>
