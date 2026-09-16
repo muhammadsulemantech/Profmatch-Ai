@@ -21,6 +21,7 @@ import {
 import { mockDb } from '@/lib/supabase/mock-db';
 import { EmailPersonalizationAgent, EmailQualityAgent } from '@/lib/agents';
 import { useAuth } from '@/lib/auth/auth-context';
+import { Professor } from '@/types/database';
 
 export default function OutreachGeneratePage() {
   const searchParams = useSearchParams();
@@ -28,7 +29,18 @@ export default function OutreachGeneratePage() {
   const { user } = useAuth();
   const professorId = searchParams.get('professorId') || mockDb.professors[0].id;
 
-  const prof = mockDb.professors.find((p) => p.id === professorId) || mockDb.professors[0];
+  const getProfessor = (): Professor => {
+    let p = mockDb.professors.find((item) => item.id === professorId);
+    if (!p && typeof window !== 'undefined') {
+      try {
+        const stored = sessionStorage.getItem(`profmatch_current_prof_${professorId}`);
+        if (stored) p = JSON.parse(stored);
+      } catch {}
+    }
+    return p || mockDb.professors[0];
+  };
+
+  const prof = getProfessor();
   const match = mockDb.researchMatches.find((m) => m.professor_id === prof.id) || mockDb.researchMatches[0];
 
   const [tone, setTone] = useState<'academic' | 'formal' | 'direct' | 'concise'>('academic');

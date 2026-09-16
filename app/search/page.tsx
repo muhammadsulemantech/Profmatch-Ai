@@ -608,7 +608,19 @@ export default function SearchPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <button
                             type="button"
-                            onClick={() => requireAuth(`view profile for ${prof.name}`, () => router.push(`/professors/${prof.id}`))}
+                            onClick={() =>
+                              requireAuth(`view profile for ${prof.name}`, () => {
+                                if (typeof window !== 'undefined') {
+                                  try {
+                                    sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+                                  } catch {}
+                                }
+                                if (!mockDb.professors.some(p => p.id === prof.id)) {
+                                  mockDb.professors.push(prof);
+                                }
+                                router.push(`/professors/${prof.id}`);
+                              })
+                            }
                             className="font-heading text-lg font-bold text-white hover:text-emerald-400 transition-colors text-left"
                           >
                             {prof.name}
@@ -707,14 +719,38 @@ export default function SearchPage() {
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => requireAuth(`view profile for ${prof.name}`, () => router.push(`/professors/${prof.id}`))}
+                        onClick={() =>
+                          requireAuth(`view profile for ${prof.name}`, () => {
+                            if (typeof window !== 'undefined') {
+                              try {
+                                sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+                              } catch {}
+                            }
+                            if (!mockDb.professors.some(p => p.id === prof.id)) {
+                              mockDb.professors.push(prof);
+                            }
+                            router.push(`/professors/${prof.id}`);
+                          })
+                        }
                         className="px-3.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 text-xs font-medium transition-colors"
                       >
                         View Profile
                       </button>
                       <button
                         type="button"
-                        onClick={() => requireAuth(`draft outreach proposal for ${prof.name}`, () => router.push(`/outreach/generate?professorId=${prof.id}`))}
+                        onClick={() =>
+                          requireAuth(`draft outreach proposal for ${prof.name}`, () => {
+                            if (typeof window !== 'undefined') {
+                              try {
+                                sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+                              } catch {}
+                            }
+                            if (!mockDb.professors.some(p => p.id === prof.id)) {
+                              mockDb.professors.push(prof);
+                            }
+                            router.push(`/outreach/generate?professorId=${prof.id}`);
+                          })
+                        }
                         className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
                       >
                         Draft Email <ArrowRight className="w-3.5 h-3.5" />
