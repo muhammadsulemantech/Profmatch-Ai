@@ -38,15 +38,70 @@ export default function DashboardPage() {
   const router = useRouter();
   const { user, isAuthenticated, logout, requireAuth } = useAuth();
 
-  const student = mockDb.studentProfiles[0];
-  const campaigns = mockDb.campaigns;
-  const emails = mockDb.emails;
+  const [savedCount, setSavedCount] = React.useState<number>(0);
+  const [sentCount, setSentCount] = React.useState<number>(0);
+  const [repliesCount, setRepliesCount] = React.useState<number>(0);
+  const [positiveCount, setPositiveCount] = React.useState<number>(0);
+
+  const student = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
   const matches = mockDb.researchMatches;
-  const replies = mockDb.replies;
-  const applications = mockDb.applications;
 
   const displayName = user?.full_name || 'Alex Vance';
   const firstName = displayName.split(' ')[0];
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    if (!user) {
+      setSavedCount(0);
+      setSentCount(0);
+      setRepliesCount(0);
+      setPositiveCount(0);
+      return;
+    }
+
+    const isSampleDemoStudent = user.id === 'usr_student_001';
+
+    // 1. Saved Professors Count
+    const savedKey = `profmatch_saved_profs_${user.id}`;
+    let savedIds: string[] = [];
+    try {
+      const storedSaved = localStorage.getItem(savedKey);
+      if (storedSaved) savedIds = JSON.parse(storedSaved);
+    } catch {}
+
+    const totalSaved = isSampleDemoStudent && savedIds.length === 0
+      ? 24
+      : savedIds.length;
+    setSavedCount(totalSaved);
+
+    // 2. Sent Emails Count
+    const sentKey = `profmatch_sent_emails_${user.id}`;
+    let localSent: any[] = [];
+    try {
+      const storedSent = localStorage.getItem(sentKey);
+      if (storedSent) localSent = JSON.parse(storedSent);
+    } catch {}
+
+    const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
+    const combinedEmailsMap = new Map();
+    [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
+    const totalSent = combinedEmailsMap.size;
+
+    if (isSampleDemoStudent && totalSent === 0) {
+      setSentCount(8);
+      setRepliesCount(3);
+      setPositiveCount(2);
+    } else {
+      setSentCount(totalSent);
+      const userReps = mockDb.replies.filter(r => {
+        const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
+        return matchingEmail?.user_id === user.id;
+      });
+      setRepliesCount(userReps.length);
+      setPositiveCount(userReps.filter(r => r.sentiment === 'POSITIVE').length);
+    }
+  }, [user]);
 
   const handleProtectedAction = (actionName: string, path?: string, customFn?: () => void) => {
     requireAuth(actionName, () => {
@@ -235,7 +290,7 @@ export default function DashboardPage() {
                 Good morning, {firstName}
               </h1>
               <p className="text-xs sm:text-sm text-slate-400">
-                Targeting <span className="font-semibold text-white">{student.target_degree} in {student.desired_field}</span> ({student.target_country}). You have 24 shortlisted faculty members aligned with your research profile.
+                Targeting <span className="font-semibold text-white">{student.target_degree} in {student.desired_field}</span> ({student.target_country}). You have {savedCount} shortlisted faculty members aligned with your research profile.
               </p>
             </div>
 
@@ -243,50 +298,84 @@ export default function DashboardPage() {
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                 <span className="text-xs font-medium text-slate-400">Professors Shortlisted</span>
-                <p className="font-heading text-3xl font-bold text-white">24</p>
-                <span className="text-[11px] text-emerald-400 block font-medium">+2 this week</span>
+                <p className="font-heading text-3xl font-bold text-white">{savedCount}</p>
+                <span className="text-[11px] text-emerald-400 block font-medium">
+                  {savedCount > 0 ? `${savedCount} saved faculty` : '0 saved'}
+                </span>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                 <span className="text-xs font-medium text-slate-400">Emails Sent</span>
-                <p className="font-heading text-3xl font-bold text-white">8</p>
-                <span className="text-[11px] text-slate-400 block font-medium">100% verified delivered</span>
+                <p className="font-heading text-3xl font-bold text-white">{sentCount}</p>
+                <span className="text-[11px] text-slate-400 block font-medium">
+                  {sentCount > 0 ? '100% verified delivered' : '0 emails sent'}
+                </span>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                 <span className="text-xs font-medium text-slate-400">Replies</span>
-                <p className="font-heading text-3xl font-bold text-emerald-400">3</p>
-                <span className="text-[11px] text-emerald-400 block font-medium">37.5% response rate</span>
+                <p className="font-heading text-3xl font-bold text-emerald-400">{repliesCount}</p>
+                <span className="text-[11px] text-emerald-400 block font-medium">
+                  {sentCount > 0 ? `${Math.round((repliesCount / sentCount) * 100)}% response rate` : '0% response rate'}
+                </span>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                 <span className="text-xs font-medium text-slate-400">Positive Responses</span>
-                <p className="font-heading text-3xl font-bold text-cyan-400">2</p>
-                <span className="text-[11px] text-cyan-400 block font-medium">1 interview scheduled</span>
+                <p className="font-heading text-3xl font-bold text-cyan-400">{positiveCount}</p>
+                <span className="text-[11px] text-cyan-400 block font-medium">
+                  {positiveCount > 0 ? `${positiveCount} positive replies` : '0 interviews'}
+                </span>
               </div>
             </div>
 
-            {/* Recent Positive Faculty Response Banner */}
-            <div className="p-5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <span className="badge-verified">
-                    <Check className="w-3 h-3 text-emerald-400" /> Positive Advisor Reply
-                  </span>
-                  <span className="text-xs text-slate-400">Yesterday</span>
+            {/* Recent Advisor Reply or Onboarding Prompt Banner */}
+            {positiveCount > 0 || user?.id === 'usr_student_001' ? (
+              <div className="p-5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="badge-verified">
+                      <Check className="w-3 h-3 text-emerald-400" /> Positive Advisor Reply
+                    </span>
+                    <span className="text-xs text-slate-400">Recent</span>
+                  </div>
+                  <h3 className="font-heading text-base font-bold text-white">
+                    Dr. Greg Durrett &bull; University of Texas at Austin
+                  </h3>
+                  <p className="text-xs text-slate-300 max-w-xl italic">
+                    &ldquo;...I am taking 1-2 new PhD students for Fall 2027 through the UT Austin CS admissions process. Please make sure to mention my lab in your statement of purpose...&rdquo;
+                  </p>
                 </div>
-                <h3 className="font-heading text-base font-bold text-white">
-                  Dr. Greg Durrett &bull; University of Texas at Austin
-                </h3>
-                <p className="text-xs text-slate-300 max-w-xl italic">
-                  &ldquo;...I am taking 1-2 new PhD students for Fall 2027 through the UT Austin CS admissions process. Please make sure to mention my lab in your statement of purpose...&rdquo;
-                </p>
+                <button
+                  type="button"
+                  onClick={() => handleProtectedAction('read full advisor reply', '/inbox')}
+                  className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                >
+                  Open Reply
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => handleProtectedAction('read full advisor reply', '/inbox')}
-                className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold shrink-0 transition-colors shadow-sm"
-              >
-                Open Reply
-              </button>
-            </div>
+            ) : (
+              <div className="p-5 rounded-xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
+                      ✨ Quick Start Guide
+                    </span>
+                  </div>
+                  <h3 className="font-heading text-base font-bold text-white">
+                    Start Discovering Professors &amp; Preparing Outreach
+                  </h3>
+                  <p className="text-xs text-slate-400 max-w-xl">
+                    Search verified global faculty by discipline, save your preferred professors to your shortlist, and draft personalized outreach emails in real time.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleProtectedAction('search verified faculty', '/search')}
+                  className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-semibold shrink-0 transition-colors shadow-sm flex items-center gap-1.5"
+                >
+                  <Search className="w-3.5 h-3.5" />
+                  Discover Professors
+                </button>
+              </div>
+            )}
 
             {/* Main 2-Column: Top Matches (7 cols) + Follow-ups & Timeline (5 cols) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/auth-context';
@@ -39,7 +39,7 @@ const DISCOVERY_STAGES = [
 
 export default function SearchPage() {
   const router = useRouter();
-  const { requireAuth } = useAuth();
+  const { user, requireAuth } = useAuth();
 
   const [naturalQuery, setNaturalQuery] = useState('');
   const [country, setCountry] = useState('Global (All Countries)');
@@ -52,6 +52,29 @@ export default function SearchPage() {
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [emailVerifiedOnly, setEmailVerifiedOnly] = useState(false);
   const [savedProfIds, setSavedProfIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const key = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) setSavedProfIds(JSON.parse(stored));
+      } catch {}
+    }
+  }, [user]);
+
+  const toggleSave = (id: string) => {
+    requireAuth('save faculty to shortlist', () => {
+      const updated = savedProfIds.includes(id)
+        ? savedProfIds.filter(pId => pId !== id)
+        : [...savedProfIds, id];
+      setSavedProfIds(updated);
+      if (typeof window !== 'undefined') {
+        const key = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
+        localStorage.setItem(key, JSON.stringify(updated));
+      }
+    });
+  };
   
   // Progress & loading states
   const [isSearching, setIsSearching] = useState(false);
@@ -171,16 +194,6 @@ export default function SearchPage() {
   const handleCountryChange = (newCountry: string) => {
     setCountry(newCountry);
     setRegion('');
-  };
-
-  const toggleSave = (id: string) => {
-    requireAuth('save faculty to shortlist', () => {
-      if (savedProfIds.includes(id)) {
-        setSavedProfIds(savedProfIds.filter(pId => pId !== id));
-      } else {
-        setSavedProfIds([...savedProfIds, id]);
-      }
-    });
   };
 
   const handleResetFilters = () => {

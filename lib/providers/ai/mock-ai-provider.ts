@@ -54,9 +54,10 @@ export class MockAIProvider implements AIProvider {
       methodologySentence = `Specifically, I examined regulatory frameworks, precedent jurisprudence, and institutional compliance standards.`;
     }
 
-    const subject = `Prospective ${prompt.targetDegree} Student (${prompt.targetIntake}) — Academic Inquiry regarding "${topPaper.split(' ').slice(0, 5).join(' ')}..."`;
+    const selectedTone = (prompt.tone || 'academic').toLowerCase();
 
-    const bodyText = `Dear ${cleanTitle} ${cleanLastName},
+    const subjectAcademic = `Prospective ${prompt.targetDegree} Student (${prompt.targetIntake}) — Academic Inquiry regarding "${topPaper.split(' ').slice(0, 5).join(' ')}..."`;
+    const bodyAcademic = `Dear ${cleanTitle} ${cleanLastName},
 
 I hope this email finds you well.
 
@@ -72,12 +73,68 @@ Sincerely,
 ${prompt.studentName}
 ${prompt.studentDegree}, ${prompt.studentUniversity}`;
 
+    const subjectFormal = `Formal Graduate Inquiry (${prompt.targetIntake} ${prompt.targetDegree}) — ${prompt.studentName}`;
+    const bodyFormal = `Dear ${cleanTitle} ${cleanLastName},
+
+I am writing to respectfully inquire whether your research group at ${prompt.professorUniversity} anticipates admitting new ${prompt.targetDegree} candidates for the ${prompt.targetIntake} academic cycle.
+
+I have thoroughly reviewed your laboratory's ongoing initiatives in ${prompt.professorInterests.slice(0, 2).join(' and ')}, with particular interest in your published study, "${topPaper}."
+
+During my degree program at ${prompt.studentUniversity}, I completed research on "${topProject}." ${methodologySentence} I am eager to apply my analytical preparation to the theoretical and empirical objectives pursued by your team.
+
+I plan to submit a formal application for ${prompt.targetIntake} to the ${cleanDept}. I would be deeply honored to learn if you will be advising new graduate candidates.
+
+I have attached my academic CV and research statement for your consideration. Thank you very much for your time and guidance.
+
+Sincerely,
+${prompt.studentName}
+${prompt.studentDegree}, ${prompt.studentUniversity}`;
+
+    const subjectDirect = `Graduate Inquiry (${prompt.targetDegree}, ${prompt.targetIntake}) — ${prompt.studentInterests[0] || 'Research Alignment'}`;
+    const bodyDirect = `Dear ${cleanTitle} ${cleanLastName},
+
+I am reaching out to ask if you are accepting new ${prompt.targetDegree} students for ${prompt.targetIntake} in the ${cleanDept} at ${prompt.professorUniversity}.
+
+My background is in ${prompt.studentInterests.slice(0, 2).join(' and ')}, and my project "${topProject}" aligns directly with your paper "${topPaper}." ${methodologySentence}
+
+I am preparing my application for ${prompt.targetIntake} and would love to know if you have openings in your lab. My academic CV is attached for your review.
+
+Best regards,
+${prompt.studentName}
+${prompt.studentDegree}, ${prompt.studentUniversity}`;
+
+    const subjectConcise = `Prospective ${prompt.targetDegree} Applicant (${prompt.targetIntake}) — ${prompt.studentName}`;
+    const bodyConcise = `Dear ${cleanTitle} ${cleanLastName},
+
+I hope this email finds you well. I am writing to express my strong interest in joining your lab as a ${prompt.targetDegree} student for ${prompt.targetIntake} at ${prompt.professorUniversity}.
+
+Your paper "${topPaper}" directly connects with my work on "${topProject}." I am keen to contribute to your ongoing research on ${prompt.professorInterests[0] || 'this domain'}.
+
+My CV is attached. Please let me know if you are taking new graduate students for ${prompt.targetIntake}.
+
+Thank you for your time,
+${prompt.studentName}`;
+
+    let finalSubject = subjectAcademic;
+    let finalBody = bodyAcademic;
+
+    if (selectedTone === 'formal') {
+      finalSubject = subjectFormal;
+      finalBody = bodyFormal;
+    } else if (selectedTone === 'direct') {
+      finalSubject = subjectDirect;
+      finalBody = bodyDirect;
+    } else if (selectedTone === 'concise') {
+      finalSubject = subjectConcise;
+      finalBody = bodyConcise;
+    }
+
     return {
-      subject,
-      bodyText,
+      subject: finalSubject,
+      bodyText: finalBody,
       personalizationNotes: [
         `Referenced verified academic publication: "${topPaper}"`,
-        `Tailored methodology framing for ${disciplineFraming}`,
+        `Tailored tone framing to '${selectedTone.toUpperCase()}' style`,
         `Connected student research ("${topProject}") to professor's focus on ${prompt.professorInterests[0] || 'domain theory'}`,
         `Aligned application cycle with confirmed ${prompt.targetIntake} admissions window`,
       ],
@@ -86,7 +143,7 @@ ${prompt.studentDegree}, ${prompt.studentUniversity}`;
           type: 'Verified Publication',
           title: topPaper,
           url: `https://scholar.google.com/scholar?q=${encodeURIComponent(topPaper)}`,
-          context: 'Referenced in paragraph 2 to establish substantive research methodology alignment',
+          context: 'Referenced in body text to establish substantive research methodology alignment',
         },
         {
           type: 'Official University Profile',
