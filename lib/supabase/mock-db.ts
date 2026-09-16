@@ -40,8 +40,8 @@ class MockDatabase {
   public profiles: UserProfile[] = [
     {
       id: 'usr_admin_001',
-      email: 'admin@profmatch.ai',
-      full_name: 'Dr. Sarah Jenkins (Admin)',
+      email: 'sulemanmunir6752@gmail.com',
+      full_name: 'Suleman Munir (Admin)',
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
       role: 'ADMIN',
       is_suspended: false,

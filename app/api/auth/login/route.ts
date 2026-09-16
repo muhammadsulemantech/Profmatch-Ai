@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-      } else if (email === 'admin@profmatch.ai') {
+      } else if (email === 'sulemanmunir6752@gmail.com' || email === 'admin@profmatch.ai') {
         matchedUser = mockDb.profiles.find(p => p.role === 'ADMIN');
       }
     }

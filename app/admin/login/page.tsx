@@ -6,8 +6,8 @@ import { Lock, ShieldCheck, ArrowRight, AlertCircle, KeyRound, Building2 } from 
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@profmatch.ai');
-  const [passphrase, setPassphrase] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [passphrase, setPassphrase] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -16,20 +16,29 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
 
-    // Elevated Admin Authorization Check
-    if (email.toLowerCase().includes('admin') || passphrase === 'admin123') {
+    const inputEmail = email.trim().toLowerCase();
+    const inputPass = passphrase.trim();
+
+    // Strict Administrative Credential Check
+    if (inputEmail === 'sulemanmunir6752@gmail.com' && inputPass === 'suleman6752') {
       // Set secure admin session & role cookies
       document.cookie = `profmatch_session=admin_elevated_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
       document.cookie = `profmatch_role=ADMIN; path=/; max-age=86400; SameSite=Lax`;
+      document.cookie = `profmatch_user=${encodeURIComponent(JSON.stringify({
+        id: 'usr_admin_001',
+        email: 'sulemanmunir6752@gmail.com',
+        full_name: 'Suleman Munir (Admin)',
+        role: 'ADMIN'
+      }))}; path=/; max-age=86400; SameSite=Lax`;
 
-      // Log audit
+      // Log audit event
       try {
         await fetch('/api/admin/audit-logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             action: 'ADMIN_PORTAL_SIGN_IN',
-            userEmail: email,
+            userEmail: inputEmail,
             resourceType: 'ADMIN_CONSOLE',
           }),
         });
@@ -46,68 +55,65 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#F8F7F3] flex items-center justify-center px-4 py-12">
-      <div className="max-w-md w-full bg-white rounded-lg p-8 border border-[#E5E7EB] shadow-sm space-y-6">
+    <div className="min-h-[85vh] bg-[#080B11] text-slate-100 flex items-center justify-center px-4 py-12">
+      <div className="max-w-md w-full glass-panel bg-slate-900/60 rounded-2xl p-8 border border-slate-800 shadow-2xl space-y-6">
         <div className="text-center space-y-2">
-          <div className="w-12 h-12 rounded bg-[#F1F2EE] border border-[#E5E7EB] flex items-center justify-center mx-auto text-[#3157A4]">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-sm">
             <Lock className="w-5 h-5" />
           </div>
-          <div className="text-[11px] font-semibold uppercase tracking-wider text-[#5C8F86]">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-emerald-400">
             Internal Operations Portal
           </div>
-          <h1 className="text-2xl font-serif font-bold text-[#172033] tracking-tight">
+          <h1 className="text-2xl font-bold text-white tracking-tight">
             System Administration
           </h1>
-          <p className="text-xs text-[#556070]">
-            Authorized faculty data stewards and platform operators only.
+          <p className="text-xs text-slate-400">
+            Authorized platform operator &amp; data stewards only.
           </p>
         </div>
 
         {error && (
-          <div className="p-3.5 rounded bg-[#FEF2F2] border border-[#FECACA] text-xs text-[#991B1B] flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-xs text-rose-300 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
             <span>{error}</span>
           </div>
         )}
 
         <form onSubmit={handleAdminLogin} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-[#172033] mb-1.5">Staff Email</label>
+            <label className="block text-xs font-semibold text-white mb-1.5">Staff Email</label>
             <input
               type="email"
               required
+              placeholder="Enter admin email address"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-[#E5E7EB] rounded text-xs text-[#172033] focus:outline-none focus:border-[#3157A4] transition-colors"
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-[#172033] mb-1.5">Security Passphrase</label>
+            <label className="block text-xs font-semibold text-white mb-1.5">Security Passphrase</label>
             <input
               type="password"
               required
+              placeholder="Enter security passphrase"
               value={passphrase}
               onChange={(e) => setPassphrase(e.target.value)}
-              className="w-full px-3.5 py-2.5 bg-white border border-[#E5E7EB] rounded text-xs text-[#172033] focus:outline-none focus:border-[#3157A4] transition-colors"
+              className="w-full px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-colors"
             />
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded font-medium bg-[#3157A4] hover:bg-[#254587] text-white text-xs shadow-sm transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             {loading ? 'Verifying Credentials...' : 'Access Administration Console'}
-            <ArrowRight className="w-3.5 h-3.5" />
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
-
-        <div className="p-3 rounded bg-[#FAF9F5] border border-[#E5E7EB] text-[11px] text-[#556070] text-center">
-          <span className="font-semibold text-[#172033]">Development credentials:</span> admin@profmatch.ai / admin123
-        </div>
       </div>
     </div>
   );
 }
-
