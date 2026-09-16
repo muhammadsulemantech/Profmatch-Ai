@@ -3,20 +3,13 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-context';
-import { Lock, LogOut, User, Sparkles } from 'lucide-react';
+import { LogOut, User, Sparkles } from 'lucide-react';
 
 export default function NavbarAuthControls() {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
 
   return (
     <div className="flex items-center gap-2.5">
-      <Link
-        href="/admin"
-        className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1.5 rounded-lg border border-slate-700/80 text-slate-300 hover:text-white hover:border-slate-600 bg-slate-900/60 transition-colors"
-      >
-        <Lock className="w-3.5 h-3.5 text-amber-400" />
-        Admin
-      </Link>
 
       {isAuthenticated && user ? (
         <div className="flex items-center gap-2">
