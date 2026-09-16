@@ -31,6 +31,14 @@ export default function CampaignsPage() {
   const [savedProfessors, setSavedProfessors] = useState<Professor[]>([]);
   const [sentEmails, setSentEmails] = useState<any[]>([]);
   const [replies, setReplies] = useState<any[]>([]);
+  const [userCampaigns, setUserCampaigns] = useState<any[]>([]);
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [campaignName, setCampaignName] = useState('');
+  const [targetIntake, setTargetIntake] = useState('Fall 2027');
+  const [targetCountry, setTargetCountry] = useState('USA');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -39,6 +47,7 @@ export default function CampaignsPage() {
       setSavedProfessors([]);
       setSentEmails([]);
       setReplies([]);
+      setUserCampaigns([]);
       return;
     }
 
@@ -86,8 +95,57 @@ export default function CampaignsPage() {
       setReplies(userReps);
     }
 
+    // 3. User Campaigns
+    const campKey = `profmatch_user_campaigns_${user.id}`;
+    let localCamps: any[] = [];
+    try {
+      const storedCamps = localStorage.getItem(campKey);
+      if (storedCamps) localCamps = JSON.parse(storedCamps);
+    } catch {}
+
+    if (localCamps.length === 0) {
+      localCamps = [
+        {
+          id: `cmp_${user.id}_1`,
+          name: 'Global Verified Faculty Outreach — Fall 2027',
+          description: 'Global campaign connecting with verified faculty across USA, Europe, and Asia for funded graduate supervision.',
+          target_intake: 'Fall 2027',
+          target_country: 'Global',
+          status: 'ACTIVE',
+        }
+      ];
+    }
+    setUserCampaigns(localCamps);
     setSavedProfessors(userProfs);
   }, [user]);
+
+  const handleCreateCampaign = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!campaignName.trim()) return;
+
+    const newCampaign = {
+      id: `cmp_${Date.now()}`,
+      name: campaignName.trim(),
+      description: description.trim() || 'Custom faculty outreach campaign for graduate supervision.',
+      target_intake: targetIntake,
+      target_country: targetCountry,
+      status: 'ACTIVE',
+    };
+
+    const userId = user?.id || 'usr_guest';
+    const campKey = `profmatch_user_campaigns_${userId}`;
+    const updated = [newCampaign, ...userCampaigns];
+    setUserCampaigns(updated);
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(campKey, JSON.stringify(updated));
+    }
+    mockDb.campaigns.unshift(newCampaign as any);
+
+    setIsModalOpen(false);
+    setCampaignName('');
+    setDescription('');
+  };
 
   // Derive pipeline list of professors (combine saved & emailed)
   const pipelineProfMap = new Map<string, Professor>();
@@ -121,7 +179,7 @@ export default function CampaignsPage() {
           </div>
           <button
             type="button"
-            onClick={() => requireAuth('create new campaign', () => router.push('/search'))}
+            onClick={() => requireAuth('create new campaign', () => setIsModalOpen(true))}
             className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition-all shrink-0"
           >
             <Plus className="w-4 h-4" /> New Campaign
@@ -290,6 +348,101 @@ export default function CampaignsPage() {
           </div>
         </div>
       </div>
+
+      {/* New Campaign Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-5">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-heading font-bold text-lg text-white">Create Outreach Campaign</h3>
+                  <p className="text-xs text-slate-400">Organize faculty targets by intake, domain, and geography.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateCampaign} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Campaign Title</label>
+                <input
+                  type="text"
+                  required
+                  value={campaignName}
+                  onChange={(e) => setCampaignName(e.target.value)}
+                  placeholder="e.g. US Artificial Intelligence & NLP — Fall 2027"
+                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Target Intake</label>
+                  <select
+                    value={targetIntake}
+                    onChange={(e) => setTargetIntake(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="Fall 2027">Fall 2027</option>
+                    <option value="Spring 2027">Spring 2027</option>
+                    <option value="Fall 2028">Fall 2028</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Target Geography</label>
+                  <select
+                    value={targetCountry}
+                    onChange={(e) => setTargetCountry(e.target.value)}
+                    className="w-full px-3 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="USA">United States (USA)</option>
+                    <option value="United Kingdom">United Kingdom (UK)</option>
+                    <option value="Germany">Germany (Europe)</option>
+                    <option value="Global">Global (All Regions)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Description & Strategy</label>
+                <textarea
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Outreach strategy notes, specific lab focus, funding preferences..."
+                  className="w-full p-3 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all"
+                >
+                  Create Campaign
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
