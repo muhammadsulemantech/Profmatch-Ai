@@ -243,6 +243,9 @@ export class GlobalAcademicDiscoveryEngine implements SearchProvider {
       };
 
       list.push(dynamicProf);
+      if (!mockDb.professors.some(p => p.id === dynamicProf.id)) {
+        mockDb.professors.push(dynamicProf);
+      }
     }
 
     // 5. Deduplication: Remove any duplicate records matching normalized name and university
