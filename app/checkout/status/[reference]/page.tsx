@@ -34,8 +34,8 @@ export default function OrderStatusPage() {
     const ord = mockDb.orders.find((o: Order) => o.order_reference === reference);
     const pay = mockDb.payments.find((p: Payment) => p.order_reference === reference);
 
-    setOrder(ord || null);
-    setPayment(pay || null);
+    setOrder(ord ? { ...ord } : null);
+    setPayment(pay ? { ...pay } : null);
     setLoading(false);
   };
 
