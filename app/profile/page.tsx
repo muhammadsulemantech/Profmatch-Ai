@@ -22,13 +22,16 @@ import {
 import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@/lib/geography/global-geography';
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
 
-const KEYWORD_SUGGESTIONS = [
+const KEYWORD_SUGGESTIONS = Array.from(new Set([
+  'AI Models & Foundation Architectures',
   'Artificial Intelligence & NLP',
-  'Large Language Models',
+  'Large Language Models (LLMs)',
+  'Generative AI & RAG Systems',
+  'Prompt Engineering & Alignment',
   'Machine Learning & Deep Learning',
   'Computer Vision & Image Processing',
   'Robotics & Autonomous Systems',
-  'Reinforcement Learning',
+  'Reinforcement Learning & AI Agents',
   'Quantum Computing & Information',
   'Sustainable Cities & Urban Planning',
   'CRISPR Assays & Genome Editing',
@@ -41,9 +44,16 @@ const KEYWORD_SUGGESTIONS = [
   'Human-Computer Interaction (HCI)',
   'Cybersecurity & Network Protocols',
   'Biomedical Imaging & Neural Interfaces',
-  'Graph Neural Networks & RAG Systems',
-  'Data Science & Big Data Engineering'
-];
+  'Graph Neural Networks & Knowledge Graphs',
+  'Data Science & Big Data Engineering',
+  'Software Engineering & Distributed Systems',
+  'Cloud Computing & Edge AI',
+  'IoT & Embedded Systems',
+  'Computational Neuroscience',
+  'Molecular Dynamics & Drug Discovery',
+  'Medical Image Analysis',
+  'Natural Language Understanding (NLU)'
+]));
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -142,13 +152,31 @@ export default function ProfilePage() {
   const selectedCountryObj = getCountryByNameOrCode(targetCountry);
   const availableRegions = selectedCountryObj ? getRegionsForCountry(selectedCountryObj.name) : [];
 
-  // Filter autocomplete suggestions based on query
+  // Filter autocomplete suggestions based on query with smart token & acronym matching
   const matchingSuggestions = useMemo(() => {
-    if (!newInterest.trim()) return [];
-    const q = newInterest.toLowerCase().trim();
-    return KEYWORD_SUGGESTIONS.filter(
-      s => s.toLowerCase().includes(q) && !interests.includes(s)
-    );
+    const allDomainDisciplines = ACADEMIC_DOMAINS.flatMap(d => d.disciplines);
+    const combinedList = Array.from(new Set([...KEYWORD_SUGGESTIONS, ...allDomainDisciplines]));
+
+    if (!newInterest.trim()) {
+      return combinedList.filter(s => !interests.includes(s)).slice(0, 8);
+    }
+
+    const rawQ = newInterest.toLowerCase().trim();
+    const tokens = rawQ.split(/\s+/).filter(Boolean);
+
+    return combinedList.filter(item => {
+      if (interests.includes(item)) return false;
+      const lowerItem = item.toLowerCase();
+
+      // Direct substring match
+      if (lowerItem.includes(rawQ)) return true;
+
+      // Handle 'ai' acronym match
+      if (tokens.includes('ai') && (lowerItem.includes('artificial intelligence') || lowerItem.includes('ai'))) return true;
+
+      // Handle token overlaps (e.g., 'ai models' matches 'AI Models & Foundation Architectures' or 'Large Language Models')
+      return tokens.every(token => lowerItem.includes(token)) || tokens.some(token => lowerItem.includes(token));
+    }).slice(0, 10);
   }, [newInterest, interests]);
 
   const saveInterestsToStorage = (updatedInterests: string[]) => {
@@ -555,16 +583,16 @@ export default function ProfilePage() {
               <FileText className="w-5 h-5 text-purple-400" />
               <h2 className="text-base font-bold text-white">Attached Academic Curriculum Vitae</h2>
             </div>
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="px-3.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+            <label
+              htmlFor="cv-file-upload-input"
+              className="cursor-pointer px-3.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
             >
               <Upload className="w-3.5 h-3.5" /> Upload / Replace CV
-            </button>
+            </label>
           </div>
 
           <input
+            id="cv-file-upload-input"
             ref={fileInputRef}
             type="file"
             accept=".pdf,.doc,.docx"
@@ -589,26 +617,25 @@ export default function ProfilePage() {
               <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
                 Active CV
               </span>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              <label
+                htmlFor="cv-file-upload-input"
+                className="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
                 title="Upload New File"
               >
                 <Upload className="w-4 h-4" />
-              </button>
+              </label>
             </div>
           </div>
 
           {/* Interactive Drag & Drop Upload Zone (Always Available) */}
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-1.5"
+          <label
+            htmlFor="cv-file-upload-input"
+            className="block border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-1.5"
           >
             <Upload className="w-6 h-6 text-purple-400 mx-auto" />
             <p className="text-xs font-semibold text-slate-200">Click to upload or drag &amp; drop your updated CV (PDF, DOCX)</p>
-            <p className="text-[10px] text-slate-500">Max file size 15MB &bull; Parsed in real-time by AI research agent</p>
-          </div>
+            <p className="text-[10px] text-slate-500">Max file size 15MB &bull; Native upload supported on mobile, laptop &amp; PC</p>
+          </label>
         </div>
 
         <div className="flex justify-end pt-4">
