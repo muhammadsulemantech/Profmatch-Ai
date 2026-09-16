@@ -1624,86 +1624,9 @@ class MockDatabase {
     },
   ];
 
-  public orders: Order[] = [
-    {
-      id: 'ord_sample_001',
-      order_reference: 'PM-839201',
-      user_id: 'usr_student_001',
-      user_email: 'student@example.com',
-      user_name: 'Alex Vance',
-      plan_tier: 'STUDENT',
-      plan_name: 'Graduate Applicant Pro',
-      amount: 5200,
-      currency: 'PKR',
-      billing_interval: 'monthly',
-      status: 'PENDING',
-      payment_method_id: 'pm_jazzcash_01',
-      payment_method_name: 'JazzCash Mobile Account',
-      created_at: new Date(Date.now() - 3600000).toISOString(),
-      updated_at: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: 'ord_sample_000',
-      order_reference: 'PM-102948',
-      user_id: 'usr_student_001',
-      user_email: 'student@example.com',
-      user_name: 'Alex Vance',
-      plan_tier: 'STUDENT',
-      plan_name: 'Graduate Applicant Pro',
-      amount: 19,
-      currency: 'USD',
-      billing_interval: 'monthly',
-      status: 'APPROVED',
-      payment_method_id: 'pm_stripe_global_01',
-      payment_method_name: 'International Credit / Debit Card (Stripe)',
-      created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    },
-  ];
+  public orders: Order[] = [];
 
-  public payments: Payment[] = [
-    {
-      id: 'pay_sample_001',
-      order_id: 'ord_sample_001',
-      order_reference: 'PM-839201',
-      user_id: 'usr_student_001',
-      user_email: 'student@example.com',
-      user_name: 'Alex Vance',
-      plan_tier: 'STUDENT',
-      plan_name: 'Graduate Applicant Pro',
-      transaction_id: 'TID-88291038192',
-      payment_method_id: 'pm_jazzcash_01',
-      payment_method_name: 'JazzCash Mobile Account',
-      amount: 5200,
-      currency: 'PKR',
-      proof_file_name: 'jazzcash_receipt_pm839201.jpg',
-      payment_note: 'Paid from 0300-9876543 via JazzCash app.',
-      status: 'PENDING',
-      created_at: new Date(Date.now() - 3500000).toISOString(),
-      updated_at: new Date(Date.now() - 3500000).toISOString(),
-    },
-    {
-      id: 'pay_sample_000',
-      order_id: 'ord_sample_000',
-      order_reference: 'PM-102948',
-      user_id: 'usr_student_001',
-      user_email: 'student@example.com',
-      user_name: 'Alex Vance',
-      plan_tier: 'STUDENT',
-      plan_name: 'Graduate Applicant Pro',
-      transaction_id: 'ch_stripe_3NkmL2949',
-      payment_method_id: 'pm_stripe_global_01',
-      payment_method_name: 'International Credit / Debit Card (Stripe)',
-      amount: 19,
-      currency: 'USD',
-      status: 'APPROVED',
-      admin_review_note: 'Stripe webhook verified payment capture.',
-      reviewed_by: 'system',
-      reviewed_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-      created_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-      updated_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    },
-  ];
+  public payments: Payment[] = [];
 
   public paymentProofs: PaymentProof[] = [];
 

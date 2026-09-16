@@ -173,8 +173,14 @@ export default function BillingPage() {
             <tbody className="divide-y divide-slate-800/60">
               {orders.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
-                    No payment records submitted yet.
+                  <td colSpan={7} className="px-6 py-12 text-center text-slate-400 font-light">
+                    <div className="max-w-md mx-auto space-y-2">
+                      <CreditCard className="w-8 h-8 text-slate-600 mx-auto" />
+                      <p className="text-sm font-medium text-slate-300">No payment records submitted yet</p>
+                      <p className="text-xs text-slate-500">
+                        When you submit a payment via JazzCash, EasyPaisa, or Bank transfer in checkout, your transaction proof and real-time approval status will appear here.
+                      </p>
+                    </div>
                   </td>
                 </tr>
               ) : (
