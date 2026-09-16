@@ -23,6 +23,7 @@ import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
 
 const KEYWORD_SUGGESTIONS = Array.from(new Set([
+  // Computing, AI & Data Science
   'AI Models & Foundation Architectures',
   'Artificial Intelligence & NLP',
   'Large Language Models (LLMs)',
@@ -33,26 +34,107 @@ const KEYWORD_SUGGESTIONS = Array.from(new Set([
   'Robotics & Autonomous Systems',
   'Reinforcement Learning & AI Agents',
   'Quantum Computing & Information',
-  'Sustainable Cities & Urban Planning',
-  'CRISPR Assays & Genome Editing',
-  'Applied Econometrics & Financial Analytics',
-  'Climate Change Mitigation & Adaptation',
-  'Renewable Energy & Energy Storage',
-  'Bioinformatics & Computational Biology',
-  'Nanotechnology & Advanced Materials',
-  'Microelectronics & VLSI Design',
-  'Human-Computer Interaction (HCI)',
-  'Cybersecurity & Network Protocols',
-  'Biomedical Imaging & Neural Interfaces',
-  'Graph Neural Networks & Knowledge Graphs',
   'Data Science & Big Data Engineering',
   'Software Engineering & Distributed Systems',
+  'Cybersecurity & Network Protocols',
+  'Human-Computer Interaction (HCI)',
   'Cloud Computing & Edge AI',
   'IoT & Embedded Systems',
-  'Computational Neuroscience',
-  'Molecular Dynamics & Drug Discovery',
-  'Medical Image Analysis',
-  'Natural Language Understanding (NLU)'
+  'Graph Neural Networks & Knowledge Graphs',
+
+  // Biological, Biomedical & Life Sciences
+  'CRISPR Assays & Genome Editing',
+  'Bioinformatics & Computational Biology',
+  'Molecular & Cellular Biology',
+  'Genetics & Genomics',
+  'Microbiology & Immunology',
+  'Biochemistry & Biophysics',
+  'Neuroscience & Neurobiology',
+  'Ecology & Biodiversity Conservation',
+  'Plant Biotechnology & Crop Science',
+  'Stem Cell Research & Regenerative Medicine',
+  'Synthetic Biology & Metabolic Engineering',
+  'Marine Biology & Oceanography',
+
+  // Clinical Medicine, Pharmacy & Public Health
+  'Oncology & Cancer Immunotherapy',
+  'Epidemiology & Biostatistics',
+  'Public Health & Global Health Policy',
+  'Pharmacology & Drug Discovery',
+  'Biomedical Imaging & Diagnostics',
+  'Health Informatics & Digital Health',
+  'Cardiovascular Medicine & Cardiology',
+  'Immunology & Vaccine Development',
+  'Neurodegenerative Diseases & Alzheimer Research',
+  'Clinical Trials & Biomarker Discovery',
+
+  // Engineering & Applied Sciences
+  'Electrical & Electronic Engineering',
+  'Mechanical Engineering & Fluid Dynamics',
+  'Civil & Structural Engineering',
+  'Chemical Engineering & Process Control',
+  'Biomedical Engineering & Biomaterials',
+  'Aerospace & Aeronautical Engineering',
+  'Materials Science & Nanotechnology',
+  'Microelectronics & VLSI Design',
+  'Mechatronics & Control Systems',
+  'Environmental Engineering & Waste Treatment',
+  'Renewable Energy & Solar Cells',
+  'Battery Technology & Energy Storage',
+  'Petroleum & Geothermal Engineering',
+
+  // Physical, Chemical & Earth Sciences
+  'Applied Physics & Condensed Matter',
+  'Astrophysics & Observational Astronomy',
+  'Organic Chemistry & Synthesis',
+  'Analytical & Physical Chemistry',
+  'Pure & Applied Mathematics',
+  'Probability & Mathematical Statistics',
+  'Geology, Seismology & Geophysics',
+  'Atmospheric Science & Climate Modeling',
+  'Photonics & Laser Physics',
+  'Quantum Mechanics & Field Theory',
+
+  // Business, Economics & Finance
+  'Applied Econometrics & Quantitative Economics',
+  'Corporate Finance & Asset Pricing',
+  'Financial Technology (FinTech) & Blockchain',
+  'Behavioral Economics & Consumer Psychology',
+  'Supply Chain Management & Logistics',
+  'Marketing Strategy & Consumer Behavior',
+  'Management & Organizational Behavior',
+  'Entrepreneurship & Innovation Management',
+  'Macroeconomics & Monetary Policy',
+  'International Trade & Development Economics',
+
+  // Social Sciences & Humanities
+  'Cognitive & Clinical Psychology',
+  'International Relations & Geopolitics',
+  'Political Science & Public Policy',
+  'Sociology & Social Demography',
+  'Anthropology & Cultural Studies',
+  'Media Studies & Digital Communication',
+  'Criminology & Criminal Justice',
+  'Development Studies & Poverty Alleviation',
+  'Philosophy & Applied Ethics',
+  'History & Historiography',
+  'Education & Technology-Enhanced Learning',
+
+  // Environment, Architecture & Agriculture
+  'Sustainable Cities & Urban Planning',
+  'Architectural Design & Sustainable Buildings',
+  'Spatial Analytics & GIS Mapping',
+  'Soil Science & Sustainable Agriculture',
+  'Water Resources & Hydrology',
+  'Forestry & Ecosystem Management',
+  'Circular Economy & Environmental Policy',
+
+  // Law, Governance & Policy
+  'International Law & Human Rights',
+  'Intellectual Property & Patent Law',
+  'Environmental & Energy Law',
+  'AI Ethics & Technology Governance',
+  'Constitutional Law & Public Governance'
 ]));
 
 export default function ProfilePage() {
@@ -152,13 +234,22 @@ export default function ProfilePage() {
   const selectedCountryObj = getCountryByNameOrCode(targetCountry);
   const availableRegions = selectedCountryObj ? getRegionsForCountry(selectedCountryObj.name) : [];
 
-  // Filter autocomplete suggestions based on query with smart token & acronym matching
+  // Filter autocomplete suggestions based on query with smart token & acronym matching across ALL global disciplines
   const matchingSuggestions = useMemo(() => {
     const allDomainDisciplines = ACADEMIC_DOMAINS.flatMap(d => d.disciplines);
     const combinedList = Array.from(new Set([...KEYWORD_SUGGESTIONS, ...allDomainDisciplines]));
 
     if (!newInterest.trim()) {
-      return combinedList.filter(s => !interests.includes(s)).slice(0, 8);
+      return [
+        'Artificial Intelligence & NLP',
+        'CRISPR Assays & Genome Editing',
+        'Sustainable Cities & Urban Planning',
+        'Applied Econometrics & Finance',
+        'Renewable Energy & Solar Cells',
+        'Oncology & Cancer Research',
+        'Quantum Computing & Information',
+        'Robotics & Autonomous Systems'
+      ].filter(s => !interests.includes(s));
     }
 
     const rawQ = newInterest.toLowerCase().trim();
@@ -171,12 +262,14 @@ export default function ProfilePage() {
       // Direct substring match
       if (lowerItem.includes(rawQ)) return true;
 
-      // Handle 'ai' acronym match
+      // Handle common acronyms
       if (tokens.includes('ai') && (lowerItem.includes('artificial intelligence') || lowerItem.includes('ai'))) return true;
+      if (tokens.includes('ml') && (lowerItem.includes('machine learning') || lowerItem.includes('ml'))) return true;
+      if (tokens.includes('nlp') && (lowerItem.includes('natural language processing') || lowerItem.includes('nlp'))) return true;
 
-      // Handle token overlaps (e.g., 'ai models' matches 'AI Models & Foundation Architectures' or 'Large Language Models')
+      // Handle token matches across words
       return tokens.every(token => lowerItem.includes(token)) || tokens.some(token => lowerItem.includes(token));
-    }).slice(0, 10);
+    }).slice(0, 12);
   }, [newInterest, interests]);
 
   const saveInterestsToStorage = (updatedInterests: string[]) => {
