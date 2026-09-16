@@ -64,8 +64,6 @@ export default function CampaignsPage() {
     let userProfs: Professor[] = [];
     if (savedIds.length > 0) {
       userProfs = mockDb.professors.filter((p) => savedIds.includes(p.id));
-    } else if (isSampleDemoStudent) {
-      userProfs = mockDb.professors.slice(0, 4);
     }
 
     // 2. Sent Emails

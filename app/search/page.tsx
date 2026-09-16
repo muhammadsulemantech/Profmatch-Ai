@@ -19,7 +19,8 @@ import {
   Globe,
   BookOpen,
   Layers,
-  RefreshCw
+  RefreshCw,
+  Sparkles
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
@@ -51,7 +52,9 @@ export default function SearchPage() {
   const [recruitingOnly, setRecruitingOnly] = useState(false);
   const [verifiedOnly, setVerifiedOnly] = useState(true);
   const [emailVerifiedOnly, setEmailVerifiedOnly] = useState(false);
+  const [savedOnly, setSavedOnly] = useState(false);
   const [savedProfIds, setSavedProfIds] = useState<string[]>([]);
+  const [professorsList, setProfessorsList] = useState<Professor[]>(mockDb.professors);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -75,14 +78,19 @@ export default function SearchPage() {
       }
     });
   };
+
+  // Filtered List based on savedOnly and search criteria
+  const displayedProfessors = useMemo(() => {
+    if (savedOnly) {
+      return professorsList.filter(p => savedProfIds.includes(p.id));
+    }
+    return professorsList;
+  }, [professorsList, savedOnly, savedProfIds]);
   
   // Progress & loading states
   const [isSearching, setIsSearching] = useState(false);
   const [discoveryStageIndex, setDiscoveryStageIndex] = useState(0);
   const [progressPercent, setProgressPercent] = useState(0);
-
-  // Professor results
-  const [professorsList, setProfessorsList] = useState<Professor[]>(mockDb.professors);
 
   const countries = useMemo(() => getAllCountries(), []);
   const selectedCountryObj = useMemo(() => (country !== 'Global (All Countries)' ? getCountryByNameOrCode(country) : null), [country]);
@@ -206,6 +214,7 @@ export default function SearchPage() {
     setVerifiedOnly(true);
     setEmailVerifiedOnly(false);
     setInterdisciplinary(true);
+    setSavedOnly(false);
     setNaturalQuery('');
     setProfessorsList(mockDb.professors);
   };
@@ -251,27 +260,36 @@ export default function SearchPage() {
               type="button"
               onClick={handleNaturalLanguageParse}
               disabled={isSearching}
-              className="px-6 py-2.5 rounded-lg bg-[#3157A4] hover:bg-[#264687] text-white text-xs sm:text-sm font-medium transition-colors flex items-center justify-center gap-2 shrink-0 disabled:opacity-50"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all disabled:opacity-50 shrink-0"
             >
-              {isSearching ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-              {isSearching ? 'Searching...' : 'Search Professors'}
+              {isSearching ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
+                  Searching...
+                </>
+              ) : (
+                <>
+                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  AI Search
+                </>
+              )}
             </button>
           </div>
         </div>
 
         {/* Discovery Pipeline Progress Bar */}
         {isSearching && (
-          <div className="p-4 rounded-lg bg-white border border-[#C7D8F1] space-y-2 shadow-academic">
+          <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-2 shadow-lg">
             <div className="flex items-center justify-between text-xs">
-              <span className="font-medium text-[#3157A4] flex items-center gap-2">
-                <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#3157A4]" />
+              <span className="font-medium text-emerald-400 flex items-center gap-2">
+                <RefreshCw className="w-3.5 h-3.5 animate-spin text-emerald-400" />
                 {DISCOVERY_STAGES[discoveryStageIndex]}
               </span>
-              <span className="font-mono text-xs text-[#525C6F]">{progressPercent}%</span>
+              <span className="font-mono text-xs text-slate-400">{progressPercent}%</span>
             </div>
-            <div className="w-full bg-[#F1F2EE] h-1.5 rounded-full overflow-hidden">
+            <div className="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden">
               <div
-                className="bg-[#3157A4] h-full transition-all duration-200"
+                className="bg-emerald-500 h-full transition-all duration-200"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
@@ -283,15 +301,15 @@ export default function SearchPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Filter Panel */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="academic-card p-5 bg-white border border-[#E5E7EB] space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E5E7EB]">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-[#172033] flex items-center gap-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-[#3157A4]" /> Filters
+          <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" /> Filters
               </h2>
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="text-xs text-[#525C6F] hover:text-[#172033] underline transition-colors"
+                className="text-xs text-slate-400 hover:text-white underline transition-colors"
               >
                 Reset All
               </button>
@@ -299,13 +317,13 @@ export default function SearchPage() {
 
             {/* 1. Country Selector */}
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#525C6F]">
+              <label className="block text-xs font-medium text-slate-400">
                 Country / Territory
               </label>
               <select
                 value={country}
                 onChange={e => handleCountryChange(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] focus:outline-none focus:border-[#3157A4]"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="Global (All Countries)">Global (All 190+ Countries)</option>
                 {countries.map(c => (
@@ -318,14 +336,14 @@ export default function SearchPage() {
 
             {/* 2. Region / Province Selector */}
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#525C6F]">
+              <label className="block text-xs font-medium text-slate-400">
                 {selectedCountryObj ? selectedCountryObj.regionLabel : 'State / Province / Region'}
               </label>
               {availableRegions.length > 0 ? (
                 <select
                   value={region}
                   onChange={e => setRegion(e.target.value)}
-                  className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] focus:outline-none focus:border-[#3157A4]"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
                 >
                   <option value="">All {selectedCountryObj?.regionLabel || 'Regions'}</option>
                   {availableRegions.map(r => (
@@ -340,21 +358,21 @@ export default function SearchPage() {
                   value={region}
                   onChange={e => setRegion(e.target.value)}
                   placeholder="e.g. Bavaria, Ontario, Tokyo"
-                  className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#3157A4]"
+                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
                 />
               )}
             </div>
 
             {/* 3. Academic Domain Selector */}
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#525C6F]">Academic Domain</label>
+              <label className="block text-xs font-medium text-slate-400">Academic Domain</label>
               <select
                 value={selectedDomain}
                 onChange={e => {
                   setSelectedDomain(e.target.value);
                   setSelectedDiscipline('All Disciplines');
                 }}
-                className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] focus:outline-none focus:border-[#3157A4]"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="All Domains">All Academic Domains</option>
                 {ACADEMIC_DOMAINS.map(d => (
@@ -367,11 +385,11 @@ export default function SearchPage() {
 
             {/* 4. Discipline Selector */}
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#525C6F]">Primary Field / Discipline</label>
+              <label className="block text-xs font-medium text-slate-400">Primary Field / Discipline</label>
               <select
                 value={selectedDiscipline}
                 onChange={e => setSelectedDiscipline(e.target.value)}
-                className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] focus:outline-none focus:border-[#3157A4]"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               >
                 <option value="All Disciplines">All Disciplines</option>
                 {availableDisciplines.map(disc => (
@@ -384,54 +402,66 @@ export default function SearchPage() {
 
             {/* 5. Custom / Novel Field Input */}
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-[#525C6F]">Research Area / Keyword</label>
+              <label className="block text-xs font-medium text-slate-400">Research Area / Keyword</label>
               <input
                 type="text"
                 value={customField}
                 onChange={e => setCustomField(e.target.value)}
                 placeholder="e.g. Energy Storage, Neural Interfaces"
-                className="w-full px-3 py-2 bg-[#F8F7F3] border border-[#E5E7EB] rounded-lg text-xs text-[#172033] placeholder:text-[#9CA3AF] focus:outline-none focus:border-[#3157A4]"
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
               />
             </div>
 
             {/* 6. Verification & Filter Toggles */}
-            <div className="space-y-2.5 pt-3 border-t border-[#E5E7EB]">
-              <label className="flex items-center gap-2 text-xs text-[#525C6F] cursor-pointer hover:text-[#172033]">
+            <div className="space-y-2.5 pt-3 border-t border-slate-800">
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
+                <input
+                  type="checkbox"
+                  checked={savedOnly}
+                  onChange={e => setSavedOnly(e.target.checked)}
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
+                />
+                <span className="flex items-center gap-1 font-medium text-emerald-400">
+                  <Bookmark className="w-3.5 h-3.5 fill-emerald-500/20" /> Saved Faculty Only ({savedProfIds.length})
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
                 <input
                   type="checkbox"
                   checked={interdisciplinary}
                   onChange={e => setInterdisciplinary(e.target.checked)}
-                  className="rounded border-[#D1D5DB] text-[#3157A4] focus:ring-[#3157A4]"
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span>Interdisciplinary &amp; Cross-Department</span>
               </label>
 
-              <label className="flex items-center gap-2 text-xs text-[#525C6F] cursor-pointer hover:text-[#172033]">
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
                 <input
                   type="checkbox"
                   checked={recruitingOnly}
                   onChange={e => setRecruitingOnly(e.target.checked)}
-                  className="rounded border-[#D1D5DB] text-[#3157A4] focus:ring-[#3157A4]"
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span>Actively Recruiting Only</span>
               </label>
 
-              <label className="flex items-center gap-2 text-xs text-[#525C6F] cursor-pointer hover:text-[#172033]">
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
                 <input
                   type="checkbox"
                   checked={verifiedOnly}
                   onChange={e => setVerifiedOnly(e.target.checked)}
-                  className="rounded border-[#D1D5DB] text-[#3157A4] focus:ring-[#3157A4]"
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span>Official University Profiles Only</span>
               </label>
 
-              <label className="flex items-center gap-2 text-xs text-[#525C6F] cursor-pointer hover:text-[#172033]">
+              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
                 <input
                   type="checkbox"
                   checked={emailVerifiedOnly}
                   onChange={e => setEmailVerifiedOnly(e.target.checked)}
-                  className="rounded border-[#D1D5DB] text-[#3157A4] focus:ring-[#3157A4]"
+                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
                 />
                 <span>Public Academic Email Verified</span>
               </label>
@@ -440,7 +470,7 @@ export default function SearchPage() {
             <button
               type="button"
               onClick={() => executeSearch()}
-              className="w-full py-2.5 rounded-lg bg-[#3157A4] hover:bg-[#264687] text-white font-medium text-xs shadow-sm transition-colors flex items-center justify-center gap-1.5"
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
             >
               <Search className="w-3.5 h-3.5" /> Apply Filters
             </button>
@@ -449,34 +479,38 @@ export default function SearchPage() {
 
         {/* Results List */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="flex items-center justify-between text-xs text-[#525C6F] pb-1">
+          <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
             <span>
-              Showing <strong className="text-[#172033] font-semibold">{professorsList.length}</strong> verified faculty records
+              Showing <strong className="text-white font-semibold">{displayedProfessors.length}</strong> {savedOnly ? 'saved' : 'verified'} faculty records
             </span>
-            <span className="flex items-center gap-1.5 text-[#355E57] font-medium">
+            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <ShieldCheck className="w-3.5 h-3.5" /> Cross-verified with official registries
             </span>
           </div>
 
-          {professorsList.length === 0 ? (
-            <div className="academic-card p-12 bg-white border border-[#E5E7EB] text-center space-y-3">
-              <div className="w-12 h-12 rounded-lg bg-[#F1F2EE] flex items-center justify-center mx-auto text-[#525C6F]">
-                <Globe className="w-6 h-6" />
+          {displayedProfessors.length === 0 ? (
+            <div className="p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+              <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                {savedOnly ? <Bookmark className="w-6 h-6 text-emerald-400" /> : <Globe className="w-6 h-6" />}
               </div>
-              <p className="text-sm font-semibold text-[#172033]">No faculty matching this exact filter combination</p>
-              <p className="text-xs text-[#525C6F] max-w-md mx-auto">
-                Try widening your field scope or selecting &ldquo;Global (All Countries)&rdquo; to discover related scholars.
+              <p className="text-sm font-semibold text-white">
+                {savedOnly ? 'No faculty saved yet' : 'No faculty matching this exact filter combination'}
+              </p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto">
+                {savedOnly
+                  ? 'Click the bookmark icon (🔖) on any professor card to save them to your faculty list.'
+                  : 'Try widening your field scope or selecting "Global (All Countries)" to discover related scholars.'}
               </p>
               <button
                 type="button"
                 onClick={handleResetFilters}
-                className="px-4 py-2 bg-[#F1F2EE] hover:bg-[#E5E7EB] text-xs font-medium text-[#172033] rounded-lg border border-[#E5E7EB] transition-colors"
+                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white rounded-xl border border-slate-700 transition-colors"
               >
-                Reset to Global View
+                Reset Filters
               </button>
             </div>
           ) : (
-            professorsList.map(prof => {
+            displayedProfessors.map(prof => {
               const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
               const isSaved = savedProfIds.includes(prof.id);
 
