@@ -18,7 +18,6 @@ import {
   Check,
   X,
   Lock,
-  Sparkles,
   Sliders,
   Database,
   ExternalLink,
@@ -151,14 +150,6 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     fetchAdminData(false);
-    const interval = setInterval(() => {
-      fetchAdminData(true);
-    }, 3000);
-    return () => clearInterval(interval);
-  }, []);
-
-  useEffect(() => {
-    fetchAdminData(true);
   }, [activeTab]);
 
   const fetchAdminData = async (isSilent: boolean = false) => {
@@ -342,10 +333,12 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.settings) {
+        setSettings(data.settings);
         showNotice('success', 'Global site settings updated successfully!');
       } else {
-        showNotice('error', 'Failed to save settings.');
+        showNotice('error', data.error || 'Failed to save settings.');
       }
     } catch {
       showNotice('error', 'Error communicating with settings endpoint.');
@@ -362,20 +355,25 @@ export default function AdminDashboardPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           sectionKey: 'hero',
-          data: {
-            title: heroContent.title,
-            subtitle: heroContent.subtitle,
-            content: {
-              badge: heroContent.badge,
-              primaryCta: heroContent.primaryCta,
-            },
+          title: heroContent.title,
+          subtitle: heroContent.subtitle,
+          content: {
+            badge: heroContent.badge,
+            primaryCta: heroContent.primaryCta,
           },
         }),
       });
-      if (res.ok) {
+      const data = await res.json();
+      if (res.ok && data.section) {
+        setHeroContent({
+          title: data.section.title || '',
+          subtitle: data.section.subtitle || '',
+          badge: data.section.content?.badge || '',
+          primaryCta: data.section.content?.primaryCta || '',
+        });
         showNotice('success', 'Global hero copy published live!');
       } else {
-        showNotice('error', 'Failed to publish content updates.');
+        showNotice('error', data.error || 'Failed to publish content updates.');
       }
     } catch {
       showNotice('error', 'Error publishing content.');

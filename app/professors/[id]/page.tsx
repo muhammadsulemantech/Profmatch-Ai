@@ -15,8 +15,7 @@ import {
   Bookmark,
   Check,
   Layers,
-  ArrowLeft,
-  Sparkles
+  ArrowLeft
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 
@@ -284,7 +283,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
                   <h2 className="text-2xl font-bold text-white mt-0.5">{match.overall_score}% Research Compatibility</h2>
                 </div>
                 <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-                  <Sparkles className="w-3 h-3 text-emerald-400" /> Grounded Match
+                  Grounded Match
                 </span>
               </div>
 
@@ -316,7 +315,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
               {/* Suggested Outreach Angle */}
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-1 text-xs">
                 <h3 className="font-semibold text-emerald-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5" /> Suggested Outreach Angle
+                  Suggested Outreach Angle
                 </h3>
                 <p className="text-slate-300 leading-relaxed">
                   {match.breakdown?.suggested_angle || 'Connect your graduate thesis with the professor recent publications.'}

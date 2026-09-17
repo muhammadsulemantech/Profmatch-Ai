@@ -16,8 +16,7 @@ import {
   Check,
   Search,
   Bookmark,
-  ShieldCheck,
-  Sparkles
+  ShieldCheck
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';

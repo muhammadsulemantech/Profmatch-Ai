@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Search,
-  Sparkles,
   BookOpen,
   Mail,
   BarChart3,
@@ -13,10 +12,96 @@ import {
   ArrowRight,
   FileCheck
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
+import { mockDb } from '@/lib/supabase/mock-db';
 
 export default function InteractivePlatformShowcase() {
   const [activeTab, setActiveTab] = useState<'match' | 'papers' | 'proposal' | 'pipeline'>('match');
   const [selectedField, setSelectedField] = useState('All Fields');
+
+  const { user, isAuthenticated } = useAuth();
+  const [stats, setStats] = useState({
+    identifiedFaculty: 24,
+    identifiedSubtext: '+4 this week',
+    inquiriesSent: 8,
+    inquiriesSubtext: 'Custom verified crafts',
+    repliesReceived: 5,
+    repliesSubtext: '62.5% response rate',
+    interviewsScheduled: 2,
+    interviewsSubtext: 'TUM • ETH Zurich'
+  });
+
+  useEffect(() => {
+    if (!isAuthenticated || !user) {
+      setStats({
+        identifiedFaculty: 24,
+        identifiedSubtext: '+4 this week',
+        inquiriesSent: 8,
+        inquiriesSubtext: 'Custom verified crafts',
+        repliesReceived: 5,
+        repliesSubtext: '62.5% response rate',
+        interviewsScheduled: 2,
+        interviewsSubtext: 'TUM • ETH Zurich'
+      });
+      return;
+    }
+
+    // 1. Saved Faculty / Identified Faculty count
+    const savedKey = `profmatch_saved_profs_${user.id}`;
+    let savedIds: string[] = [];
+    try {
+      const storedSaved = localStorage.getItem(savedKey);
+      if (storedSaved) savedIds = JSON.parse(storedSaved);
+    } catch {}
+    const savedCount = savedIds.length;
+
+    // 2. Sent Inquiries count
+    const sentKey = `profmatch_sent_emails_${user.id}`;
+    let localSent: any[] = [];
+    try {
+      const storedSent = localStorage.getItem(sentKey);
+      if (storedSent) localSent = JSON.parse(storedSent);
+    } catch {}
+    const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
+    const combinedEmailsMap = new Map();
+    [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
+    const userEmails = Array.from(combinedEmailsMap.values());
+    const sentCount = userEmails.length;
+
+    // 3. Replies Received & Response Rate
+    const userReps = mockDb.replies.filter(r => {
+      const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
+      return matchingEmail?.user_id === user.id;
+    });
+    const repliesCount = userReps.length;
+    const respRate = sentCount > 0 ? Math.round((repliesCount / sentCount) * 100) : 0;
+
+    // 4. Interviews Scheduled / Active Pipeline
+    const appKey = `profmatch_user_applications_${user.id}`;
+    let localApps: any[] = [];
+    try {
+      const storedApps = localStorage.getItem(appKey);
+      if (storedApps) localApps = JSON.parse(storedApps);
+    } catch {}
+    const mockUserApps = mockDb.applications.filter(a => a.user_id === user.id);
+    const combinedAppsMap = new Map();
+    [...localApps, ...mockUserApps].forEach(a => combinedAppsMap.set(a.id, a));
+    const userApps: any[] = Array.from(combinedAppsMap.values());
+    const interviewApps = userApps.filter(a => a.status === 'Interviewing' || a.status === 'Offer');
+    const positiveReplies = userReps.filter(r => r.sentiment === 'POSITIVE');
+    const interviewsCount = Math.max(interviewApps.length, positiveReplies.length);
+
+    setStats({
+      identifiedFaculty: savedCount,
+      identifiedSubtext: savedCount > 0 ? `${savedCount} saved in workspace` : '0 saved in workspace',
+      inquiriesSent: sentCount,
+      inquiriesSubtext: sentCount > 0 ? 'Verified email crafts' : 'No outreach sent yet',
+      repliesReceived: repliesCount,
+      repliesSubtext: sentCount > 0 ? `${respRate}% response rate` : '0% response rate',
+      interviewsScheduled: interviewsCount,
+      interviewsSubtext: interviewsCount > 0 ? 'Active candidate pipeline' : 'Pending offers'
+    });
+  }, [isAuthenticated, user]);
 
   return (
     <div className="mt-12 max-w-6xl mx-auto rounded-2xl border border-slate-800/80 bg-slate-950/80 backdrop-blur-xl shadow-2xl shadow-emerald-500/5 overflow-hidden">
@@ -42,7 +127,6 @@ export default function InteractivePlatformShowcase() {
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Faculty</span> Matching
           </button>
           <button
@@ -92,7 +176,6 @@ export default function InteractivePlatformShowcase() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
               <div>
                 <h3 className="text-base font-semibold text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
                   AI-Assisted Compatibility Matrix
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -364,24 +447,24 @@ export default function InteractivePlatformShowcase() {
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <div className="text-2xl font-bold text-white">24</div>
+                <div className="text-2xl font-bold text-white">{stats.identifiedFaculty}</div>
                 <div className="text-xs text-slate-400 mt-1">Identified Faculty</div>
-                <div className="text-[10px] text-emerald-400 mt-0.5">+4 this week</div>
+                <div className="text-[10px] text-emerald-400 mt-0.5">{stats.identifiedSubtext}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <div className="text-2xl font-bold text-white">8</div>
+                <div className="text-2xl font-bold text-white">{stats.inquiriesSent}</div>
                 <div className="text-xs text-slate-400 mt-1">Inquiries Sent</div>
-                <div className="text-[10px] text-slate-400 mt-0.5">Custom verified drafts</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">{stats.inquiriesSubtext}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
-                <div className="text-2xl font-bold text-emerald-400">5</div>
+                <div className="text-2xl font-bold text-emerald-400">{stats.repliesReceived}</div>
                 <div className="text-xs text-slate-400 mt-1">Replies Received</div>
-                <div className="text-[10px] text-emerald-400 mt-0.5">62.5% response rate</div>
+                <div className="text-[10px] text-emerald-400 mt-0.5">{stats.repliesSubtext}</div>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-emerald-500/30 bg-emerald-500/5 text-center">
-                <div className="text-2xl font-bold text-emerald-400">2</div>
+                <div className="text-2xl font-bold text-emerald-400">{stats.interviewsScheduled}</div>
                 <div className="text-xs text-emerald-300 mt-1">Interviews Scheduled</div>
-                <div className="text-[10px] text-emerald-400 mt-0.5">TUM &bull; ETH Zurich</div>
+                <div className="text-[10px] text-emerald-400 mt-0.5">{stats.interviewsSubtext}</div>
               </div>
             </div>
           </div>

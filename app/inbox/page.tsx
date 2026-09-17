@@ -6,7 +6,6 @@ import { ReplyAnalysisAgent } from '@/lib/agents';
 import {
   MessageSquare,
   Mail,
-  Sparkles,
   ShieldCheck,
   Send,
   Copy,
@@ -144,7 +143,7 @@ export default function InboxPage() {
               {/* AI Analysis Summary */}
               <div className="glass-panel rounded-2xl p-6 border border-emerald-500/25 bg-[#0b1325] space-y-4">
                 <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400" /> AI Reply Analysis
+                  AI Reply Analysis
                 </h3>
                 <div className="p-3 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
                   {selectedReply.summary}

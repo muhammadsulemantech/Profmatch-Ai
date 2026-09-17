@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-context';
-import { LogOut, User, Sparkles } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 
 export default function NavbarAuthControls() {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();

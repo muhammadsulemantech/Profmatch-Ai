@@ -11,7 +11,6 @@ import {
   ArrowRight,
   AlertCircle,
   CheckCircle2,
-  Sparkles,
   ShieldCheck,
   RefreshCw
 } from 'lucide-react';
@@ -26,6 +25,15 @@ export default function AuthModal() {
   const [targetDegree, setTargetDegree] = useState('PhD');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (isAuthModalOpen && mode === 'signup') {
+      setFullName('');
+      setEmail('');
+      setPassword('');
+      setError(null);
+    }
+  }, [isAuthModalOpen, mode]);
 
   if (!isAuthModalOpen) return null;
 
@@ -57,13 +65,6 @@ export default function AuthModal() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleDemoFill = () => {
-    setMode('login');
-    setEmail('student@example.com');
-    setPassword('student123');
-    setError(null);
   };
 
   return (
@@ -106,7 +107,13 @@ export default function AuthModal() {
           <div className="flex rounded-xl bg-slate-950/80 p-1 border border-slate-800">
             <button
               type="button"
-              onClick={() => { setMode('signup'); setError(null); }}
+              onClick={() => {
+                setMode('signup');
+                setFullName('');
+                setEmail('');
+                setPassword('');
+                setError(null);
+              }}
               className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 mode === 'signup'
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
@@ -117,7 +124,10 @@ export default function AuthModal() {
             </button>
             <button
               type="button"
-              onClick={() => { setMode('login'); setError(null); }}
+              onClick={() => {
+                setMode('login');
+                setError(null);
+              }}
               className={`flex-1 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 mode === 'login'
                   ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
@@ -137,7 +147,7 @@ export default function AuthModal() {
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-3.5">
+          <form onSubmit={handleSubmit} autoComplete={mode === 'signup' ? 'off' : 'on'} className="space-y-3.5">
             {mode === 'signup' && (
               <>
                 <div>
@@ -150,6 +160,7 @@ export default function AuthModal() {
                       value={fullName}
                       onChange={(e) => setFullName(e.target.value)}
                       placeholder="Alex Morgan"
+                      autoComplete="name"
                       className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                     />
                   </div>
@@ -181,6 +192,7 @@ export default function AuthModal() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="researcher@university.edu"
+                  autoComplete={mode === 'signup' ? 'new-email' : 'username'}
                   className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
@@ -196,6 +208,7 @@ export default function AuthModal() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
+                  autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                   className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />
               </div>
@@ -219,18 +232,6 @@ export default function AuthModal() {
               )}
             </button>
           </form>
-
-          {/* Quick Demo Fill Helper */}
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
-            <span className="text-[11px]">Testing demo account?</span>
-            <button
-              type="button"
-              onClick={handleDemoFill}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium hover:underline"
-            >
-              Fill Demo Student Credentials &rarr;
-            </button>
-          </div>
         </div>
       </div>
     </div>

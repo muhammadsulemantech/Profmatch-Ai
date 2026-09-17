@@ -1,7 +1,7 @@
 import { getAllSiteContent } from '@/lib/cms/content-service';
 import { mockDb } from '@/lib/supabase/mock-db';
 import Link from 'next/link';
-import { Check, ShieldCheck, Award, Building2, HelpCircle, Sparkles } from 'lucide-react';
+import { Check, ShieldCheck, Award, Building2, HelpCircle } from 'lucide-react';
 
 export const metadata = {
   title: 'Academic Plans & Subscriptions — ProfMatch AI',
@@ -18,7 +18,6 @@ export default async function PricingPage() {
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-            <Sparkles className="w-3.5 h-3.5" />
             <span>Transparent Academic Subscriptions</span>
           </div>
           <h1 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold text-white tracking-tight">

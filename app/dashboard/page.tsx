@@ -27,7 +27,6 @@ import {
   School,
   ChevronRight,
   ShieldCheck,
-  Sparkles,
   Lock,
   LogOut,
   User,
@@ -139,7 +138,6 @@ export default function DashboardPage() {
               onClick={() => handleProtectedAction('activate your researcher account')}
               className="px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs transition-all shrink-0 shadow-md shadow-emerald-500/20 flex items-center gap-1.5"
             >
-              <Sparkles className="w-3.5 h-3.5" />
               Create Account / Sign In
             </button>
           </div>

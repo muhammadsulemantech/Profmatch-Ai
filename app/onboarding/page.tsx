@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   GraduationCap,
-  Sparkles,
   User,
   BookOpen,
   FolderGit2,
@@ -591,7 +590,6 @@ export default function OnboardingPage() {
               className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/30 hover:scale-[1.02] transition-all disabled:opacity-50"
             >
               {loading ? 'Entering Portal...' : 'Complete & Launch Dashboard'}
-              <Sparkles className="w-4 h-4" />
             </button>
           )}
         </div>

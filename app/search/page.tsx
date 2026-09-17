@@ -19,8 +19,7 @@ import {
   Globe,
   BookOpen,
   Layers,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
@@ -346,7 +345,7 @@ export default function SearchPage() {
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-4 h-4 text-slate-950" />
+                  <Search className="w-4 h-4 text-slate-950" />
                   AI Search
                 </>
               )}

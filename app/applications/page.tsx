@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   X,
   Search,
-  Sparkles,
   Layers
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
@@ -305,7 +304,6 @@ export default function ApplicationsPage() {
               Active Institutional Files ({filteredApplications.length})
             </h2>
             <span className="text-[11px] text-slate-400 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-emerald-400" />
               Real-time synchronization active
             </span>
           </div>

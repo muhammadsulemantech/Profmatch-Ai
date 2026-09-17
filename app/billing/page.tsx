@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Download,
   ExternalLink,
-  Sparkles,
   ArrowRight,
   Layers,
   FileText,
@@ -81,7 +80,7 @@ export default function BillingPage() {
             href="/pricing"
             className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all"
           >
-            <Sparkles className="w-4 h-4" /> Change / Upgrade Plan
+            Change / Upgrade Plan
           </Link>
         </div>
       </div>

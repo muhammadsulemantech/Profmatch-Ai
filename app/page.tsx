@@ -19,7 +19,6 @@ import {
   Globe,
   Check,
   ChevronRight,
-  Sparkles,
   Database,
   GraduationCap
 } from 'lucide-react';
@@ -46,7 +45,6 @@ export default async function HomePage() {
           <div className="text-center max-w-3xl mx-auto space-y-6">
             {/* Small Eyebrow */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shadow-sm">
-              <Sparkles className="w-3.5 h-3.5" />
               <span>ACADEMIC RESEARCH OUTREACH &bull; VERIFIED DIRECTORY</span>
             </div>
 
@@ -109,7 +107,7 @@ export default async function HomePage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl mb-16 space-y-3">
             <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" /> Methodology
+              Methodology
             </span>
             <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white">
               From research thesis to verified outreach in five structured steps.
@@ -264,7 +262,7 @@ export default async function HomePage() {
                 <div>
                   {plan.highlighted && (
                     <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mb-5">
-                      <Sparkles className="w-3.5 h-3.5" /> Recommended for Candidates
+                      Recommended for Candidates
                     </span>
                   )}
                   <h3 className="font-heading text-xl font-bold text-white">{plan.name}</h3>

@@ -12,7 +12,6 @@ import {
   AlertCircle,
   Upload,
   ArrowLeft,
-  Sparkles,
   Lock,
   Globe,
   HelpCircle,

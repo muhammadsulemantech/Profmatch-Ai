@@ -33,12 +33,6 @@ export default function LoginPage() {
     router.refresh();
   };
 
-  const handleDemoFill = () => {
-    setEmail('student@example.com');
-    setPassword('student123');
-    setError(null);
-  };
-
   return (
     <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-4 py-12 selection:bg-emerald-500/25 selection:text-emerald-300">
       <div className="max-w-md w-full bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
@@ -119,19 +113,7 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Demo Fast Fill Buttons */}
-        <div className="pt-4 border-t border-slate-800 space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] text-slate-400 font-medium">Quick Demo Credentials:</span>
-            <button
-              type="button"
-              onClick={handleDemoFill}
-              className="text-[11px] text-emerald-400 hover:text-emerald-300 font-medium hover:underline"
-            >
-              Fill Demo Student &rarr;
-            </button>
-          </div>
-        </div>
+
 
         <p className="text-center text-xs text-slate-400">
           Don&apos;t have an account?{' '}

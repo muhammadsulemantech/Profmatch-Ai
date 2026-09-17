@@ -12,7 +12,6 @@ import {
   FileText,
   Save,
   CheckCircle2,
-  Sparkles,
   Plus,
   Trash2,
   Layers,

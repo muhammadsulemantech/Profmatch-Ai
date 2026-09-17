@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { GraduationCap, Mail, Lock, User, ArrowRight, AlertCircle, RefreshCw, Sparkles } from 'lucide-react';
+import { GraduationCap, Mail, Lock, User, ArrowRight, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 
 export default function SignupPage() {
@@ -63,7 +63,7 @@ export default function SignupPage() {
           </div>
         )}
 
-        <form onSubmit={handleSignup} className="space-y-4">
+        <form onSubmit={handleSignup} autoComplete="off" className="space-y-4">
           <div>
             <label className="block text-xs font-medium text-slate-300 mb-1.5">Full Name</label>
             <div className="relative">
@@ -74,6 +74,7 @@ export default function SignupPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 placeholder="Elena Rostova"
+                autoComplete="name"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
             </div>
@@ -89,6 +90,7 @@ export default function SignupPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="elena.rostova@university.edu"
+                autoComplete="new-email"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
             </div>
@@ -118,6 +120,7 @@ export default function SignupPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="At least 6 characters"
+                autoComplete="new-password"
                 className="w-full pl-10 pr-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
               />
             </div>

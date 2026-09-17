@@ -12,7 +12,6 @@ import {
   ShieldCheck,
   RefreshCw,
   FileText,
-  Sparkles,
   Layers,
   ArrowLeft
 } from 'lucide-react';
