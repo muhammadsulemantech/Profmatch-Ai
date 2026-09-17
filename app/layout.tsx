@@ -100,6 +100,10 @@ export default async function RootLayout({
                 <Link href="/pricing" className="hover:text-white transition-colors">
                   Pricing
                 </Link>
+                <Link href="/tracker" className="hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1 text-emerald-300">
+                  <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  Tracker
+                </Link>
                 <Link href="/responsible-outreach" className="hover:text-white flex items-center gap-1 transition-colors">
                   <ShieldCheck className="w-4 h-4 text-emerald-400" />
                   Ethical Outreach

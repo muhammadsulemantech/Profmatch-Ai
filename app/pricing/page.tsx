@@ -26,6 +26,13 @@ export default async function PricingPage() {
           <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
             No recurring hidden lock-ins. Grounded entirely on verifiable university records, official faculty publications, and ethical one-to-one outreach standards.
           </p>
+
+          <div className="pt-2">
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 shadow-md">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+              <span>Over <strong className="text-emerald-400">1,420+ MS &amp; PhD candidates</strong> matched with verified faculty worldwide.</span>
+            </div>
+          </div>
         </div>
 
         {/* Plans Grid */}

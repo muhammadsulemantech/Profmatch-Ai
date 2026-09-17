@@ -85,6 +85,28 @@ export default function OrderStatusPage() {
           </div>
         )}
 
+        {/* Real-Time Payment Verification Progress Bar */}
+        <div className="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3 text-xs">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-white uppercase text-[10px] tracking-wider">Verification Audit Progress</span>
+            <span className="font-mono text-emerald-400 font-bold">
+              {status === 'APPROVED' ? 'Step 3 of 3 (Complete)' : status === 'REJECTED' ? 'Verification Failed' : 'Step 2 of 3 (In Review)'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2 text-center text-[10px] font-semibold">
+            <div className={`p-2 rounded-lg border ${status ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+              1. Transfer Submitted
+            </div>
+            <div className={`p-2 rounded-lg border ${status === 'APPROVED' || status === 'PENDING' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+              2. Bank / TID Review
+            </div>
+            <div className={`p-2 rounded-lg border ${status === 'APPROVED' ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-slate-950 text-slate-500 border-slate-800'}`}>
+              3. Account Activated
+            </div>
+          </div>
+        </div>
+
         {/* Order Details Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-900/80 border border-slate-800 text-xs">
           <div>
@@ -130,15 +152,25 @@ export default function OrderStatusPage() {
           </div>
         )}
 
-        {/* Actions */}
+        {/* Actions & Printable Receipt */}
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-800">
-          <button
-            onClick={fetchStatus}
-            disabled={loading}
-            className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold text-slate-300 flex items-center justify-center gap-2 transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Status
-          </button>
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <button
+              onClick={fetchStatus}
+              disabled={loading}
+              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-semibold text-slate-300 flex items-center justify-center gap-2 transition-colors"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} /> Refresh Status
+            </button>
+
+            <button
+              type="button"
+              onClick={() => window.print()}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <FileText className="w-3.5 h-3.5 text-emerald-400" /> Digital PDF Receipt
+            </button>
+          </div>
 
           <div className="flex items-center gap-3 w-full sm:w-auto">
             {status === 'REJECTED' ? (

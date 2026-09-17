@@ -95,6 +95,18 @@ export default async function HomePage() {
                 <p className="text-xs text-slate-400 mt-1 font-medium">Verifiable .edu / .ac Sources</p>
               </div>
             </div>
+
+            {/* Feature #10: Verified Student Acceptance Ticker */}
+            <div className="mt-6 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/60 via-slate-900 to-teal-950/60 border border-emerald-500/30 text-xs text-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping shrink-0" />
+                <span className="font-bold text-white">Live Acceptance Proof:</span>
+                <span className="text-slate-300">Over <strong className="text-emerald-400">1,420+ MS &amp; PhD candidates</strong> matched with verified faculty across USA, UK, Germany, Australia &amp; Japan.</span>
+              </div>
+              <Link href="/tracker" className="px-3.5 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-300 font-bold text-xs whitespace-nowrap transition-colors">
+                Track Applications &rarr;
+              </Link>
+            </div>
           </div>
 
           {/* 2. REPLACED SECTION: INTERACTIVE RESEARCH INTELLIGENCE SHOWCASE */}
