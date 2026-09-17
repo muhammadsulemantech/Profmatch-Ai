@@ -33,6 +33,8 @@ export async function POST(request: NextRequest) {
 
     const { email, password } = parsed.data;
 
+    const isAdminEmail = email === 'sulemanmunir6752@gmail.com' || email === 'admin@profmatch.ai';
+
     let matchedUser = mockDb.profiles.find((p) => p.email.toLowerCase() === email);
 
     // Try Supabase auth if configured
@@ -50,9 +52,9 @@ export async function POST(request: NextRequest) {
           matchedUser = {
             id: data.user.id,
             email: data.user.email || email,
-            full_name: data.user.user_metadata?.full_name || email.split('@')[0],
+            full_name: data.user.user_metadata?.full_name || (isAdminEmail ? 'Suleman Munir (Admin)' : email.split('@')[0]),
             avatar_url: data.user.user_metadata?.avatar_url || null,
-            role: (data.user.user_metadata?.role as any) || 'USER',
+            role: isAdminEmail ? 'ADMIN' : ((data.user.user_metadata?.role as any) || 'USER'),
             is_suspended: false,
             created_at: data.user.created_at,
             updated_at: new Date().toISOString(),
@@ -63,7 +65,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Support standard demo student accounts if not in real Supabase
+    // Support standard demo student/admin accounts if not in real Supabase
     if (!matchedUser) {
       if (email === 'student@example.com' || email === 'alex@example.com') {
         matchedUser = mockDb.profiles.find(p => p.role === 'USER') || {
@@ -76,8 +78,17 @@ export async function POST(request: NextRequest) {
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
-      } else if (email === 'sulemanmunir6752@gmail.com' || email === 'admin@profmatch.ai') {
-        matchedUser = mockDb.profiles.find(p => p.role === 'ADMIN');
+      } else if (isAdminEmail) {
+        matchedUser = mockDb.profiles.find(p => p.role === 'ADMIN') || {
+          id: 'usr_admin_001',
+          email: 'sulemanmunir6752@gmail.com',
+          full_name: 'Suleman Munir (Admin)',
+          avatar_url: null,
+          role: 'ADMIN',
+          is_suspended: false,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
       }
     }
 
@@ -86,6 +97,15 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'No account found with this email. Please check your credentials or sign up.' },
         { status: 401 }
       );
+    }
+
+    // Absolute Guarantee for Admin Email
+    if (isAdminEmail) {
+      matchedUser.role = 'ADMIN';
+      const dbAdmin = mockDb.profiles.find(p => p.email.toLowerCase() === email);
+      if (dbAdmin) {
+        dbAdmin.role = 'ADMIN';
+      }
     }
 
     if (matchedUser.is_suspended) {

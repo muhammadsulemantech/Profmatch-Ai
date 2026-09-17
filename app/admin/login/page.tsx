@@ -21,15 +21,18 @@ export default function AdminLoginPage() {
 
     // Strict Administrative Credential Check
     if (inputEmail === 'sulemanmunir6752@gmail.com' && inputPass === 'suleman6752') {
-      // Set secure admin session & role cookies
-      document.cookie = `profmatch_session=admin_elevated_${Date.now()}; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `profmatch_role=ADMIN; path=/; max-age=86400; SameSite=Lax`;
-      document.cookie = `profmatch_user=${encodeURIComponent(JSON.stringify({
+      const sessionToken = `admin_elevated_${Date.now()}`;
+      const adminObj = {
         id: 'usr_admin_001',
         email: 'sulemanmunir6752@gmail.com',
         full_name: 'Suleman Munir (Admin)',
         role: 'ADMIN'
-      }))}; path=/; max-age=86400; SameSite=Lax`;
+      };
+
+      // Set secure admin session & role cookies with 7-day max-age
+      document.cookie = `profmatch_session=${sessionToken}; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `profmatch_role=ADMIN; path=/; max-age=604800; SameSite=Lax`;
+      document.cookie = `profmatch_user=${encodeURIComponent(JSON.stringify(adminObj))}; path=/; max-age=604800; SameSite=Lax`;
 
       // Log audit event
       try {
@@ -46,8 +49,8 @@ export default function AdminLoginPage() {
         // silent audit catch
       }
 
-      router.push('/admin');
-      router.refresh();
+      // Perform full page redirect so AuthContext and client state re-hydrate cleanly as ADMIN
+      window.location.href = '/admin';
     } else {
       setError('Invalid elevated administrative credentials.');
       setLoading(false);
