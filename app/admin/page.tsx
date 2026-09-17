@@ -1903,6 +1903,170 @@ export default function AdminDashboardPage() {
           </div>
         </div>
       )}
+
+      {/* Add / Edit Payment Method Modal */}
+      {(isAddingMethod || editingMethod) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200">
+          <div className="relative w-full max-w-xl bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-8 space-y-5 my-auto">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <Wallet className="w-5 h-5 text-emerald-400" />
+                <h3 className="text-base font-bold text-white">
+                  {editingMethod ? 'Edit Receiving Payment Channel' : 'Add New Payment Receiving Method'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAddingMethod(false);
+                  setEditingMethod(null);
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSavePaymentMethod} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Method Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. JazzCash Mobile Account, EasyPaisa, Stripe"
+                    value={methodForm.name}
+                    onChange={e => setMethodForm({ ...methodForm, name: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Channel Type *</label>
+                  <select
+                    value={methodForm.type}
+                    onChange={e => setMethodForm({ ...methodForm, type: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="mobile_wallet">Mobile Wallet (JazzCash / EasyPaisa / NayaPay)</option>
+                    <option value="bank_transfer">Bank Wire Transfer (IBAN / Local Bank)</option>
+                    <option value="card">Credit / Debit Card (Stripe)</option>
+                    <option value="paypal">PayPal Academic Checkout</option>
+                    <option value="other">Other Payment Channel</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Country / Region *</label>
+                  <select
+                    value={methodForm.country}
+                    onChange={e => setMethodForm({ ...methodForm, country: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                  >
+                    <option value="Pakistan">Pakistan</option>
+                    <option value="Global">Global (All Countries)</option>
+                    {countries.map(c => (
+                      <option key={c.code} value={c.name}>
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Currency Code *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="PKR, USD, EUR, GBP"
+                    value={methodForm.currency}
+                    onChange={e => setMethodForm({ ...methodForm, currency: e.target.value.toUpperCase() })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white uppercase focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Account Title / Beneficiary *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="ProfMatch Education Services"
+                    value={methodForm.account_name}
+                    onChange={e => setMethodForm({ ...methodForm, account_name: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">Account Number / Phone *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="03001234567 or Card ID"
+                    value={methodForm.account_number}
+                    onChange={e => setMethodForm({ ...methodForm, account_number: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">IBAN / Swift / Routing (Optional)</label>
+                <input
+                  type="text"
+                  placeholder="PK36MEZN0099330101234567 or Swift Code"
+                  value={methodForm.account_identifier}
+                  onChange={e => setMethodForm({ ...methodForm, account_identifier: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 font-mono"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 mb-1">Checkout Customer Instructions</label>
+                <textarea
+                  rows={3}
+                  placeholder="Transfer payment via JazzCash app to 03001234567 and enter the 10-digit TID transaction receipt..."
+                  value={methodForm.instructions}
+                  onChange={e => setMethodForm({ ...methodForm, instructions: e.target.value })}
+                  className="w-full px-3.5 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={methodForm.enabled}
+                    onChange={e => setMethodForm({ ...methodForm, enabled: e.target.checked })}
+                    className="w-4 h-4 accent-emerald-500 rounded"
+                  />
+                  <span className="text-xs font-semibold text-slate-300">Active / Enabled for Customers</span>
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsAddingMethod(false);
+                      setEditingMethod(null);
+                    }}
+                    className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-1.5"
+                  >
+                    {saving ? 'Saving...' : editingMethod ? 'Update Payment Method' : 'Create Payment Method'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
     </div>
   );
