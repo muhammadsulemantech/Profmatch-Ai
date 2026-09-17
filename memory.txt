@@ -1,0 +1,74 @@
+====================================================================
+PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
+====================================================================
+Last Updated: 2026-09-17
+Repository: suleman197/Profmatch-Ai (branch: main)
+Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Tavily Search, OpenAlex API
+
+--------------------------------------------------------------------
+1. CORE CREDENTIALS & ADMIN AUTHENTICATION
+--------------------------------------------------------------------
+• Admin Email: sulemanmunir6752@gmail.com
+• Admin Password: suleman6752
+• Backup Admin Email: admin@profmatch.ai
+• Admin Auth Policy: Middleware (middleware.ts) + Server Cookie (profmatch_role=admin) enforces automatic admin dashboard privileges whenever logging in from the Admin Console.
+
+--------------------------------------------------------------------
+2. LIVE ENVIRONMENT & API KEYS CONFIGURATION (.env.local)
+--------------------------------------------------------------------
+• Base App URL: http://localhost:3000 / https://profmatch.ai
+• Supabase URL: https://yofbhdgabzuededvceyr.supabase.co (Configured in .env.local)
+• Supabase Keys: Anon Key & Service Role Key configured in .env.local
+• AI Engine: AI_PROVIDER=gemini | AI_API_KEY (Google Gemini Pro active)
+• Search Provider: SEARCH_PROVIDER=tavily | TAVILY_API_KEY (Tavily Search active)
+• Academic Provider: ACADEMIC_DATA_PROVIDER=openalex | OPENALEX_API_KEY (OpenAlex active)
+• Email Provider: EMAIL_PROVIDER=resend | RESEND_API_KEY (Resend Email active)
+• Payment Provider: Stripe (Mock fallback active for zero-break testing)
+
+--------------------------------------------------------------------
+3. COMPLETE FEATURE MAP & PAGES IMPLEMENTED
+--------------------------------------------------------------------
+[1] Homepage & Global Header (app/page.tsx, app/layout.tsx)
+    - Global acceptance ticker: "1,420+ MS & PhD Candidates Matched across 190+ Countries".
+    - Fixed Top Navbar (z-index adjusted so pages like signup/login start below navbar).
+    - Added "Tracker" navigation link to top menu.
+
+[2] Authentication & Responsive Body (app/login/page.tsx, app/signup/page.tsx)
+    - Body scroll overflow locked on auth pages to prevent background website scrolling.
+    - Top logo & form padding responsive across all mobile & desktop screen sizes.
+
+[3] Candidate Profile & AI CV Auto-Parser (app/profile/page.tsx)
+    - 1-Click Resume/CV File Auto-Parser (extracts research keywords, updates bio, target degree, and displays success banner).
+
+[4] Professor Detail & Match Analysis (app/professors/[id]/page.tsx)
+    - AI Match Analysis Modal (calculates percentage match between candidate profile & faculty thesis/publications).
+    - DOI Badges & OpenAlex Live Links on publication cards.
+    - In-App Publication Inspector Modal (replaces external Scholar redirect for immediate paper viewing).
+    - Google Scholar targeted research fallback.
+    - Live University Directory Audit Badge.
+    - Clean contact row formatting (zero email truncations or double dots).
+
+[5] AI Outreach Email Generator (app/outreach/generate/page.tsx)
+    - Email Deliverability & Anti-Spam Health Meter.
+    - AI Email Quality & Tone Grader widget (Professional, Persuasive, Conciseness scores).
+    - Grounded Publication Citation Highlighting.
+    - 7-Day & 14-Day Automated Follow-Up Reminders scheduler.
+
+[6] MS/PhD Application Kanban Tracker (app/tracker/page.tsx)
+    - 5 Application Stages: Saved Faculty, Outreach Sent, Replied, Interview, Accepted.
+    - Drag & Move between stages, custom note modal, persistent state.
+
+[7] Real-Time Editable Admin & Pricing Panel (app/admin/pricing/page.tsx, app/admin/page.tsx)
+    - Full CRUD editability for plans, features, and price tags with instant real-time sync.
+
+[8] Payment Status & Digital PDF Receipts (app/checkout/status/[reference]/page.tsx)
+    - 3-Step Live Payment Verification Progress Bar.
+    - Digital PDF Billing Receipt print/download functionality.
+
+--------------------------------------------------------------------
+4. SYSTEM ARCHITECTURE & CODE CONVENTIONS
+--------------------------------------------------------------------
+• State & Database: lib/supabase/mock-db.ts (Fallback DB) + Supabase Client/Server SDKs.
+• Responsive Styling: Pure Tailwind CSS with dark theme (#030712 background, Emerald accents, Slate/Zinc cards).
+• Zero Build Errors: Strictly typed TypeScript (npx tsc --noEmit passes cleanly).
+====================================================================
