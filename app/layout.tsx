@@ -27,6 +27,13 @@ export async function generateMetadata(): Promise<Metadata> {
       type: 'website',
       url: process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai',
     },
+    icons: {
+      icon: [
+        { url: '/icon.svg', type: 'image/svg+xml' },
+      ],
+      shortcut: '/icon.svg',
+      apple: '/icon.svg',
+    },
     robots: {
       index: true,
       follow: true,
