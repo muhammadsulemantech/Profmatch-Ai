@@ -52,6 +52,17 @@ interface SiteSettings {
   };
 }
 
+interface PricingPlanItem {
+  name: string;
+  tier: string;
+  price: string;
+  period: string;
+  description: string;
+  features: string[];
+  cta: string;
+  highlighted: boolean;
+}
+
 interface FeatureFlag {
   flag_key: string;
   name: string;
@@ -106,6 +117,65 @@ export default function AdminDashboardPage() {
     badge: 'Global Academic Discovery & Verified Outreach Engine',
     primaryCta: 'Start Global Faculty Discovery',
   });
+
+  const [pricingPlans, setPricingPlans] = useState<PricingPlanItem[]>(
+    mockDb.siteContent.pricing?.content?.plans || []
+  );
+
+  const handleUpdatePlan = (planIdx: number, field: keyof PricingPlanItem, value: any) => {
+    setPricingPlans(prev => {
+      const copy = [...prev];
+      copy[planIdx] = { ...copy[planIdx], [field]: value };
+      return copy;
+    });
+  };
+
+  const handleUpdateFeature = (planIdx: number, featIdx: number, value: string) => {
+    setPricingPlans(prev => {
+      const copy = [...prev];
+      const newFeats = [...copy[planIdx].features];
+      newFeats[featIdx] = value;
+      copy[planIdx] = { ...copy[planIdx], features: newFeats };
+      return copy;
+    });
+  };
+
+  const handleAddFeature = (planIdx: number) => {
+    setPricingPlans(prev => {
+      const copy = [...prev];
+      copy[planIdx] = { ...copy[planIdx], features: [...copy[planIdx].features, 'New Plan Feature'] };
+      return copy;
+    });
+  };
+
+  const handleRemoveFeature = (planIdx: number, featIdx: number) => {
+    setPricingPlans(prev => {
+      const copy = [...prev];
+      copy[planIdx] = { ...copy[planIdx], features: copy[planIdx].features.filter((_, i) => i !== featIdx) };
+      return copy;
+    });
+  };
+
+  const handleAddPlan = () => {
+    setPricingPlans(prev => [
+      ...prev,
+      {
+        name: 'New Custom Tier',
+        tier: 'PRO',
+        price: '$29',
+        period: 'per month',
+        description: 'Custom academic research plan tailored for intensive candidate outreach.',
+        features: ['Unlimited Searches', 'Priority Outreach Drafts', 'Dedicated Support'],
+        cta: 'Upgrade Plan',
+        highlighted: false,
+      },
+    ]);
+  };
+
+  const handleRemovePlan = (planIdx: number) => {
+    if (!confirm('Are you sure you want to remove this pricing plan?')) return;
+    setPricingPlans(prev => prev.filter((_, i) => i !== planIdx));
+  };
 
   const [users, setUsers] = useState<UserProfile[]>([]);
   const [flags, setFlags] = useState<FeatureFlag[]>([]);
@@ -173,6 +243,9 @@ export default function AdminDashboardPage() {
             badge: cData.content.hero.content?.badge || '',
             primaryCta: cData.content.hero.content?.primaryCta || '',
           });
+        }
+        if (cData.content?.pricing?.content?.plans) {
+          setPricingPlans(cData.content.pricing.content.plans);
         }
       }
 
@@ -350,7 +423,8 @@ export default function AdminDashboardPage() {
   const handleSaveContent = async () => {
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/content', {
+      // 1. Save Hero Copy
+      await fetch('/api/admin/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -363,17 +437,27 @@ export default function AdminDashboardPage() {
           },
         }),
       });
-      const data = await res.json();
-      if (res.ok && data.section) {
-        setHeroContent({
-          title: data.section.title || '',
-          subtitle: data.section.subtitle || '',
-          badge: data.section.content?.badge || '',
-          primaryCta: data.section.content?.primaryCta || '',
-        });
-        showNotice('success', 'Global hero copy published live!');
+
+      // 2. Save Pricing Plans
+      const pRes = await fetch('/api/admin/content', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sectionKey: 'pricing',
+          title: 'Transparent Global Academic Pricing',
+          subtitle: 'Free to start exploring faculty worldwide; upgrade when launching multi-country campaigns.',
+          content: {
+            plans: pricingPlans,
+          },
+        }),
+      });
+
+      const pData = await pRes.json();
+      if (pRes.ok && pData.section?.content?.plans) {
+        setPricingPlans(pData.section.content.plans);
+        showNotice('success', 'Global editorial copy & pricing plans published live!');
       } else {
-        showNotice('error', data.error || 'Failed to publish content updates.');
+        showNotice('error', pData.error || 'Failed to publish content updates.');
       }
     } catch {
       showNotice('error', 'Error publishing content.');
@@ -1507,6 +1591,157 @@ export default function AdminDashboardPage() {
                 onChange={e => setHeroContent({ ...heroContent, primaryCta: e.target.value })}
                 className="w-full px-3.5 py-2.5 bg-slate-900/90 border border-slate-700 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
               />
+            </div>
+          </div>
+
+          {/* PRICING PLANS EDITABLE CMS SECTION */}
+          <div className="pt-8 border-t border-slate-800 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <CreditCard className="w-4 h-4 text-emerald-400" />
+                  Academic Pricing Plans &amp; Subscriptions Manager
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Update live prices, tier names, billing cycles, features, and call-to-actions across the entire platform in real-time.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAddPlan}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-semibold flex items-center gap-1.5 transition-all border border-slate-700 shrink-0"
+              >
+                <Plus className="w-3.5 h-3.5" /> Add Pricing Tier
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {pricingPlans.map((plan, pIdx) => (
+                <div
+                  key={pIdx}
+                  className="p-5 rounded-2xl bg-slate-900/90 border border-slate-800 space-y-4 relative group"
+                >
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                    <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider">
+                      Tier #{pIdx + 1}: {plan.name}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePlan(pIdx)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
+                      title="Delete Plan"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Plan Name</label>
+                      <input
+                        type="text"
+                        value={plan.name}
+                        onChange={e => handleUpdatePlan(pIdx, 'name', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Tier Code</label>
+                      <input
+                        type="text"
+                        value={plan.tier}
+                        onChange={e => handleUpdatePlan(pIdx, 'tier', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Price Label (e.g. $0, $19)</label>
+                      <input
+                        type="text"
+                        value={plan.price}
+                        onChange={e => handleUpdatePlan(pIdx, 'price', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-emerald-400 font-bold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">Billing Period (e.g. forever, per month)</label>
+                      <input
+                        type="text"
+                        value={plan.period}
+                        onChange={e => handleUpdatePlan(pIdx, 'period', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-400 mb-1">Plan Description</label>
+                    <textarea
+                      rows={2}
+                      value={plan.description}
+                      onChange={e => handleUpdatePlan(pIdx, 'description', e.target.value)}
+                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-400 mb-1">CTA Button Label</label>
+                      <input
+                        type="text"
+                        value={plan.cta}
+                        onChange={e => handleUpdatePlan(pIdx, 'cta', e.target.value)}
+                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div className="flex flex-col justify-end">
+                      <label className="flex items-center gap-2 cursor-pointer py-2">
+                        <input
+                          type="checkbox"
+                          checked={plan.highlighted}
+                          onChange={e => handleUpdatePlan(pIdx, 'highlighted', e.target.checked)}
+                          className="w-4 h-4 accent-emerald-500 rounded cursor-pointer"
+                        />
+                        <span className="text-xs font-semibold text-slate-300">Highlighted / Featured</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Bullet Point Features List */}
+                  <div className="pt-2 border-t border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Features List</span>
+                      <button
+                        type="button"
+                        onClick={() => handleAddFeature(pIdx)}
+                        className="text-[10px] text-emerald-400 hover:text-emerald-300 font-semibold flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Add Feature Bullet
+                      </button>
+                    </div>
+
+                    <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                      {plan.features.map((feat, fIdx) => (
+                        <div key={fIdx} className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={feat}
+                            onChange={e => handleUpdateFeature(pIdx, fIdx, e.target.value)}
+                            className="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveFeature(pIdx, fIdx)}
+                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
