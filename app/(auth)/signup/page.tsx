@@ -39,7 +39,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-4 py-12 selection:bg-emerald-500/25 selection:text-emerald-300">
+    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-4 pt-24 sm:pt-28 pb-16 selection:bg-emerald-500/25 selection:text-emerald-300">
       <div className="max-w-md w-full bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
