@@ -4,22 +4,35 @@ import { updateSiteSettings } from '@/lib/cms/settings-service';
 import { logAuditEvent } from '@/lib/security/audit';
 
 export async function GET() {
-  return NextResponse.json({ settings: mockDb.siteSettings });
+  return NextResponse.json({ success: true, settings: mockDb.siteSettings });
 }
 
 export async function PUT(request: NextRequest) {
+  return handleUpdateSettings(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleUpdateSettings(request);
+}
+
+async function handleUpdateSettings(request: NextRequest) {
   try {
     const body = await request.json();
     const updated = await updateSiteSettings(body);
 
-    await logAuditEvent({
-      action: 'SITE_SETTINGS_UPDATED',
-      resourceType: 'SITE_SETTINGS',
-      metadata: { fields: Object.keys(body) },
-    });
+    try {
+      await logAuditEvent({
+        action: 'SITE_SETTINGS_UPDATED',
+        resourceType: 'SITE_SETTINGS',
+        metadata: { fields: Object.keys(body || {}) },
+      });
+    } catch {
+      // safe audit catch
+    }
 
     return NextResponse.json({ success: true, settings: updated });
-  } catch (err) {
-    return NextResponse.json({ error: 'Failed to update settings.' }, { status: 500 });
+  } catch (err: any) {
+    console.error('[SETTINGS API ERROR]', err);
+    return NextResponse.json({ success: false, error: err.message || 'Failed to update settings.' }, { status: 500 });
   }
 }

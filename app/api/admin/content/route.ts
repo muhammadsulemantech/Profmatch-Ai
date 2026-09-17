@@ -4,16 +4,24 @@ import { updateSiteContent } from '@/lib/cms/content-service';
 import { logAuditEvent } from '@/lib/security/audit';
 
 export async function GET() {
-  return NextResponse.json({ content: mockDb.siteContent });
+  return NextResponse.json({ success: true, content: mockDb.siteContent });
 }
 
 export async function PUT(request: NextRequest) {
+  return handleContentUpdate(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleContentUpdate(request);
+}
+
+async function handleContentUpdate(request: NextRequest) {
   try {
     const body = await request.json();
     const { sectionKey, title, subtitle, content, isPublished, data } = body;
 
     if (!sectionKey) {
-      return NextResponse.json({ error: 'sectionKey is required.' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'sectionKey is required.' }, { status: 400 });
     }
 
     const finalTitle = title !== undefined ? title : data?.title;
@@ -27,15 +35,20 @@ export async function PUT(request: NextRequest) {
       is_published: isPublished,
     });
 
-    await logAuditEvent({
-      action: 'CMS_CONTENT_UPDATED',
-      resourceType: 'SITE_CONTENT',
-      resourceId: sectionKey,
-      metadata: { title: finalTitle, isPublished },
-    });
+    try {
+      await logAuditEvent({
+        action: 'CMS_CONTENT_UPDATED',
+        resourceType: 'SITE_CONTENT',
+        resourceId: sectionKey,
+        metadata: { title: finalTitle, isPublished },
+      });
+    } catch {
+      // safe audit catch
+    }
 
     return NextResponse.json({ success: true, section: updated });
-  } catch (err) {
-    return NextResponse.json({ error: 'Failed to update content.' }, { status: 500 });
+  } catch (err: any) {
+    console.error('[CONTENT API ERROR]', err);
+    return NextResponse.json({ success: false, error: err.message || 'Failed to update content.' }, { status: 500 });
   }
 }
