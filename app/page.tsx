@@ -25,6 +25,8 @@ import {
 import { mockDb } from '@/lib/supabase/mock-db';
 import InteractivePlatformShowcase from '@/components/home/interactive-platform-showcase';
 
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   const content = await getAllSiteContent();
   const settings = await getSiteSettings();

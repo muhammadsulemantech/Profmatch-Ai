@@ -15,6 +15,8 @@ const plusJakartaSans = Plus_Jakarta_Sans({
   display: 'swap',
 });
 
+export const dynamic = 'force-dynamic';
+
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
   return {
