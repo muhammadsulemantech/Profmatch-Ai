@@ -539,7 +539,7 @@ export default function DashboardPage() {
                           <div key={`email_${idx}`} className="flex items-start gap-2.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-400 mt-1.5 shrink-0" />
                             <div>
-                              <p className="font-medium text-white">Outreach bhej di gayi for {e.recipient_name || 'Professor'}</p>
+                              <p className="font-medium text-white">Outreach draft created for {e.recipient_name || 'Professor'}</p>
                               <p className="text-[11px] text-slate-400">Real-time activity recorded</p>
                             </div>
                           </div>
