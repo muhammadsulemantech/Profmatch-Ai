@@ -19,6 +19,7 @@ export async function GET(request: NextRequest) {
     const account = mockDb.getConnectedEmailAccount(userId);
     if (account) {
       return NextResponse.json({
+        connected: true,
         isConnected: true,
         account: {
           id: account.id,
@@ -30,9 +31,9 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    return NextResponse.json({ isConnected: false });
+    return NextResponse.json({ connected: false, isConnected: false });
   } catch (err: any) {
-    return NextResponse.json({ isConnected: false, error: err.message }, { status: 500 });
+    return NextResponse.json({ connected: false, isConnected: false, error: err.message }, { status: 500 });
   }
 }
 

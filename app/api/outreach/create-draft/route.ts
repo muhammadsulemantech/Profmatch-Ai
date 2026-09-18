@@ -5,11 +5,13 @@ export async function POST(request: NextRequest) {
   try {
     mockDb.loadFromDisk();
     const bodyPayload = await request.json();
-    const { professorEmail, subject, body, professorName } = bodyPayload;
+    const professorEmail = bodyPayload.toEmail || bodyPayload.professorEmail;
+    const subject = bodyPayload.subject;
+    const body = bodyPayload.bodyText || bodyPayload.body;
 
     if (!professorEmail || !subject || !body) {
       return NextResponse.json(
-        { success: false, error: 'professorEmail, subject, and body are required.' },
+        { success: false, error: 'Recipient email, subject, and body text are required.' },
         { status: 400 }
       );
     }
