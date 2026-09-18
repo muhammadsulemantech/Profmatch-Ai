@@ -1,5 +1,6 @@
 import { Professor, VerificationStatus, EmailVerificationStatus, RecruitingStatus } from '@/types/database';
 import { SearchProvider, SearchFilters } from './search-provider.interface';
+import { formatCleanProfessorEmail } from '@/lib/utils/email-resolver';
 
 export class TavilySearchProvider implements SearchProvider {
   name = 'Tavily Live Web & Academic Search Provider';
@@ -75,7 +76,7 @@ export class TavilySearchProvider implements SearchProvider {
           university_name: filters.country ? `${filters.country} Academic Institute` : 'Global Research University',
           university_country: filters.country || 'International',
           department_name: filters.discipline ? `${filters.discipline} Department` : 'Research Department',
-          email: `${cleanName.toLowerCase().replace(/[^a-z]/g, '.')}@university.edu`,
+          email: formatCleanProfessorEmail({ name: cleanName, university_name: filters.country ? `${filters.country} Academic Institute` : 'Global Research University' }),
           email_verification_status: 'LIKELY' as EmailVerificationStatus,
           verification_status: 'VERIFIED' as VerificationStatus,
           confidence_score: 90,

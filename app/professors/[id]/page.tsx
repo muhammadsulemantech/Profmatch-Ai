@@ -27,36 +27,7 @@ import {
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import EmailReviewModal from '@/components/outreach/email-review-modal';
-
-function formatCleanProfessorEmail(prof: Professor): string {
-  if (prof.email && prof.email.trim()) {
-    let clean = prof.email.trim();
-    // Fix double dots like dr..associate or ..com
-    clean = clean.replace(/\.{2,}/g, '.');
-    // If clean email doesn't have an @ or has invalid characters, build fallback
-    if (clean.includes('@') && !clean.includes('..')) {
-      return clean;
-    }
-  }
-
-  // Generate clean fallback email based on professor name and university domain
-  const rawName = prof.name || 'faculty';
-  const nameParts = rawName
-    .replace(/^(Dr\.|Prof\.|Associate|Full|Assistant|Professor|Department|Head|Director|\/)\s*/gi, '')
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, '')
-    .split(/\s+/)
-    .filter(Boolean);
-
-  const cleanName = nameParts.length >= 2 ? `${nameParts[0]}.${nameParts[nameParts.length - 1]}` : (nameParts[0] || 'faculty');
-  const uniHost = (prof.university_name || (typeof prof.university === 'string' ? prof.university : 'university'))
-    .toLowerCase()
-    .replace(/[^a-z]/g, '')
-    .slice(0, 14);
-
-  return `${cleanName}@${uniHost || 'academic'}.edu`;
-}
+import { formatCleanProfessorEmail } from '@/lib/utils/email-resolver';
 
 function generateDeterministicProf(id: string): Professor {
   const parts = id.split('_');
@@ -132,7 +103,7 @@ function generateDeterministicProf(id: string): Professor {
     title: index % 2 === 0 ? 'Full Professor & Department Director' : 'Associate Professor & Lab PI',
     position: `Principal Investigator, ${fieldName} Research Group`,
     department_name: `${fieldName} Department`,
-    email: `${cleanEmailName}@${university.toLowerCase().replace(/[^a-z]/g, '').slice(0, 10)}.edu`,
+    email: formatCleanProfessorEmail({ name, university_name: university }),
     email_verification_status: 'VERIFIED',
     profile_url: `https://scholar.google.com/scholar?q=${encodeURIComponent(name + ' ' + university)}`,
     research_interests: [fieldName, 'Empirical Methods', 'System Analytics'],

@@ -1,5 +1,6 @@
 import { Professor, VerificationStatus, EmailVerificationStatus, RecruitingStatus } from '@/types/database';
 import { SearchProvider, SearchFilters } from './search-provider.interface';
+import { formatCleanProfessorEmail } from '@/lib/utils/email-resolver';
 
 export class OpenAlexProvider implements SearchProvider {
   name = 'OpenAlex Live Global Academic Graph Provider';
@@ -50,7 +51,7 @@ export class OpenAlexProvider implements SearchProvider {
           university_country: countryName,
           university_region: 'Academic Region',
           department_name: concepts[0] ? `${concepts[0]} Department` : 'Academic Department',
-          email: `${displayName.toLowerCase().replace(/[^a-z]/g, '.')}@${instName.toLowerCase().replace(/[^a-z]/g, '') || 'univ'}.edu`,
+          email: formatCleanProfessorEmail({ name: displayName, university_name: instName }),
           email_verification_status: 'LIKELY' as EmailVerificationStatus,
           verification_status: 'VERIFIED' as VerificationStatus,
           confidence_score: 95,
