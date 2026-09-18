@@ -19,6 +19,7 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     }
   }
 
+  mockDb.loadFromDisk();
   return mockDb.siteSettings;
 }
 
@@ -27,6 +28,7 @@ export async function updateSiteSettings(newSettings: Partial<SiteSettings>, use
     ...mockDb.siteSettings,
     ...newSettings,
   };
+  mockDb.persist();
 
   const supabase = createClient();
   if (supabase) {

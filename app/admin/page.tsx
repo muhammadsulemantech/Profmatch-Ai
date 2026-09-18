@@ -410,6 +410,7 @@ export default function AdminDashboardPage() {
       if (res.ok && data.settings) {
         setSettings(data.settings);
         showNotice('success', 'Global site settings updated successfully!');
+        fetchAdminData(true);
       } else {
         showNotice('error', data.error || 'Failed to save settings.');
       }
@@ -456,6 +457,7 @@ export default function AdminDashboardPage() {
       if (pRes.ok && pData.section?.content?.plans) {
         setPricingPlans(pData.section.content.plans);
         showNotice('success', 'Global editorial copy & pricing plans published live!');
+        fetchAdminData(true);
       } else {
         showNotice('error', pData.error || 'Failed to publish content updates.');
       }
@@ -481,6 +483,7 @@ export default function AdminDashboardPage() {
           prev.map(f => (f.flag_key === flagKey ? { ...f, is_enabled: !currentStatus } : f))
         );
         showNotice('success', `Feature flag ${flagKey} toggled.`);
+        fetchAdminData(true);
       }
     } catch {
       showNotice('error', 'Failed to toggle feature flag.');
@@ -502,6 +505,7 @@ export default function AdminDashboardPage() {
           prev.map(u => (u.id === userId ? { ...u, is_suspended: !currentlySuspended } : u))
         );
         showNotice('success', `User account ${!currentlySuspended ? 'suspended' : 'reactivated'}.`);
+        fetchAdminData(true);
       }
     } catch {
       showNotice('error', 'Failed to modify user status.');

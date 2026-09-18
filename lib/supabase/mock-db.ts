@@ -37,6 +37,71 @@ import {
 
 // In-Memory Database Store for Resilient Local, Test & Fallback Execution
 class MockDatabase {
+  constructor() {
+    this.loadFromDisk();
+  }
+
+  public persist() {
+    this.saveToDisk();
+  }
+
+  public loadFromDisk() {
+    if (typeof window !== 'undefined') return;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
+      if (fs.existsSync(dbPath)) {
+        const raw = fs.readFileSync(dbPath, 'utf-8');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed.siteSettings) this.siteSettings = parsed.siteSettings;
+          if (parsed.siteContent) this.siteContent = parsed.siteContent;
+          if (parsed.paymentMethods) this.paymentMethods = parsed.paymentMethods;
+          if (parsed.orders) this.orders = parsed.orders;
+          if (parsed.payments) this.payments = parsed.payments;
+          if (parsed.featureFlags) this.featureFlags = parsed.featureFlags;
+          if (parsed.profiles) this.profiles = parsed.profiles;
+          if (parsed.auditLogs) this.auditLogs = parsed.auditLogs;
+          if (parsed.subscriptions) this.subscriptions = parsed.subscriptions;
+          if (parsed.universities) this.universities = parsed.universities;
+          if (parsed.professors) this.professors = parsed.professors;
+        }
+      }
+    } catch (err) {
+      console.error('[MOCK DB PERSIST LOAD ERROR]', err);
+    }
+  }
+
+  public saveToDisk() {
+    if (typeof window !== 'undefined') return;
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
+      const dataToSave = {
+        siteSettings: this.siteSettings,
+        siteContent: this.siteContent,
+        paymentMethods: this.paymentMethods,
+        orders: this.orders,
+        payments: this.payments,
+        featureFlags: this.featureFlags,
+        profiles: this.profiles,
+        auditLogs: this.auditLogs,
+        subscriptions: this.subscriptions,
+        universities: this.universities,
+        professors: this.professors,
+      };
+      const dir = path.dirname(dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      fs.writeFileSync(dbPath, JSON.stringify(dataToSave, null, 2), 'utf-8');
+    } catch (err) {
+      console.error('[MOCK DB PERSIST SAVE ERROR]', err);
+    }
+  }
+
   public profiles: UserProfile[] = [
     {
       id: 'usr_admin_001',
@@ -1754,6 +1819,7 @@ class MockDatabase {
   public savePaymentMethod(methodData: Partial<PaymentMethod> & { id?: string }): PaymentMethod {
     const existingIndex = methodData.id ? this.paymentMethods.findIndex(m => m.id === methodData.id) : -1;
     const now = new Date().toISOString();
+    let result: PaymentMethod;
 
     if (existingIndex >= 0) {
       const updated: PaymentMethod = {
@@ -1762,7 +1828,7 @@ class MockDatabase {
         updated_at: now,
       };
       this.paymentMethods[existingIndex] = updated;
-      return updated;
+      result = updated;
     } else {
       const newMethod: PaymentMethod = {
         id: methodData.id || `pm_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
@@ -1782,14 +1848,17 @@ class MockDatabase {
         updated_at: now,
       };
       this.paymentMethods.push(newMethod);
-      return newMethod;
+      result = newMethod;
     }
+    this.persist();
+    return result;
   }
 
   public deletePaymentMethod(id: string): boolean {
     const idx = this.paymentMethods.findIndex(m => m.id === id);
     if (idx >= 0) {
       this.paymentMethods.splice(idx, 1);
+      this.persist();
       return true;
     }
     return false;
@@ -1815,6 +1884,7 @@ class MockDatabase {
       updated_at: now,
     };
     this.orders.unshift(order);
+    this.persist();
     return order;
   }
 
@@ -1850,6 +1920,7 @@ class MockDatabase {
       order.updated_at = now;
     }
 
+    this.persist();
     return payment;
   }
 
@@ -1942,6 +2013,7 @@ class MockDatabase {
       });
     }
 
+    this.persist();
     return { payment, order, subscription };
   }
 }

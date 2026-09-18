@@ -17,6 +17,7 @@ export async function getSiteContentSection(sectionKey: string): Promise<SiteCon
     }
   }
 
+  mockDb.loadFromDisk();
   return mockDb.siteContent[sectionKey] || null;
 }
 
@@ -37,10 +38,12 @@ export async function getAllSiteContent(): Promise<Record<string, SiteContentSec
     }
   }
 
+  mockDb.loadFromDisk();
   return mockDb.siteContent;
 }
 
 export async function updateSiteContent(sectionKey: string, payload: Partial<SiteContentSection>, userId?: string): Promise<SiteContentSection> {
+  mockDb.loadFromDisk();
   const updatedItem: SiteContentSection = {
     section_key: sectionKey,
     title: payload.title || mockDb.siteContent[sectionKey]?.title || '',
@@ -52,6 +55,7 @@ export async function updateSiteContent(sectionKey: string, payload: Partial<Sit
   };
 
   mockDb.siteContent[sectionKey] = updatedItem;
+  mockDb.persist();
 
   const supabase = createClient();
   if (supabase) {

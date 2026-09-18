@@ -18,6 +18,7 @@ interface AuthContextType {
   authModalReason: string;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (fullName: string, email: string, password: string, targetDegree?: string) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: (googlePayload?: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   openAuthModal: (reason?: string, onAuthenticated?: () => void) => void;
   closeAuthModal: () => void;
@@ -151,6 +152,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const loginWithGoogle = async (googlePayload?: any) => {
+    try {
+      if (googlePayload && googlePayload.email) {
+        const res = await fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(googlePayload),
+        });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          return { success: false, error: data.error || 'Google Login failed.' };
+        }
+        handleAuthSuccess(data.user);
+        return { success: true };
+      } else {
+        window.location.href = '/api/auth/google';
+        return { success: true };
+      }
+    } catch {
+      return { success: false, error: 'Failed to initiate Google authentication.' };
+    }
+  };
+
   const logout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -189,6 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         authModalReason,
         login,
         signup,
+        loginWithGoogle,
         logout,
         openAuthModal,
         closeAuthModal,
