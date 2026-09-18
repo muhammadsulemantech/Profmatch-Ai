@@ -2,15 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 
 export async function GET(request: NextRequest) {
-  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-  if (!clientId) {
-    return NextResponse.json({ error: 'Google Client ID not configured.' }, { status: 500 });
-  }
-
   const { searchParams } = new URL(request.url);
   const redirectTo = searchParams.get('redirectTo') || '/dashboard';
-
   const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
+
+  const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+  if (!clientId) {
+    return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent('Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel Environment Variables.')}`);
+  }
   const redirectUri = `${origin}/api/auth/google/callback`;
 
   const state = Buffer.from(JSON.stringify({ redirectTo, origin })).toString('base64');
