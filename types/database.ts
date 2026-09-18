@@ -381,6 +381,21 @@ export interface SiteSettings {
   };
 }
 
+export interface ConnectedEmailAccount {
+  id: string;
+  user_id: string;
+  provider: 'gmail';
+  email: string;
+  google_account_id?: string;
+  access_token: string;
+  refresh_token: string;
+  token_expires_at: number;
+  scopes: string[];
+  status: 'ACTIVE' | 'EXPIRED' | 'DISCONNECTED';
+  connected_at: string;
+  last_used_at?: string;
+}
+
 export interface FeatureFlag {
   id?: string;
   flag_key: string;

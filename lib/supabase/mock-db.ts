@@ -32,7 +32,8 @@ import {
   Order,
   Payment,
   PaymentProof,
-  PlanTier
+  PlanTier,
+  ConnectedEmailAccount
 } from '@/types/database';
 
 // In-Memory Database Store for Resilient Local, Test & Fallback Execution
@@ -66,6 +67,7 @@ class MockDatabase {
           if (parsed.subscriptions) this.subscriptions = parsed.subscriptions;
           if (parsed.universities) this.universities = parsed.universities;
           if (parsed.professors) this.professors = parsed.professors;
+          if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = parsed.connectedEmailAccounts;
         }
       }
     } catch (err) {
@@ -91,6 +93,7 @@ class MockDatabase {
         subscriptions: this.subscriptions,
         universities: this.universities,
         professors: this.professors,
+        connectedEmailAccounts: this.connectedEmailAccounts,
       };
       const dir = path.dirname(dbPath);
       if (!fs.existsSync(dir)) {
@@ -101,6 +104,8 @@ class MockDatabase {
       console.error('[MOCK DB PERSIST SAVE ERROR]', err);
     }
   }
+
+  public connectedEmailAccounts: ConnectedEmailAccount[] = [];
 
   public profiles: UserProfile[] = [
     {
@@ -2015,6 +2020,56 @@ class MockDatabase {
 
     this.persist();
     return { payment, order, subscription };
+  }
+
+  public getConnectedEmailAccount(userId: string): ConnectedEmailAccount | undefined {
+    return this.connectedEmailAccounts.find(a => a.user_id === userId && a.status === 'ACTIVE');
+  }
+
+  public saveConnectedEmailAccount(data: Partial<ConnectedEmailAccount> & { user_id: string; email: string }): ConnectedEmailAccount {
+    const existingIndex = this.connectedEmailAccounts.findIndex(a => a.user_id === data.user_id && a.provider === 'gmail');
+    const now = new Date().toISOString();
+
+    if (existingIndex >= 0) {
+      const updated: ConnectedEmailAccount = {
+        ...this.connectedEmailAccounts[existingIndex],
+        ...data,
+        status: 'ACTIVE',
+        connected_at: now,
+        last_used_at: now,
+      };
+      this.connectedEmailAccounts[existingIndex] = updated;
+      this.persist();
+      return updated;
+    } else {
+      const newAcc: ConnectedEmailAccount = {
+        id: data.id || `acc_gmail_${Date.now()}`,
+        user_id: data.user_id,
+        provider: 'gmail',
+        email: data.email,
+        google_account_id: data.google_account_id,
+        access_token: data.access_token || '',
+        refresh_token: data.refresh_token || '',
+        token_expires_at: data.token_expires_at || Date.now() + 3600000,
+        scopes: data.scopes || ['https://www.googleapis.com/auth/gmail.compose'],
+        status: 'ACTIVE',
+        connected_at: now,
+        last_used_at: now,
+      };
+      this.connectedEmailAccounts.push(newAcc);
+      this.persist();
+      return newAcc;
+    }
+  }
+
+  public deleteConnectedEmailAccount(userId: string): boolean {
+    const idx = this.connectedEmailAccounts.findIndex(a => a.user_id === userId && a.provider === 'gmail');
+    if (idx >= 0) {
+      this.connectedEmailAccounts.splice(idx, 1);
+      this.persist();
+      return true;
+    }
+    return false;
   }
 }
 

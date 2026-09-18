@@ -27,6 +27,7 @@ import { mockDb } from '@/lib/supabase/mock-db';
 import { EmailPersonalizationAgent, EmailQualityAgent } from '@/lib/agents';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Professor } from '@/types/database';
+import EmailReviewModal from '@/components/outreach/email-review-modal';
 
 export default function OutreachGeneratePage() {
   const searchParams = useSearchParams();
@@ -58,6 +59,7 @@ export default function OutreachGeneratePage() {
   const [confirmedGrounded, setConfirmedGrounded] = useState(false);
   const [enableFollowUpReminder, setEnableFollowUpReminder] = useState(true);
   const [followUpDays, setFollowUpDays] = useState<number>(7);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
 
   const [qualityFeedback, setQualityFeedback] = useState<{ isValid: boolean; score: number; issues: string[] }>({
     isValid: true,
@@ -372,15 +374,26 @@ export default function OutreachGeneratePage() {
                   </span>
                 </label>
 
-                <button
-                  type="button"
-                  onClick={handleSend}
-                  disabled={!confirmedGrounded || isSending}
-                  className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
-                >
-                  <Send className="w-4 h-4" />
-                  {isSending ? 'Sending Outreach...' : 'Approve & Send Outreach'}
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsReviewModalOpen(true)}
+                    className="py-3 rounded-xl bg-slate-900 border border-emerald-500/40 hover:bg-slate-800 text-emerald-300 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-sm"
+                  >
+                    <Mail className="w-4 h-4 text-emerald-400" />
+                    Create Gmail Draft
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleSend}
+                    disabled={!confirmedGrounded || isSending}
+                    className="py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 disabled:opacity-40 transition-all"
+                  >
+                    <Send className="w-4 h-4" />
+                    {isSending ? 'Sending Outreach...' : 'Approve & Send'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -487,6 +500,14 @@ export default function OutreachGeneratePage() {
           </div>
         </div>
       </div>
+
+      <EmailReviewModal
+        isOpen={isReviewModalOpen}
+        onClose={() => setIsReviewModalOpen(false)}
+        professor={prof}
+        initialSubject={subject}
+        initialBody={bodyText}
+      />
     </div>
   );
 }

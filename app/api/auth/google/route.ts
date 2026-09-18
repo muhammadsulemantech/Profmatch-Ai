@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
   if (!clientId) {
     return NextResponse.redirect(`${origin}/login?error=${encodeURIComponent('Please add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in Vercel Environment Variables.')}`);
   }
-  const redirectUri = `${origin}/api/auth/google/callback`;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/callback`;
 
   const state = Buffer.from(JSON.stringify({ redirectTo, origin })).toString('base64');
 

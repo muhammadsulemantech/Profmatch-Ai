@@ -26,6 +26,7 @@ import {
   GraduationCap
 } from 'lucide-react';
 import { Professor } from '@/types/database';
+import EmailReviewModal from '@/components/outreach/email-review-modal';
 
 function formatCleanProfessorEmail(prof: Professor): string {
   if (prof.email && prof.email.trim()) {
@@ -180,6 +181,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
   
   // Modals state
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+  const [isEmailModalOpen, setIsEmailModalOpen] = useState(false);
   const [selectedPublication, setSelectedPublication] = useState<any | null>(null);
 
   useEffect(() => {
@@ -311,11 +313,20 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
                 AI Match Analysis
               </button>
 
+              <button
+                type="button"
+                onClick={() => setIsEmailModalOpen(true)}
+                className="flex-1 md:flex-none px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+              >
+                <Mail className="w-4 h-4" />
+                Generate Email &amp; Create Gmail Draft
+              </button>
+
               <Link
                 href={`/outreach/generate?professorId=${prof.id}`}
-                className="flex-1 md:flex-none px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
               >
-                Draft Grounded Email <ArrowRight className="w-4 h-4" />
+                Outreach Studio <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>
           </div>
@@ -704,6 +715,13 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
           </div>
         </div>
       )}
+
+      {/* MODAL 3: Email Review & Gmail Draft Modal */}
+      <EmailReviewModal
+        isOpen={isEmailModalOpen}
+        onClose={() => setIsEmailModalOpen(false)}
+        professor={prof}
+      />
     </div>
   );
 }
