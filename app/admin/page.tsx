@@ -565,16 +565,10 @@ export default function AdminDashboardPage() {
           <div className="flex items-center gap-2.5">
             <button
               onClick={() => fetchAdminData(false)}
-              className="p-2.5 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shadow-sm"
+              className="px-3 py-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-300 hover:text-white hover:bg-slate-800 transition-colors shadow-sm text-xs flex items-center gap-1.5"
               title="Refresh Telemetry"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-emerald-400' : ''}`} />
-            </button>
-            <button
-              onClick={handleAdminLogout}
-              className="px-4 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-sm"
-            >
-              <LogOut className="w-3.5 h-3.5" /> Sign Out
+              <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-emerald-400' : ''}`} /> Refresh
             </button>
           </div>
         </div>
