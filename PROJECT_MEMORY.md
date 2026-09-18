@@ -76,3 +76,13 @@
 9. [app/api/auth/google/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/route.ts) & [app/api/auth/google/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/callback/route.ts):
    - Google Client ID & Secret configuration with automatic OAuth token exchange & user profile creation.
    - 1-Click "Continue with Google" buttons on Login, Signup, and Auth Modal components.
+
+### ✉️ Direct Gmail Drafts Integration (`gmail.compose`)
+10. [app/api/auth/google/gmail/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/gmail/route.ts), [app/settings/page.tsx](file:///e:/profmatch%20ai%20project/app/settings/page.tsx) & [components/outreach/email-review-modal.tsx](file:///e:/profmatch%20ai%20project/components/outreach/email-review-modal.tsx):
+    - Google OAuth 2.0 authorization code flow using minimal sensitive scope `https://www.googleapis.com/auth/gmail.compose`.
+    - Server-side token management with `access_type=offline` and automatic token auto-refresh.
+    - In-App Email Review Modal for reviewing/editing To, Subject, and Body text prior to draft creation.
+    - Direct Base64URL encoded RFC 2822 MIME formatting sent to Gmail `drafts.create` API.
+    - Direct 1-Click link (`https://mail.google.com/mail/u/0/#drafts`) to open unsent drafts in official Gmail inbox.
+    - Dedicated Email Integration management card in Account Settings (`/settings`).
+

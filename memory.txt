@@ -65,6 +65,14 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
     - 3-Step Live Payment Verification Progress Bar.
     - Digital PDF Billing Receipt print/download functionality.
 
+[9] Direct Gmail Drafts Integration (gmail.compose)
+    - OAuth 2.0 authorization code flow using minimal scope https://www.googleapis.com/auth/gmail.compose.
+    - Offline token storage with automatic token refresh.
+    - In-App Email Review Modal (components/outreach/email-review-modal.tsx) for editing To, Subject, and Body text.
+    - Direct RFC 2822 Base64URL draft creation via Gmail API (app/api/outreach/create-draft/route.ts).
+    - 1-Click link (https://mail.google.com/mail/u/0/#drafts) for opening unsent drafts in Gmail.
+    - Dedicated Email Integration card in Settings (app/settings/page.tsx).
+
 --------------------------------------------------------------------
 4. SYSTEM ARCHITECTURE & CODE CONVENTIONS
 --------------------------------------------------------------------
