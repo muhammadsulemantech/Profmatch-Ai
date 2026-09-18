@@ -30,7 +30,8 @@ import {
   Lock,
   LogOut,
   User,
-  ShieldAlert
+  ShieldAlert,
+  Link2
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 
@@ -225,6 +226,15 @@ export default function DashboardPage() {
                 >
                   <CreditCard className="w-4 h-4" />
                   Billing
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleProtectedAction('manage email & API integrations', '/connectors')}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors text-left"
+                >
+                  <Link2 className="w-4 h-4 text-emerald-400" />
+                  Connectors
                 </button>
 
                 <button

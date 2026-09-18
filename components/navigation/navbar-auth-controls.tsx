@@ -24,15 +24,6 @@ export default function NavbarAuthControls() {
             <span className="max-w-[120px] truncate hidden sm:inline">{user.full_name}</span>
           </Link>
 
-          {/* Settings Link */}
-          <Link
-            href="/settings"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-900/80 border border-transparent hover:border-slate-800 transition-colors text-xs inline-flex items-center gap-1"
-            title="Account Settings"
-          >
-            <span className="hidden md:inline text-xs font-medium">Settings</span>
-          </Link>
-
           {/* Logout Button */}
           <button
             type="button"

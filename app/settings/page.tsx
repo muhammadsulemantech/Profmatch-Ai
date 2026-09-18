@@ -166,19 +166,11 @@ export default function SettingsPage() {
                     Open Gmail Drafts <ExternalLink className="w-3 h-3" />
                   </a>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-slate-300 pt-2 border-t border-emerald-500/20 text-[11px]">
-                  <div>
-                    <span className="text-slate-400 block">Connected Date:</span>
-                    <span className="font-mono text-white">
-                      {new Date(connectedStatus.account.connected_at).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div>
-                    <span className="text-slate-400 block">Authorized Scope:</span>
-                    <span className="font-mono text-emerald-300">
-                      https://www.googleapis.com/auth/gmail.compose
-                    </span>
-                  </div>
+                <div className="pt-2 border-t border-emerald-500/20 text-[11px] text-slate-300">
+                  <span className="text-slate-400">Connected Date: </span>
+                  <span className="font-mono text-white">
+                    {new Date(connectedStatus.account.connected_at).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             )}

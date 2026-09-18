@@ -2022,21 +2022,22 @@ class MockDatabase {
     return { payment, order, subscription };
   }
 
-  public getConnectedEmailAccount(userId: string): ConnectedEmailAccount | undefined {
-    return this.connectedEmailAccounts.find(a => (a.user_id === userId || a.user_id === 'usr_student_001' || !userId) && a.status === 'ACTIVE')
-        || this.connectedEmailAccounts.find(a => a.status === 'ACTIVE');
+  public getConnectedEmailAccount(userId?: string): ConnectedEmailAccount | undefined {
+    return this.connectedEmailAccounts.find(a => a.status === 'ACTIVE');
   }
 
-  public saveConnectedEmailAccount(data: Partial<ConnectedEmailAccount> & { user_id: string; email: string }): ConnectedEmailAccount {
-    const existingIndex = this.connectedEmailAccounts.findIndex(a => a.user_id === data.user_id && a.provider === 'gmail');
+  public saveConnectedEmailAccount(data: Partial<ConnectedEmailAccount> & { email: string; user_id?: string }): ConnectedEmailAccount {
+    const existingIndex = this.connectedEmailAccounts.findIndex(a => a.provider === 'gmail');
     const now = new Date().toISOString();
+    const targetUserId = data.user_id || 'global_user';
 
     if (existingIndex >= 0) {
       const updated: ConnectedEmailAccount = {
         ...this.connectedEmailAccounts[existingIndex],
         ...data,
+        user_id: targetUserId,
         status: 'ACTIVE',
-        connected_at: now,
+        connected_at: this.connectedEmailAccounts[existingIndex].connected_at || now,
         last_used_at: now,
       };
       this.connectedEmailAccounts[existingIndex] = updated;
@@ -2045,7 +2046,7 @@ class MockDatabase {
     } else {
       const newAcc: ConnectedEmailAccount = {
         id: data.id || `acc_gmail_${Date.now()}`,
-        user_id: data.user_id,
+        user_id: targetUserId,
         provider: 'gmail',
         email: data.email,
         google_account_id: data.google_account_id,
@@ -2063,10 +2064,9 @@ class MockDatabase {
     }
   }
 
-  public deleteConnectedEmailAccount(userId: string): boolean {
-    const idx = this.connectedEmailAccounts.findIndex(a => a.user_id === userId && a.provider === 'gmail');
-    if (idx >= 0) {
-      this.connectedEmailAccounts.splice(idx, 1);
+  public deleteConnectedEmailAccount(userId?: string): boolean {
+    if (this.connectedEmailAccounts.length > 0) {
+      this.connectedEmailAccounts = [];
       this.persist();
       return true;
     }
