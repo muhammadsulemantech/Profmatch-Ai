@@ -2,7 +2,7 @@
 
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Tavily Search, OpenAlex API  
-> **Memory File Location:** [`memory.txt`](file:///e:/student%20sir/memory.txt) & [`PROJECT_MEMORY.md`](file:///e:/student%20sir/PROJECT_MEMORY.md)
+> **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)
 
 ---
 
@@ -10,7 +10,7 @@
 - **Admin Email:** `sulemanmunir6752@gmail.com`
 - **Admin Password:** `suleman6752`
 - **Backup Admin Email:** `admin@profmatch.ai`
-- **Admin Security Guarantee:** [middleware.ts](file:///e:/student%20sir/middleware.ts) + Server Cookie (`profmatch_role=admin`) automatically enforces admin dashboard privileges whenever logging in from Admin Console.
+- **Admin Security Guarantee:** [middleware.ts](file:///e:/profmatch%20ai%20project/middleware.ts) + Server Cookie (`profmatch_role=admin`) automatically enforces admin dashboard privileges whenever logging in from Admin Console.
 
 ---
 
@@ -28,61 +28,47 @@
 ## 3. Implemented Features & Pages Index
 
 ### 🌐 Global & Navigation
-1. [app/layout.tsx](file:///e:/student%20sir/app/layout.tsx) & [app/page.tsx](file:///e:/student%20sir/app/page.tsx):
+1. [app/layout.tsx](file:///e:/profmatch%20ai%20project/app/layout.tsx) & [app/page.tsx](file:///e:/profmatch%20ai%20project/app/page.tsx):
    - Global Candidate Acceptance Ticker ("1,420+ MS & PhD Candidates Matched across 190+ Countries").
    - Added **Tracker** navigation link (`/tracker`).
-   - Sticky Top Navbar overlay fixed (login/signup pages start below navbar).
+   - Unified global navbar authentication controls ([components/navigation/navbar-auth-controls.tsx](file:///e:/profmatch%20ai%20project/components/navigation/navbar-auth-controls.tsx)) with Admin role status badge linking directly to `/admin`.
+   - `export const dynamic = 'force-dynamic'` enabled so live admin edits (pricing, taglines, announcement banners) immediately reflect to all site visitors.
 
 ### 🔐 Auth Pages
-2. [app/login/page.tsx](file:///e:/student%20sir/app/login/page.tsx) & [app/signup/page.tsx](file:///e:/student%20sir/app/signup/page.tsx):
+2. [app/login/page.tsx](file:///e:/profmatch%20ai%20project/app/login/page.tsx) & [app/signup/page.tsx](file:///e:/profmatch%20ai%20project/app/signup/page.tsx):
    - Scroll overflow locked on auth pages (prevents background site scroll).
    - Fully responsive design on all mobile & desktop screen sizes.
 
 ### 👤 Candidate Profile & Resume AI
-3. [app/profile/page.tsx](file:///e:/student%20sir/app/profile/page.tsx):
+3. [app/profile/page.tsx](file:///e:/profmatch%20ai%20project/app/profile/page.tsx):
    - 1-Click CV AI Auto-Parser (extracts research keywords, updates bio, target degree, displays feedback banner).
 
 ### 🎓 Professor Details & Match Engine
-4. [app/professors/[id]/page.tsx](file:///e:/student%20sir/app/professors/[id]/page.tsx):
+4. [app/professors/[id]/page.tsx](file:///e:/profmatch%20ai%20project/app/professors/[id]/page.tsx):
    - AI Match Analysis Modal (% match calculation between candidate profile & faculty thesis/publications).
-   - Live DOI Badges & OpenAlex Paper Links.
-   - In-App Publication Inspector Modal (replaces external Google Scholar redirects).
-   - Live University Directory Audit Badge.
-   - Clean contact row formatting (zero email truncations or double dots).
+   - Live DOI Badges & OpenAlex Paper Links (`api.openalex.org/works`).
+   - Cleaned title prefixes (`Dr.`, `Prof.`) via `cleanProfessorNameForSearch` to prevent zero-result Google Scholar/OpenAlex search errors.
+   - Centralized official university email domain resolver ([lib/utils/email-resolver.ts](file:///e:/profmatch%20ai%20project/lib/utils/email-resolver.ts)) mapping global top institutions to real official domains.
 
-### ✉️ AI Outreach Generator
-5. [app/outreach/generate/page.tsx](file:///e:/student%20sir/app/outreach/generate/page.tsx):
-   - Email Deliverability Anti-Spam Health Meter.
-   - AI Quality & Tone Grader widget (Professional, Persuasive, Conciseness scores).
-   - Grounded Citation Highlighting.
-   - 7-Day & 14-Day Automated Follow-Up Reminders scheduler.
+### ✉️ AI Outreach Generator & Gmail Drafts
+5. [app/outreach/generate/page.tsx](file:///e:/profmatch%20ai%20project/app/outreach/generate/page.tsx):
+   - Direct Gmail Drafts integration via Google OAuth 2.0 (`https://www.googleapis.com/auth/gmail.compose`).
+   - In-App Email Review Modal prior to draft creation with Base64URL encoded RFC 2822 MIME output.
+   - Dedicated Connectors Hub ([app/connectors/page.tsx](file:///e:/profmatch%20ai%20project/app/connectors/page.tsx)) for managing Gmail & external integrations.
+   - Deliverability Anti-Spam Health Meter, AI Quality Grader, and 7-Day / 14-Day follow-up scheduler.
 
 ### 📋 Application Kanban Tracker
-6. [app/tracker/page.tsx](file:///e:/student%20sir/app/tracker/page.tsx):
+6. [app/tracker/page.tsx](file:///e:/profmatch%20ai%20project/app/tracker/page.tsx):
    - 5 Application Stages: *Saved Faculty*, *Outreach Sent*, *Replied*, *Interview*, *Accepted*.
    - Drag & Move between stages, custom note modal, persistent storage.
 
 ### 💳 Payments & Receipts
-7. [app/checkout/status/[reference]/page.tsx](file:///e:/student%20sir/app/checkout/status/[reference]/page.tsx):
+7. [app/checkout/status/[reference]/page.tsx](file:///e:/profmatch%20ai%20project/app/checkout/status/[reference]/page.tsx):
    - 3-Step Live Payment Verification Audit Progress Bar.
    - Digital PDF Billing Receipt print/download generator.
 
-### ⚙️ Real-Time Admin Panel & Permanent Data Store
+### ⚙️ Real-Time Admin Panel & Disk Persistence Engine
 8. [app/admin/page.tsx](file:///e:/profmatch%20ai%20project/app/admin/page.tsx) & [database/persistent_store.json](file:///e:/profmatch%20ai%20project/database/persistent_store.json):
+   - Single unified Sign Out control in top navbar (removed redundant in-page banner logout).
    - Dynamic real-time editable pricing plans, hero copy, site settings, payment methods, feature flags, user accounts & audit logs.
-   - Permanent JSON file-backed persistence (`loadFromDisk` & `saveToDisk`) surviving logins, reboots, and refreshes.
-
-### 🔑 Google OAuth 2.0 Auth Integration
-9. [app/api/auth/google/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/route.ts) & [app/api/auth/google/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/callback/route.ts):
-   - Google Client ID & Secret configuration with automatic OAuth token exchange & user profile creation.
-   - 1-Click "Continue with Google" buttons on Login, Signup, and Auth Modal components.
-
-### ✉️ Direct Gmail Drafts Integration (`gmail.compose`)
-10. [app/api/auth/google/gmail/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/gmail/route.ts), [app/settings/page.tsx](file:///e:/profmatch%20ai%20project/app/settings/page.tsx) & [components/outreach/email-review-modal.tsx](file:///e:/profmatch%20ai%20project/components/outreach/email-review-modal.tsx):
-    - Google OAuth 2.0 authorization code flow using minimal sensitive scope `https://www.googleapis.com/auth/gmail.compose`.
-    - Server-side token management with `access_type=offline` and automatic token auto-refresh.
-    - In-App Email Review Modal for reviewing/editing To, Subject, and Body text prior to draft creation.
-    - Direct Base64URL encoded RFC 2822 MIME formatting sent to Gmail `drafts.create` API.
-    - Direct 1-Click link (`https://mail.google.com/mail/u/0/#drafts`) to open unsent drafts in official Gmail inbox.
-    - Dedicated Email Integration management card in Account Settings (`/settings`).
-
+   - Mandatory disk storage re-sync (`mockDb.loadFromDisk()`) added across all API GET handlers (`/api/admin/settings`, `/api/admin/content`, `/api/admin/payment-methods`, `/api/admin/payments`, `/api/admin/audit-logs`) ensuring 100% data persistence across logins, reboots, and multi-day gaps.
