@@ -67,6 +67,12 @@
    - 3-Step Live Payment Verification Audit Progress Bar.
    - Digital PDF Billing Receipt print/download generator.
 
-### ⚙️ Real-Time Admin Panel
-8. [app/admin/pricing/page.tsx](file:///e:/student%20sir/app/admin/pricing/page.tsx):
-   - Dynamic real-time editable pricing plans & features.
+### ⚙️ Real-Time Admin Panel & Permanent Data Store
+8. [app/admin/page.tsx](file:///e:/profmatch%20ai%20project/app/admin/page.tsx) & [database/persistent_store.json](file:///e:/profmatch%20ai%20project/database/persistent_store.json):
+   - Dynamic real-time editable pricing plans, hero copy, site settings, payment methods, feature flags, user accounts & audit logs.
+   - Permanent JSON file-backed persistence (`loadFromDisk` & `saveToDisk`) surviving logins, reboots, and refreshes.
+
+### 🔑 Google OAuth 2.0 Auth Integration
+9. [app/api/auth/google/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/route.ts) & [app/api/auth/google/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/callback/route.ts):
+   - Google Client ID & Secret configuration with automatic OAuth token exchange & user profile creation.
+   - 1-Click "Continue with Google" buttons on Login, Signup, and Auth Modal components.
