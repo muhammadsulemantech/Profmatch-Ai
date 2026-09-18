@@ -69,6 +69,8 @@ class MockDatabase {
           if (parsed.professors) this.professors = parsed.professors;
           if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = parsed.connectedEmailAccounts;
         }
+      } else {
+        this.saveToDisk();
       }
     } catch (err) {
       console.error('[MOCK DB PERSIST LOAD ERROR]', err);

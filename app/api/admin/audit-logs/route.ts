@@ -25,5 +25,6 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET() {
+  mockDb.loadFromDisk();
   return NextResponse.json({ logs: mockDb.auditLogs.slice(0, 100) });
 }

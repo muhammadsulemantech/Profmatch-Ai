@@ -3,6 +3,7 @@ import { createClient } from '@/lib/supabase/server';
 import { SiteSettings } from '@/types/database';
 
 export async function getSiteSettings(): Promise<SiteSettings> {
+  mockDb.loadFromDisk();
   const supabase = createClient();
   if (supabase) {
     try {
@@ -19,11 +20,11 @@ export async function getSiteSettings(): Promise<SiteSettings> {
     }
   }
 
-  mockDb.loadFromDisk();
   return mockDb.siteSettings;
 }
 
 export async function updateSiteSettings(newSettings: Partial<SiteSettings>, userId?: string): Promise<SiteSettings> {
+  mockDb.loadFromDisk();
   mockDb.siteSettings = {
     ...mockDb.siteSettings,
     ...newSettings,

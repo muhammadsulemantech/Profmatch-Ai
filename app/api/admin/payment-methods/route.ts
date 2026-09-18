@@ -3,6 +3,7 @@ import { mockDb } from '@/lib/supabase/mock-db';
 
 export async function GET() {
   try {
+    mockDb.loadFromDisk();
     return NextResponse.json({
       success: true,
       total: mockDb.paymentMethods.length,

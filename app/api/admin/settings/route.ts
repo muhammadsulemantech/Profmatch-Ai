@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
-import { updateSiteSettings } from '@/lib/cms/settings-service';
+import { getSiteSettings, updateSiteSettings } from '@/lib/cms/settings-service';
 import { logAuditEvent } from '@/lib/security/audit';
 
 export async function GET() {
-  return NextResponse.json({ success: true, settings: mockDb.siteSettings });
+  const settings = await getSiteSettings();
+  return NextResponse.json({ success: true, settings });
 }
 
 export async function PUT(request: NextRequest) {
