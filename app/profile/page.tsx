@@ -177,6 +177,20 @@ export default function ProfilePage() {
     uploaded_at: cvDoc.created_at || new Date().toISOString(),
   });
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const keywordContainerRef = useRef<HTMLDivElement>(null);
+
+  // Close keyword suggestions on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (keywordContainerRef.current && !keywordContainerRef.current.contains(event.target as Node)) {
+        setIsSuggestionOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Sync state with localStorage per user
   useEffect(() => {
@@ -271,14 +285,30 @@ export default function ProfilePage() {
   };
 
   const handleAddInterest = (itemToAdd?: string) => {
-    const target = (itemToAdd || newInterest).trim();
-    if (target && !interests.includes(target)) {
-      const updated = [...interests, target];
+    const raw = (typeof itemToAdd === 'string' ? itemToAdd : newInterest).trim();
+    if (!raw) return;
+
+    // Support comma-separated multiple keywords e.g. "Sustainable Cities, CRISPR Assays"
+    const candidates = raw.includes(',')
+      ? raw.split(',').map(s => s.trim()).filter(Boolean)
+      : [raw];
+
+    const toAdd: string[] = [];
+    candidates.forEach(c => {
+      const alreadyExists = interests.some(i => i.toLowerCase() === c.toLowerCase());
+      if (!alreadyExists) {
+        toAdd.push(c);
+      }
+    });
+
+    if (toAdd.length > 0) {
+      const updated = [...interests, ...toAdd];
       setInterests(updated);
       saveInterestsToStorage(updated);
-      setNewInterest('');
-      setIsSuggestionOpen(false);
     }
+
+    setNewInterest('');
+    setIsSuggestionOpen(false);
   };
 
   const handleRemoveInterest = (item: string) => {
@@ -622,7 +652,7 @@ export default function ProfilePage() {
                 ))}
               </div>
 
-              <div className="relative flex flex-col sm:flex-row gap-2">
+              <div ref={keywordContainerRef} className="relative flex flex-col sm:flex-row gap-2">
                 <div className="relative flex-1">
                   <input
                     type="text"
@@ -632,6 +662,14 @@ export default function ProfilePage() {
                       setIsSuggestionOpen(true);
                     }}
                     onFocus={() => setIsSuggestionOpen(true)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddInterest();
+                      } else if (e.key === 'Escape') {
+                        setIsSuggestionOpen(false);
+                      }
+                    }}
                     placeholder="e.g. Sustainable Cities, CRISPR Assays, Applied Econometrics"
                     className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
                   />
@@ -647,7 +685,10 @@ export default function ProfilePage() {
                         <button
                           key={item}
                           type="button"
-                          onClick={() => handleAddInterest(item)}
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            handleAddInterest(item);
+                          }}
                           className="w-full text-left px-3.5 py-2 text-xs text-slate-200 hover:bg-emerald-500/15 hover:text-emerald-300 transition-colors flex items-center justify-between"
                         >
                           <span>{item}</span>
@@ -660,8 +701,16 @@ export default function ProfilePage() {
 
                 <button
                   type="button"
-                  onClick={() => handleAddInterest()}
-                  className="px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-semibold flex items-center justify-center gap-1 shrink-0 transition-colors"
+                  id="btn-add-keyword"
+                  onClick={e => {
+                    e.preventDefault();
+                    handleAddInterest();
+                  }}
+                  className={`px-5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shrink-0 transition-all ${
+                    newInterest.trim()
+                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-md shadow-emerald-500/20 scale-[1.02]'
+                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200'
+                  }`}
                 >
                   <Plus className="w-3.5 h-3.5 text-emerald-400" /> Add Keyword
                 </button>
