@@ -39,40 +39,14 @@ export async function POST(request: NextRequest) {
     const cleanEmail = email.toLowerCase().trim();
     const isSystemAdmin = cleanEmail === 'sulemanmunir6752@gmail.com' || cleanEmail === 'admin@profmatch.ai';
 
-    let user = mockDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
-    const now = new Date().toISOString();
-
-    if (!user) {
-      user = {
-        id: sub ? `usr_google_${sub}` : `usr_g_${Date.now()}`,
-        email: cleanEmail,
-        full_name: name || email.split('@')[0],
-        avatar_url: picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-        role: isSystemAdmin ? 'ADMIN' : 'USER',
-        is_suspended: false,
-        created_at: now,
-        updated_at: now,
-      };
-      mockDb.profiles.push(user);
-
-      // Create student profile
-      mockDb.studentProfiles.push({
-        id: `sp_${Date.now()}`,
-        user_id: user.id,
-        country: 'Global',
-        target_degree: targetDegree || 'PhD',
-        target_country: 'United States',
-        target_state: 'Global',
-        target_intake: 'Fall 2027',
-        funding_preference: 'Fully Funded (RA/TA)',
-        desired_field: 'Artificial Intelligence & Computer Science',
-        bio: `Graduate applicant (${user.full_name}) registered via Google Auth.`,
-        created_at: now,
-        updated_at: now,
-      });
-
-      mockDb.persist();
-    }
+    const user = mockDb.autoSaveUser({
+      id: sub ? `usr_google_${sub}` : undefined,
+      email: cleanEmail,
+      full_name: name || email.split('@')[0],
+      avatar_url: picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      role: isSystemAdmin ? 'ADMIN' : 'USER',
+      target_degree: targetDegree || 'PhD',
+    });
 
     const responseUser = {
       id: user.id,

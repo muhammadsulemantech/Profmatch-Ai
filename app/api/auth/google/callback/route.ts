@@ -62,41 +62,14 @@ export async function GET(request: NextRequest) {
     const cleanEmail = googleUser.email.toLowerCase().trim();
     const isSystemAdmin = cleanEmail === 'sulemanmunir6752@gmail.com' || cleanEmail === 'admin@profmatch.ai';
 
-    mockDb.loadFromDisk();
-    let user = mockDb.profiles.find((p) => p.email.toLowerCase() === cleanEmail);
-    const now = new Date().toISOString();
-
-    if (!user) {
-      user = {
-        id: googleUser.id ? `usr_google_${googleUser.id}` : `usr_g_${Date.now()}`,
-        email: cleanEmail,
-        full_name: googleUser.name || googleUser.email.split('@')[0],
-        avatar_url: googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-        role: isSystemAdmin ? 'ADMIN' : 'USER',
-        is_suspended: false,
-        created_at: now,
-        updated_at: now,
-      };
-      mockDb.profiles.push(user);
-
-      // Create student profile
-      mockDb.studentProfiles.push({
-        id: `sp_${Date.now()}`,
-        user_id: user.id,
-        country: 'Global',
-        target_degree: 'PhD',
-        target_country: 'United States',
-        target_state: 'Global',
-        target_intake: 'Fall 2027',
-        funding_preference: 'Fully Funded (RA/TA)',
-        desired_field: 'Artificial Intelligence & Computer Science',
-        bio: `Graduate applicant (${user.full_name}) registered via Google Auth.`,
-        created_at: now,
-        updated_at: now,
-      });
-
-      mockDb.persist();
-    }
+    const user = mockDb.autoSaveUser({
+      id: googleUser.id ? `usr_google_${googleUser.id}` : undefined,
+      email: cleanEmail,
+      full_name: googleUser.name || googleUser.email.split('@')[0],
+      avatar_url: googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      role: isSystemAdmin ? 'ADMIN' : 'USER',
+      target_degree: 'PhD',
+    });
 
     const responseUser = {
       id: user.id,

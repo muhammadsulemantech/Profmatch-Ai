@@ -99,14 +99,19 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Absolute Guarantee for Admin Email
+    // Absolute Guarantee for Admin Email & Automatic Persistent DB Save
     if (isAdminEmail) {
       matchedUser.role = 'ADMIN';
-      const dbAdmin = mockDb.profiles.find(p => p.email.toLowerCase() === email);
-      if (dbAdmin) {
-        dbAdmin.role = 'ADMIN';
-      }
     }
+
+    // Auto-save user permanently into persistent database
+    matchedUser = mockDb.autoSaveUser({
+      id: matchedUser.id,
+      email: matchedUser.email,
+      full_name: matchedUser.full_name,
+      avatar_url: matchedUser.avatar_url,
+      role: matchedUser.role,
+    });
 
     if (matchedUser.is_suspended) {
       return NextResponse.json(

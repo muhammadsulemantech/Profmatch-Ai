@@ -46,6 +46,15 @@ export async function POST(request: NextRequest) {
     // Generate unique order reference
     const orderReference = `PM-${Math.floor(100000 + Math.random() * 900000)}`;
 
+    // Ensure the paying user is automatically recorded in the database
+    if (userEmail) {
+      mockDb.autoSaveUser({
+        id: userId,
+        email: userEmail,
+        full_name: userName,
+      });
+    }
+
     const provider = new ManualPaymentProvider();
     const result = await provider.submitProof({
       orderReference,

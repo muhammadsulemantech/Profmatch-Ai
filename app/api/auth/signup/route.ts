@@ -101,41 +101,13 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 3. Save profile to database store
-    mockDb.profiles.push(newUser);
-
-    // Create student profile record
-    const newStudentProfile: StudentProfile = {
-      id: `std_${newUserId}`,
-      user_id: newUser.id,
-      country: 'Global',
+    // 3. Auto-save profile to persistent database store & create student profile + subscription
+    const savedUser = mockDb.autoSaveUser({
+      id: newUser.id,
+      email: newUser.email,
+      full_name: newUser.full_name,
       target_degree: targetDegree,
-      target_country: 'Global',
-      target_state: null,
-      target_intake: 'Fall 2027',
-      funding_preference: 'Fully Funded',
-      desired_field: 'Academic Research',
-      bio: null,
-      created_at: now,
-      updated_at: now,
-    };
-    mockDb.studentProfiles.push(newStudentProfile);
-
-    // Create default FREE subscription record
-    mockDb.subscriptions.push({
-      id: `sub_${newUserId}`,
-      user_id: newUser.id,
-      plan_type: 'FREE',
-      status: 'active',
-      current_period_start: now,
-      current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
-      cancel_at_period_end: false,
-      created_at: now,
-      updated_at: now,
     });
-
-    // Save to disk immediately so user appears in admin dashboard and persistent DB
-    mockDb.persist();
 
     // 4. Send the required Welcome Email immediately upon account creation
     try {
@@ -159,12 +131,12 @@ export async function POST(request: NextRequest) {
     });
 
     // 5. Create secure session cookies
-    const sessionToken = `session_${newUser.id}_${Date.now()}`;
+    const sessionToken = `session_${savedUser.id}_${Date.now()}`;
     const sanitizedUser = {
-      id: newUser.id,
-      email: newUser.email,
-      full_name: newUser.full_name,
-      role: newUser.role,
+      id: savedUser.id,
+      email: savedUser.email,
+      full_name: savedUser.full_name,
+      role: savedUser.role,
       target_degree: targetDegree,
     };
 
@@ -184,7 +156,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
     });
 
-    response.cookies.set('profmatch_role', newUser.role, {
+    response.cookies.set('profmatch_role', savedUser.role, {
       path: '/',
       maxAge,
       sameSite: 'lax',

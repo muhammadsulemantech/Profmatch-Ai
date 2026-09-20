@@ -63,6 +63,7 @@ class MockDatabase {
           if (parsed.payments) this.payments = parsed.payments;
           if (parsed.featureFlags) this.featureFlags = parsed.featureFlags;
           if (parsed.profiles) this.profiles = parsed.profiles;
+          if (parsed.studentProfiles) this.studentProfiles = parsed.studentProfiles;
           if (parsed.auditLogs) this.auditLogs = parsed.auditLogs;
           if (parsed.subscriptions) this.subscriptions = parsed.subscriptions;
           if (parsed.universities) this.universities = parsed.universities;
@@ -91,6 +92,7 @@ class MockDatabase {
         payments: this.payments,
         featureFlags: this.featureFlags,
         profiles: this.profiles,
+        studentProfiles: this.studentProfiles,
         auditLogs: this.auditLogs,
         subscriptions: this.subscriptions,
         universities: this.universities,
@@ -105,6 +107,111 @@ class MockDatabase {
     } catch (err) {
       console.error('[MOCK DB PERSIST SAVE ERROR]', err);
     }
+  }
+
+  /**
+   * Automatically saves any newly signed-up or logged-in user permanently to disk and database
+   */
+  public autoSaveUser(userData: {
+    id?: string;
+    email: string;
+    full_name?: string | null;
+    avatar_url?: string | null;
+    role?: string;
+    target_degree?: string;
+  }): UserProfile {
+    this.loadFromDisk();
+
+    const email = (userData.email || '').toLowerCase().trim();
+    if (!email) {
+      throw new Error('Email is required to auto-save user.');
+    }
+
+    const isAdmin = email === 'sulemanmunir6752@gmail.com' || email === 'admin@profmatch.ai';
+    const now = new Date().toISOString();
+
+    const existing = this.profiles.find(
+      p => p.email.toLowerCase() === email || (userData.id && p.id === userData.id)
+    );
+
+    if (existing) {
+      if (userData.full_name && userData.full_name !== existing.full_name) {
+        existing.full_name = userData.full_name;
+      }
+      if (userData.avatar_url && !existing.avatar_url) {
+        existing.avatar_url = userData.avatar_url;
+      }
+      if (isAdmin) {
+        existing.role = 'ADMIN';
+      }
+      existing.updated_at = now;
+
+      // Ensure subscription exists
+      const hasSub = this.subscriptions.some(s => s.user_id === existing.id);
+      if (!hasSub) {
+        this.subscriptions.push({
+          id: `sub_${existing.id}`,
+          user_id: existing.id,
+          plan_type: isAdmin ? 'ELITE' : 'FREE',
+          status: 'active',
+          current_period_start: now,
+          current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+          cancel_at_period_end: false,
+          created_at: now,
+          updated_at: now,
+        });
+      }
+
+      this.persist();
+      return existing;
+    }
+
+    const newUserId = userData.id || `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    const newUser: UserProfile = {
+      id: newUserId,
+      email,
+      full_name: userData.full_name || email.split('@')[0],
+      avatar_url: userData.avatar_url || null,
+      role: isAdmin ? 'ADMIN' : ((userData.role as any) || 'USER'),
+      is_suspended: false,
+      created_at: now,
+      updated_at: now,
+    };
+
+    this.profiles.push(newUser);
+
+    // Auto-create default student profile
+    this.studentProfiles.push({
+      id: `std_${newUserId}`,
+      user_id: newUserId,
+      country: 'Global',
+      target_degree: userData.target_degree || 'PhD',
+      target_country: 'Global',
+      target_state: null,
+      target_intake: 'Fall 2027',
+      funding_preference: 'Fully Funded',
+      desired_field: 'Academic Research',
+      bio: `Registered applicant (${newUser.full_name})`,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Auto-create default subscription
+    this.subscriptions.push({
+      id: `sub_${newUserId}`,
+      user_id: newUserId,
+      plan_type: isAdmin ? 'ELITE' : 'FREE',
+      status: 'active',
+      current_period_start: now,
+      current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+      cancel_at_period_end: false,
+      created_at: now,
+      updated_at: now,
+    });
+
+    this.persist();
+
+    return newUser;
   }
 
   public connectedEmailAccounts: ConnectedEmailAccount[] = [];
@@ -2180,5 +2287,10 @@ class MockDatabase {
 
 // Global Singleton Store
 const globalForMock = globalThis as unknown as { mockDb: MockDatabase };
-export const mockDb = globalForMock.mockDb || new MockDatabase();
-if (process.env.NODE_ENV !== 'production') globalForMock.mockDb = mockDb;
+if (!globalForMock.mockDb) {
+  globalForMock.mockDb = new MockDatabase();
+} else {
+  Object.setPrototypeOf(globalForMock.mockDb, MockDatabase.prototype);
+}
+export const mockDb = globalForMock.mockDb;
+
