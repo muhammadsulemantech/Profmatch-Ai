@@ -14,9 +14,9 @@ export class GeminiProvider implements AIProvider {
   private modelName: string;
   private fallback: MockAIProvider;
 
-  constructor(apiKey?: string, modelName: string = 'gemini-1.5-pro') {
-    this.apiKey = apiKey || process.env.AI_API_KEY;
-    this.modelName = modelName;
+  constructor(apiKey?: string, modelName?: string) {
+    this.apiKey = apiKey || process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
+    this.modelName = modelName || process.env.AI_MODEL || 'gemini-3.5-flash-lite';
     this.fallback = new MockAIProvider();
   }
 
