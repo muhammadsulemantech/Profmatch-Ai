@@ -1120,7 +1120,7 @@ export default function SearchPage() {
                     <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> 🌐 100% Worldwide Access (190+ Countries)</li>
                     <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Unlimited Searches</li>
                     <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Unlimited AI Grounded Drafts</li>
-                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Priority AutoPilot (Unlimited Batches)</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> AutoPilot Engine (Up to 500 Emails / mo)</li>
                   </ul>
                 </div>
                 <Link

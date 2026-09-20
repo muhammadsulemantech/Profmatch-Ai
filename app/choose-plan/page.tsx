@@ -256,7 +256,7 @@ export default function ChoosePlanPage() {
                 </div>
                 <h3 className="text-lg font-heading font-bold text-white">PhD Elite</h3>
                 <p className="text-[11px] text-slate-400 mt-1 min-h-[32px]">
-                  Unrestricted worldwide access to all 190+ countries with unlimited autonomous outreach.
+                  Unrestricted worldwide access to all 190+ countries with high-capacity autonomous outreach.
                 </p>
               </div>
 
@@ -282,7 +282,7 @@ export default function ChoosePlanPage() {
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span>Priority AutoPilot (Unlimited Batches)</span>
+                  <span><strong>AutoPilot Engine</strong> (Up to 500 Emails / mo)</span>
                 </div>
                 <div className="flex items-start gap-2">
                   <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
