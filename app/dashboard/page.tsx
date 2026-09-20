@@ -42,7 +42,9 @@ export default function DashboardPage() {
   const [savedCount, setSavedCount] = React.useState<number>(0);
   const [sentCount, setSentCount] = React.useState<number>(0);
   const [repliesCount, setRepliesCount] = React.useState<number>(0);
+  const [unreadRepliesCount, setUnreadRepliesCount] = React.useState<number>(0);
   const [positiveCount, setPositiveCount] = React.useState<number>(0);
+  const [latestReply, setLatestReply] = React.useState<any>(null);
   const [savedProfessors, setSavedProfessors] = React.useState<Professor[]>([]);
   const [sentEmailsList, setSentEmailsList] = React.useState<any[]>([]);
 
@@ -52,14 +54,16 @@ export default function DashboardPage() {
   const displayName = user?.full_name || 'Alex Vance';
   const firstName = displayName.split(' ')[0];
 
-  React.useEffect(() => {
+  const loadUserData = React.useCallback(() => {
     if (typeof window === 'undefined') return;
 
     if (!user) {
       setSavedCount(0);
       setSentCount(0);
       setRepliesCount(0);
+      setUnreadRepliesCount(0);
       setPositiveCount(0);
+      setLatestReply(null);
       setSavedProfessors([]);
       setSentEmailsList([]);
       return;
@@ -93,13 +97,42 @@ export default function DashboardPage() {
     setSentCount(userEmails.length);
     setSentEmailsList(userEmails);
 
-    const userReps = mockDb.replies.filter(r => {
-      const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
-      return matchingEmail?.user_id === user.id;
-    });
-    setRepliesCount(userReps.length);
-    setPositiveCount(userReps.filter(r => r.sentiment === 'POSITIVE').length);
+    // 3. Real-Time Replies & Messages
+    const replyKey = `profmatch_replies_${user.id}`;
+    let userReplies: any[] = [];
+    try {
+      const storedReplies = localStorage.getItem(replyKey);
+      if (storedReplies) userReplies = JSON.parse(storedReplies);
+    } catch {}
+
+    // Only seed mock replies for demo account usr_student_001 if empty
+    if (user.id === 'usr_student_001' && userReplies.length === 0) {
+      userReplies = mockDb.replies;
+    }
+
+    setRepliesCount(userReplies.length);
+    const unread = userReplies.filter((r: any) => r.status === 'UNREAD').length;
+    setUnreadRepliesCount(unread);
+    const positive = userReplies.filter((r: any) => r.sentiment === 'POSITIVE' || r.sentiment === 'MEETING_REQUESTED').length;
+    setPositiveCount(positive);
+    setLatestReply(userReplies.length > 0 ? userReplies[0] : null);
   }, [user]);
+
+  React.useEffect(() => {
+    loadUserData();
+
+    const handleUpdate = () => {
+      loadUserData();
+    };
+
+    window.addEventListener('profmatch_messages_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+
+    return () => {
+      window.removeEventListener('profmatch_messages_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [loadUserData]);
 
   const handleProtectedAction = (actionName: string, path?: string, customFn?: () => void) => {
     requireAuth(actionName, () => {
@@ -214,9 +247,11 @@ export default function DashboardPage() {
                     <Inbox className="w-4 h-4" />
                     Messages
                   </span>
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    1 new
-                  </span>
+                  {unreadRepliesCount > 0 && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 animate-pulse">
+                      {unreadRepliesCount} new
+                    </span>
+                  )}
                 </button>
 
                 <button
@@ -333,20 +368,20 @@ export default function DashboardPage() {
             </div>
 
             {/* Recent Advisor Reply or Onboarding Prompt Banner */}
-            {positiveCount > 0 || user?.id === 'usr_student_001' ? (
+            {latestReply ? (
               <div className="p-5 rounded-xl bg-slate-900/80 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <span className="badge-verified">
-                      <Check className="w-3 h-3 text-emerald-400" /> Positive Advisor Reply
+                      <Check className="w-3 h-3 text-emerald-400" /> {latestReply.sentiment === 'POSITIVE' ? 'Positive Advisor Reply' : 'Faculty Reply'}
                     </span>
                     <span className="text-xs text-slate-400">Recent</span>
                   </div>
                   <h3 className="font-heading text-base font-bold text-white">
-                    Dr. Greg Durrett &bull; University of Texas at Austin
+                    {latestReply.professor_name || 'Professor'} {latestReply.university_name ? `• ${latestReply.university_name}` : ''}
                   </h3>
-                  <p className="text-xs text-slate-300 max-w-xl italic">
-                    &ldquo;...I am taking 1-2 new PhD students for Fall 2027 through the UT Austin CS admissions process. Please make sure to mention my lab in your statement of purpose...&rdquo;
+                  <p className="text-xs text-slate-300 max-w-xl italic line-clamp-2">
+                    &ldquo;{latestReply.body_text?.slice(0, 180)}...&rdquo;
                   </p>
                 </div>
                 <button
