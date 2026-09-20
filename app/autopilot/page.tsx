@@ -46,6 +46,8 @@ interface ContactedProfRecord {
   subject: string;
   sentAt: string;
   sentVia: string;
+  actionType: 'DRAFT' | 'SEND';
+  draftUrl?: string;
 }
 
 export default function AutoPilotPage() {
@@ -55,6 +57,7 @@ export default function AutoPilotPage() {
   const countries = React.useMemo(() => getAllCountries(), []);
 
   // Campaign Configuration State
+  const [actionType, setActionType] = useState<'DRAFT' | 'SEND'>('DRAFT');
   const [targetCountry, setTargetCountry] = useState('United States');
   const [targetDegree, setTargetDegree] = useState('PhD');
   const [academicDomain, setAcademicDomain] = useState('Computing, Artificial Intelligence & Informatics');
@@ -67,7 +70,7 @@ export default function AutoPilotPage() {
   // Safeguard Consent State
   const [hasAuthorized, setHasAuthorized] = useState(false);
 
-  type EngineStatus = 'IDLE' | 'SEARCHING' | 'DRAFTING' | 'SENDING' | 'COOLDOWN' | 'PAUSED' | 'COMPLETED';
+  type EngineStatus = 'IDLE' | 'SEARCHING' | 'DRAFTING' | 'SAVING_DRAFT' | 'SENDING' | 'COOLDOWN' | 'PAUSED' | 'COMPLETED';
 
   // Execution Engine State
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('IDLE');
@@ -261,92 +264,186 @@ export default function AutoPilotPage() {
 
       if (isPausedRef.current || isCancelledRef.current) break;
 
-      // STEP 3: Automated Dispatch via Gmail OAuth / Mailer
-      setEngineStatus('SENDING');
-      appendLog('SEND', `📤 Dispatching outreach email to ${discoveredProf.email}...`);
+      if (actionType === 'DRAFT') {
+        // STEP 3 (DRAFT MODE): Automated Creation in Gmail Drafts
+        setEngineStatus('SAVING_DRAFT');
+        appendLog('AI', `📝 Preparing draft in Gmail for ${discoveredProf.name}...`);
 
-      try {
-        const sendRes = await fetch('/api/outreach/send-email', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            toEmail: discoveredProf.email,
-            subject: generatedSubject,
-            bodyText: generatedBody,
-            professorName: discoveredProf.name,
-            universityName: discoveredProf.university_name,
-            userId,
-          }),
-        });
-
-        const sendData = await sendRes.json();
-        if (!sendRes.ok || !sendData.success) {
-          throw new Error(sendData.error || 'Failed to dispatch email');
-        }
-
-        completedCount += 1;
-        setCurrentProgress(completedCount);
-
-        const newRecord: ContactedProfRecord = {
-          id: `sent_${Date.now()}`,
-          name: discoveredProf.name,
-          university: discoveredProf.university_name,
-          country: discoveredProf.university_country || targetCountry,
-          email: discoveredProf.email,
-          subject: generatedSubject,
-          sentAt: new Date().toLocaleTimeString(),
-          sentVia: sendData.sentVia || 'GMAIL',
-        };
-
-        setContactedHistory((prev) => [newRecord, ...prev]);
-
-        // Save sent email into user history
-        if (typeof window !== 'undefined') {
-          const sentKey = `profmatch_sent_emails_${userId}`;
-          let existing: any[] = [];
-          try {
-            const raw = localStorage.getItem(sentKey);
-            if (raw) existing = JSON.parse(raw);
-          } catch {}
-
-          const sentItem = {
-            id: `email_${Date.now()}`,
-            user_id: userId,
-            recipientEmail: discoveredProf.email,
-            professor_name: discoveredProf.name,
-            subject: generatedSubject,
-            bodyText: generatedBody,
-            status: 'SENT',
-            sent_at: new Date().toISOString(),
-          };
-
-          localStorage.setItem(sentKey, JSON.stringify([sentItem, ...existing]));
-
-          // Save to Kanban
-          const kanbanKey = `profmatch_kanban_cards_${userId}`;
-          try {
-            const rawCards = localStorage.getItem(kanbanKey);
-            let cards: any[] = rawCards ? JSON.parse(rawCards) : [];
-            cards.unshift({
-              id: `card_${Date.now()}`,
-              professorId: discoveredProf.id,
+        try {
+          const draftRes = await fetch('/api/outreach/create-draft', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              toEmail: discoveredProf.email,
+              subject: generatedSubject,
+              bodyText: generatedBody,
               professorName: discoveredProf.name,
               universityName: discoveredProf.university_name,
-              country: discoveredProf.university_country || targetCountry,
-              email: discoveredProf.email,
-              stage: 'OUTREACH_SENT',
-              notes: `AutoPilot campaign outreach: "${generatedSubject}"`,
-              appliedDate: new Date().toISOString().split('T')[0],
-            });
-            localStorage.setItem(kanbanKey, JSON.stringify(cards));
-          } catch {}
+              userId,
+            }),
+          });
 
-          window.dispatchEvent(new Event('profmatch_messages_updated'));
+          const draftData = await draftRes.json();
+          if (!draftRes.ok || !draftData.success) {
+            throw new Error(draftData.error || 'Failed to create Gmail draft');
+          }
+
+          completedCount += 1;
+          setCurrentProgress(completedCount);
+
+          const draftUrl = draftData.gmailUrl || 'https://mail.google.com/mail/u/0/#drafts';
+
+          const newRecord: ContactedProfRecord = {
+            id: `draft_${Date.now()}`,
+            name: discoveredProf.name,
+            university: discoveredProf.university_name,
+            country: discoveredProf.university_country || targetCountry,
+            email: discoveredProf.email,
+            subject: generatedSubject,
+            sentAt: new Date().toLocaleTimeString(),
+            sentVia: draftData.connectedEmail || 'Gmail Drafts',
+            actionType: 'DRAFT',
+            draftUrl,
+          };
+
+          setContactedHistory((prev) => [newRecord, ...prev]);
+
+          if (typeof window !== 'undefined') {
+            const draftsKey = `profmatch_draft_emails_${userId}`;
+            let existingDrafts: any[] = [];
+            try {
+              const raw = localStorage.getItem(draftsKey);
+              if (raw) existingDrafts = JSON.parse(raw);
+            } catch {}
+
+            const draftItem = {
+              id: `draft_${Date.now()}`,
+              user_id: userId,
+              recipientEmail: discoveredProf.email,
+              professor_name: discoveredProf.name,
+              subject: generatedSubject,
+              bodyText: generatedBody,
+              status: 'DRAFT',
+              created_at: new Date().toISOString(),
+              draftUrl,
+            };
+            localStorage.setItem(draftsKey, JSON.stringify([draftItem, ...existingDrafts]));
+
+            // Save to Kanban
+            const kanbanKey = `profmatch_kanban_cards_${userId}`;
+            try {
+              const rawCards = localStorage.getItem(kanbanKey);
+              let cards: any[] = rawCards ? JSON.parse(rawCards) : [];
+              cards.unshift({
+                id: `card_${Date.now()}`,
+                professorId: discoveredProf.id,
+                professorName: discoveredProf.name,
+                universityName: discoveredProf.university_name,
+                country: discoveredProf.university_country || targetCountry,
+                email: discoveredProf.email,
+                stage: 'OUTREACH_DRAFT',
+                notes: `AutoPilot grounded draft: "${generatedSubject}"`,
+                appliedDate: new Date().toISOString().split('T')[0],
+              });
+              localStorage.setItem(kanbanKey, JSON.stringify(cards));
+            } catch {}
+
+            window.dispatchEvent(new Event('profmatch_messages_updated'));
+          }
+
+          appendLog('SUCCESS', `📝 Draft saved to Gmail! Ready for your review (${completedCount}/${batchLimit})`);
+        } catch (err: any) {
+          appendLog('ERROR', `Draft creation failed for ${discoveredProf.email}: ${err.message}`);
         }
+      } else {
+        // STEP 3 (SEND MODE): Automated Direct Dispatch via Gmail OAuth / Mailer
+        setEngineStatus('SENDING');
+        appendLog('SEND', `📤 Dispatching outreach email to ${discoveredProf.email}...`);
 
-        appendLog('SUCCESS', `✅ Email successfully delivered via ${sendData.sentVia}! (${completedCount}/${batchLimit})`);
-      } catch (err: any) {
-        appendLog('ERROR', `Dispatch failed for ${discoveredProf.email}: ${err.message}`);
+        try {
+          const sendRes = await fetch('/api/outreach/send-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              toEmail: discoveredProf.email,
+              subject: generatedSubject,
+              bodyText: generatedBody,
+              professorName: discoveredProf.name,
+              universityName: discoveredProf.university_name,
+              userId,
+            }),
+          });
+
+          const sendData = await sendRes.json();
+          if (!sendRes.ok || !sendData.success) {
+            throw new Error(sendData.error || 'Failed to dispatch email');
+          }
+
+          completedCount += 1;
+          setCurrentProgress(completedCount);
+
+          const newRecord: ContactedProfRecord = {
+            id: `sent_${Date.now()}`,
+            name: discoveredProf.name,
+            university: discoveredProf.university_name,
+            country: discoveredProf.university_country || targetCountry,
+            email: discoveredProf.email,
+            subject: generatedSubject,
+            sentAt: new Date().toLocaleTimeString(),
+            sentVia: sendData.sentVia || 'GMAIL',
+            actionType: 'SEND',
+          };
+
+          setContactedHistory((prev) => [newRecord, ...prev]);
+
+          // Save sent email into user history
+          if (typeof window !== 'undefined') {
+            const sentKey = `profmatch_sent_emails_${userId}`;
+            let existing: any[] = [];
+            try {
+              const raw = localStorage.getItem(sentKey);
+              if (raw) existing = JSON.parse(raw);
+            } catch {}
+
+            const sentItem = {
+              id: `email_${Date.now()}`,
+              user_id: userId,
+              recipientEmail: discoveredProf.email,
+              professor_name: discoveredProf.name,
+              subject: generatedSubject,
+              bodyText: generatedBody,
+              status: 'SENT',
+              sent_at: new Date().toISOString(),
+            };
+
+            localStorage.setItem(sentKey, JSON.stringify([sentItem, ...existing]));
+
+            // Save to Kanban
+            const kanbanKey = `profmatch_kanban_cards_${userId}`;
+            try {
+              const rawCards = localStorage.getItem(kanbanKey);
+              let cards: any[] = rawCards ? JSON.parse(rawCards) : [];
+              cards.unshift({
+                id: `card_${Date.now()}`,
+                professorId: discoveredProf.id,
+                professorName: discoveredProf.name,
+                universityName: discoveredProf.university_name,
+                country: discoveredProf.university_country || targetCountry,
+                email: discoveredProf.email,
+                stage: 'OUTREACH_SENT',
+                notes: `AutoPilot campaign outreach: "${generatedSubject}"`,
+                appliedDate: new Date().toISOString().split('T')[0],
+              });
+              localStorage.setItem(kanbanKey, JSON.stringify(cards));
+            } catch {}
+
+            window.dispatchEvent(new Event('profmatch_messages_updated'));
+          }
+
+          appendLog('SUCCESS', `✅ Email successfully delivered via ${sendData.sentVia}! (${completedCount}/${batchLimit})`);
+        } catch (err: any) {
+          appendLog('ERROR', `Dispatch failed for ${discoveredProf.email}: ${err.message}`);
+        }
       }
 
       // STEP 4: Anti-Spam Cooldown Timer
@@ -385,7 +482,7 @@ export default function AutoPilotPage() {
     appendLog('ERROR', '🛑 AutoPilot campaign terminated.');
   };
 
-  const isRunning = engineStatus === 'SEARCHING' || engineStatus === 'DRAFTING' || engineStatus === 'SENDING' || engineStatus === 'COOLDOWN';
+  const isRunning = engineStatus === 'SEARCHING' || engineStatus === 'DRAFTING' || engineStatus === 'SAVING_DRAFT' || engineStatus === 'SENDING' || engineStatus === 'COOLDOWN';
 
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-10 selection:bg-emerald-500/25 selection:text-emerald-300">
@@ -424,6 +521,51 @@ export default function AutoPilotPage() {
               </div>
 
               <div className="space-y-4 text-xs">
+                {/* Action Mode Toggle: Draft vs Send */}
+                <div>
+                  <label className="block text-slate-300 font-semibold mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <FileText className="w-3.5 h-3.5 text-emerald-400" /> Outreach Action Mode
+                    </span>
+                    <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider">
+                      {actionType === 'DRAFT' ? 'Review & Draft' : 'Direct Send'}
+                    </span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950/80 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      disabled={isRunning}
+                      onClick={() => setActionType('DRAFT')}
+                      className={`py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        actionType === 'DRAFT'
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Save to Gmail Drafts
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isRunning}
+                      onClick={() => setActionType('SEND')}
+                      className={`py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        actionType === 'SEND'
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                      Direct Auto-Send
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-1">
+                    {actionType === 'DRAFT'
+                      ? '✨ AI will prepare personalized grounded emails directly in your Gmail Drafts folder so you can review before sending.'
+                      : '⚡ AI will autonomously dispatch emails directly from your connected mailer with safety intervals.'}
+                  </p>
+                </div>
+
                 <div>
                   <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
                     <Globe className="w-3.5 h-3.5 text-emerald-400" /> Target Destination Country
@@ -556,7 +698,7 @@ export default function AutoPilotPage() {
                   <span className="text-slate-300 leading-relaxed text-[11px]">
                     <strong className="text-white">One-Time Safeguard Consent:</strong> I authorize ProfMatch AI to
                     autonomously search verified global professors matching my research criteria, synthesize personalized
-                    academic emails with Gemini AI, and dispatch outreach directly from my mailbox with safety delays.
+                    academic emails with Gemini AI, and {actionType === 'DRAFT' ? 'create reviewable drafts directly in my Gmail account' : 'dispatch outreach directly from my mailbox with safety delays'}.
                   </span>
                 </label>
               </div>
@@ -568,10 +710,19 @@ export default function AutoPilotPage() {
                     type="button"
                     onClick={runAutoPilotCampaign}
                     disabled={!hasAuthorized}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100"
+                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
                   >
-                    <Rocket className="w-4 h-4 text-slate-950" />
-                    Launch Autonomous Campaign ({batchLimit} Emails)
+                    {actionType === 'DRAFT' ? (
+                      <>
+                        <FileText className="w-4 h-4 text-slate-950" />
+                        Launch AutoPilot (Create {batchLimit} Gmail Drafts)
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="w-4 h-4 text-slate-950" />
+                        Launch AutoPilot (Direct Send {batchLimit} Emails)
+                      </>
+                    )}
                   </button>
                 ) : isRunning ? (
                   <div className="flex items-center gap-2">
@@ -634,7 +785,7 @@ export default function AutoPilotPage() {
                 </div>
 
                 <span className="text-xs font-mono font-bold text-slate-300">
-                  {currentProgress} / {batchLimit} Dispatched
+                  {currentProgress} / {batchLimit} {actionType === 'DRAFT' ? 'Drafts Ready' : 'Dispatched'}
                 </span>
               </div>
 
@@ -711,20 +862,36 @@ export default function AutoPilotPage() {
             <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
               <div className="flex items-center justify-between border-b border-slate-800 pb-3">
                 <div className="flex items-center gap-2">
-                  <Send className="w-4 h-4 text-emerald-400" />
-                  <h3 className="font-bold text-sm text-white">Dispatched Outreach Stream ({contactedHistory.length})</h3>
+                  {actionType === 'DRAFT' ? (
+                    <FileText className="w-4 h-4 text-emerald-400" />
+                  ) : (
+                    <Send className="w-4 h-4 text-emerald-400" />
+                  )}
+                  <h3 className="font-bold text-sm text-white">
+                    {actionType === 'DRAFT' ? 'Prepared Gmail Drafts' : 'Dispatched Outreach Stream'} ({contactedHistory.length})
+                  </h3>
                 </div>
-                <Link
-                  href="/tracker"
-                  className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1"
-                >
-                  View in Kanban <ExternalLink className="w-3 h-3" />
-                </Link>
+                <div className="flex items-center gap-3">
+                  <a
+                    href="https://mail.google.com/mail/u/0/#drafts"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1"
+                  >
+                    Open Gmail Drafts <ExternalLink className="w-3 h-3" />
+                  </a>
+                  <Link
+                    href="/tracker"
+                    className="text-[11px] font-semibold text-slate-400 hover:text-white flex items-center gap-1"
+                  >
+                    Kanban <ExternalLink className="w-3 h-3" />
+                  </Link>
+                </div>
               </div>
 
               {contactedHistory.length === 0 ? (
                 <p className="text-xs text-slate-500 text-center py-6">
-                  No outreach sent yet in this session.
+                  No outreach records yet in this session.
                 </p>
               ) : (
                 <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
@@ -736,17 +903,41 @@ export default function AutoPilotPage() {
                       <div className="min-w-0 space-y-0.5">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-white truncate">{item.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/15 text-emerald-400 font-semibold border border-emerald-500/30">
-                            Sent via {item.sentVia}
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 ${
+                              item.actionType === 'DRAFT'
+                                ? 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30'
+                                : 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                            }`}
+                          >
+                            {item.actionType === 'DRAFT' ? (
+                              <>
+                                <FileText className="w-2.5 h-2.5" /> Draft in {item.sentVia}
+                              </>
+                            ) : (
+                              `Sent via ${item.sentVia}`
+                            )}
                           </span>
                         </div>
                         <p className="text-[11px] text-slate-400 truncate">
                           {item.university} &bull; {item.email}
                         </p>
                       </div>
-                      <span className="text-[10px] font-mono text-slate-500 shrink-0">
-                        {item.sentAt}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {item.draftUrl && (
+                          <a
+                            href={item.draftUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[10px] flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20"
+                          >
+                            Open Draft <ExternalLink className="w-2.5 h-2.5" />
+                          </a>
+                        )}
+                        <span className="text-[10px] font-mono text-slate-500">
+                          {item.sentAt}
+                        </span>
+                      </div>
                     </div>
                   ))}
                 </div>
