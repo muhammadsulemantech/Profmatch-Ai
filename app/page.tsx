@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import InteractivePlatformShowcase from '@/components/home/interactive-platform-showcase';
+import HomePricingSection from '@/components/home/home-pricing-section';
 
 export const dynamic = 'force-dynamic';
 
@@ -248,70 +249,8 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* 5. ACADEMIC PRICING */}
-      <section id="pricing" className="py-24 bg-slate-950/60 border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
-            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest">
-              Transparent Pricing
-            </span>
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white">
-              Simple, accessible academic plans.
-            </h2>
-            <p className="text-sm text-slate-400">
-              Start exploring global faculty for free; subscribe when initiating active outreach campaigns.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-            {pricing.content.plans?.map((plan: any, idx: number) => (
-              <div
-                key={idx}
-                className={`rounded-2xl p-8 flex flex-col justify-between border transition-all ${
-                  plan.highlighted
-                    ? 'border-emerald-500/50 bg-slate-900/90 shadow-2xl shadow-emerald-500/10 ring-1 ring-emerald-500/30'
-                    : 'border-slate-800 bg-slate-900/40 hover:border-slate-700'
-                }`}
-              >
-                <div>
-                  {plan.highlighted && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 mb-5">
-                      Recommended for Candidates
-                    </span>
-                  )}
-                  <h3 className="font-heading text-xl font-bold text-white">{plan.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1.5 min-h-[36px]">{plan.description}</p>
-                  
-                  <div className="mt-5 mb-7">
-                    <span className="font-heading text-4xl font-bold text-white">{plan.price}</span>
-                    <span className="text-xs text-slate-400 ml-1">/ {plan.period}</span>
-                  </div>
-
-                  <ul className="space-y-3 text-xs text-slate-300 mb-8">
-                    {plan.features.map((feat: string, fIdx: number) => (
-                      <li key={fIdx} className="flex items-start gap-2.5">
-                        <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="leading-snug">{feat}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <Link
-                  href={plan.tier === 'FREE' || plan.price === '$0' ? '/signup' : '/signup?plan=pro'}
-                  className={`w-full py-3 rounded-xl text-center text-xs font-semibold transition-all ${
-                    plan.highlighted
-                      ? 'bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20'
-                      : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700'
-                  }`}
-                >
-                  {plan.cta}
-                </Link>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* 5. ACADEMIC PRICING (4-TIER WORLDWIDE PLANS WITH CURRENCY SWITCHER) */}
+      <HomePricingSection initialPlans={pricing.content.plans} />
 
       {/* 6. FAQ */}
       <section className="py-24 bg-[#080B11] border-b border-slate-800/80">

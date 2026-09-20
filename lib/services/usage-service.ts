@@ -183,9 +183,35 @@ export function setUserTierOverride(tier: PlanTier) {
   }
 }
 
+export function getCustomPlans(): Record<string, PlanConfig> {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('profmatch_custom_plans');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') {
+          return { ...ACADEMIC_PLANS, ...parsed };
+        }
+      }
+    } catch {}
+  }
+  return ACADEMIC_PLANS;
+}
+
+export function saveCustomPlans(plans: Record<string, Partial<PlanConfig>>) {
+  if (typeof window !== 'undefined') {
+    try {
+      const existing = getCustomPlans();
+      const updated = { ...existing, ...plans };
+      localStorage.setItem('profmatch_custom_plans', JSON.stringify(updated));
+    } catch {}
+  }
+}
+
 export function getPlanConfig(tier: PlanTier): PlanConfig {
-  if (tier === 'STUDENT') return ACADEMIC_PLANS.STARTER;
-  return ACADEMIC_PLANS[tier] || ACADEMIC_PLANS.FREE;
+  const plans = getCustomPlans();
+  if (tier === 'STUDENT') return plans.STARTER || ACADEMIC_PLANS.STARTER;
+  return plans[tier] || plans.FREE || ACADEMIC_PLANS.FREE;
 }
 
 export function getSearchUsage(userId?: string): {
