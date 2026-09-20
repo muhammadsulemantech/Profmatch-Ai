@@ -21,13 +21,23 @@ import {
   Layers,
   RefreshCw,
   ChevronDown,
-  PlusCircle
+  PlusCircle,
+  Lock,
+  Sparkles,
+  Zap,
+  X,
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
 import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@/lib/geography/global-geography';
 import { ACADEMIC_DOMAINS, parseNaturalLanguageQuery } from '@/lib/taxonomy/academic-taxonomy';
-import { Professor } from '@/types/database';
+import { Professor, PlanTier } from '@/types/database';
+import {
+  getSearchUsage,
+  incrementSearchUsage,
+  isCountryUnlockedForTier,
+  getPlanConfig,
+} from '@/lib/services/usage-service';
 
 const DISCOVERY_STAGES = [
   'Discovering accredited universities in target region...',
@@ -42,6 +52,13 @@ const DISCOVERY_STAGES = [
 export default function SearchPage() {
   const router = useRouter();
   const { user, requireAuth } = useAuth();
+
+  const [usage, setUsage] = useState(() => getSearchUsage(user?.id));
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    setUsage(getSearchUsage(user?.id));
+  }, [user]);
 
   const [naturalQuery, setNaturalQuery] = useState('');
   const [country, setCountry] = useState('Global (All Countries)');
@@ -237,6 +254,8 @@ export default function SearchPage() {
     if (append) {
       setIsLoadingMore(true);
     } else {
+      incrementSearchUsage(user?.id);
+      setUsage(getSearchUsage(user?.id));
       setIsSearching(true);
       setProgressPercent(20);
       setDiscoveryStageIndex(1);
@@ -348,6 +367,63 @@ export default function SearchPage() {
           </p>
         </div>
 
+        {/* Real-time Usage & Plan Tracker Bar */}
+        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-lg shadow-emerald-500/5">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="px-3 py-1 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>{getPlanConfig(usage.tier).name}</span>
+            </div>
+
+            <div className="text-xs text-slate-300 flex items-center gap-2">
+              {usage.limit >= 999999 ? (
+                <span className="text-teal-300 font-medium flex items-center gap-1.5">
+                  <Globe className="w-3.5 h-3.5 text-teal-400" />
+                  <strong>Unlimited Worldwide Search &amp; Discovery</strong> (190+ Countries Unlocked)
+                </span>
+              ) : (
+                <span>
+                  Searches Used:{' '}
+                  <strong className={usage.isExhausted ? 'text-amber-400 font-bold' : 'text-white'}>
+                    {usage.used} / {usage.limit}
+                  </strong>{' '}
+                  <span className="text-slate-400">
+                    ({usage.isExhausted ? '0 remaining - Limit reached' : `${usage.remaining} remaining`})
+                  </span>
+                </span>
+              )}
+            </div>
+
+            {usage.tier === 'FREE' && (
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">
+                Preview: 2 Countries (Pakistan, Germany)
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            {usage.limit < 999999 && (
+              <div className="w-28 sm:w-36 bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800 shrink-0">
+                <div
+                  className={`h-full transition-all ${
+                    usage.isExhausted ? 'bg-amber-500' : 'bg-gradient-to-r from-emerald-500 to-teal-400'
+                  }`}
+                  style={{ width: `${Math.min(100, (usage.used / usage.limit) * 100)}%` }}
+                />
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(true)}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-emerald-500/20 shrink-0 flex items-center gap-1.5"
+            >
+              <Zap className="w-3.5 h-3.5 fill-slate-950" />
+              <span>{usage.tier === 'FREE' ? 'Upgrade to Pro' : 'Change Plan'}</span>
+            </button>
+          </div>
+        </div>
+
         {/* Search Bar (Requirement #14) */}
         <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-400">
@@ -438,12 +514,17 @@ export default function SearchPage() {
                 onChange={e => handleCountryChange(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
               >
-                <option value="Global (All Countries)">Global (All 190+ Countries)</option>
-                {countries.map(c => (
-                  <option key={c.code} value={c.name}>
-                    {c.name} ({c.continent})
-                  </option>
-                ))}
+                <option value="Global (All Countries)">
+                  Global (All 190+ Countries) {usage.tier === 'ELITE' ? '✅' : '🔒 Elite'}
+                </option>
+                {countries.map(c => {
+                  const isUnlocked = isCountryUnlockedForTier(usage.tier, c.name);
+                  return (
+                    <option key={c.code} value={c.name}>
+                      {c.name} {isUnlocked ? '✅' : '🔒 Pro'}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -592,44 +673,142 @@ export default function SearchPage() {
 
         {/* Results List */}
         <div className="lg:col-span-8 space-y-4">
-          <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
-            <span>
-              Showing{' '}
-              <strong className="text-white font-semibold">
-                {displayedProfessors.length > 0 && visibleCount < displayedProfessors.length
-                  ? `${Math.min(visibleCount, displayedProfessors.length)} of ${displayedProfessors.length}`
-                  : displayedProfessors.length}
-              </strong>{' '}
-              {savedOnly ? 'saved' : 'verified'} faculty records
-            </span>
-            <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-              <ShieldCheck className="w-3.5 h-3.5" /> Cross-verified with official registries
-            </span>
-          </div>
+          {(() => {
+            const isCountryLocked = country !== 'Global (All Countries)' && !isCountryUnlockedForTier(usage.tier, country);
+            const isGlobalLocked = country === 'Global (All Countries)' && usage.tier === 'FREE';
+            const isPaywallTriggered = usage.isExhausted || isCountryLocked || isGlobalLocked;
 
-          {displayedProfessors.length === 0 ? (
-            <div className="p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                {savedOnly ? <Bookmark className="w-6 h-6 text-emerald-400" /> : <Globe className="w-6 h-6" />}
-              </div>
-              <p className="text-sm font-semibold text-white">
-                {savedOnly ? 'No faculty saved yet' : 'No faculty matching this exact filter combination'}
-              </p>
-              <p className="text-xs text-slate-400 max-w-md mx-auto">
-                {savedOnly
-                  ? 'Click the bookmark icon (🔖) on any professor card to save them to your faculty list.'
-                  : 'Try widening your field scope or selecting "Global (All Countries)" to discover related scholars.'}
-              </p>
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white rounded-xl border border-slate-700 transition-colors"
-              >
-                Reset Filters
-              </button>
-            </div>
-          ) : (
-            <>
+            return (
+              <>
+                <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
+                  <span>
+                    Showing{' '}
+                    <strong className="text-white font-semibold">
+                      {displayedProfessors.length > 0 && visibleCount < displayedProfessors.length
+                        ? `${Math.min(visibleCount, displayedProfessors.length)} of ${displayedProfessors.length}`
+                        : displayedProfessors.length}
+                    </strong>{' '}
+                    {savedOnly ? 'saved' : 'verified'} faculty records
+                  </span>
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <ShieldCheck className="w-3.5 h-3.5" /> Cross-verified with official registries
+                  </span>
+                </div>
+
+                {displayedProfessors.length === 0 ? (
+                  <div className="p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
+                      {savedOnly ? <Bookmark className="w-6 h-6 text-emerald-400" /> : <Globe className="w-6 h-6" />}
+                    </div>
+                    <p className="text-sm font-semibold text-white">
+                      {savedOnly ? 'No faculty saved yet' : 'No faculty matching this exact filter combination'}
+                    </p>
+                    <p className="text-xs text-slate-400 max-w-md mx-auto">
+                      {savedOnly
+                        ? 'Click the bookmark icon (🔖) on any professor card to save them to your faculty list.'
+                        : 'Try widening your field scope or selecting "Global (All Countries)" to discover related scholars.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white rounded-xl border border-slate-700 transition-colors"
+                    >
+                      Reset Filters
+                    </button>
+                  </div>
+                ) : isPaywallTriggered ? (
+                  <div className="relative">
+                    {/* Blurred Results List */}
+                    <div
+                      onClick={() => setShowUpgradeModal(true)}
+                      className="filter blur-[6px] opacity-30 select-none pointer-events-none transition-all duration-300 space-y-4 cursor-pointer"
+                    >
+                      {visibleProfessors.slice(0, 3).map(prof => {
+                        const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
+                        return (
+                          <div
+                            key={prof.id}
+                            className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4"
+                          >
+                            <div className="flex items-start gap-4">
+                              <div className="w-11 h-11 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-bold text-emerald-400 text-sm shrink-0">
+                                {prof.name.split(' ').filter(p => !p.includes('.')).map(n => n[0]).slice(0, 2).join('')}
+                              </div>
+                              <div className="space-y-1">
+                                <div className="font-heading text-lg font-bold text-white">{prof.name}</div>
+                                <p className="text-xs text-slate-400">{prof.university_name} &bull; {prof.university_country}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Floating Center Paywall Gate */}
+                    <div className="sticky top-28 z-20 my-6 flex items-center justify-center p-2 sm:p-4">
+                      <div className="max-w-xl w-full bg-slate-950/95 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-emerald-500/25 backdrop-blur-2xl space-y-6">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400 shadow-inner">
+                          <Lock className="w-7 h-7" />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>Worldwide Academic Access Restricted</span>
+                          </div>
+                          <h3 className="text-xl sm:text-2xl font-heading font-bold text-white tracking-tight">
+                            {isCountryLocked
+                              ? `${country} Faculty Records Are Locked in Free Tier`
+                              : isGlobalLocked
+                              ? 'Global 190+ Countries Discovery Requires Pro / Elite'
+                              : 'Free Search Quota Reached (3 / 3 Searches Used)'}
+                          </h3>
+                          <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
+                            {isCountryLocked
+                              ? `Free Explorer tier allows previewing Germany and Pakistan. To view verified faculty appointments, public .edu/.ac emails, and AI outreach drafts in ${country}, please upgrade to Scholar Starter, Pro, or Elite.`
+                              : 'Aapki Free Plan ki searches complete ho chuki hain. Full professor records, official institutional emails, aur autonomous email drafts unlock karne ke liye apna academic plan upgrade karein.'}
+                          </p>
+                        </div>
+
+                        {/* 3 Package Comparison Tiles */}
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Starter</span>
+                            <p className="text-xs font-bold text-white">Rs. 3,500 / mo</p>
+                            <p className="text-[10px] text-slate-400">10 Major Countries</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 space-y-1 relative shadow-sm">
+                            <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">⭐ Pro (Popular)</span>
+                            <p className="text-xs font-bold text-white">Rs. 8,000 / mo</p>
+                            <p className="text-[10px] text-slate-300">45+ Destinations &bull; AutoPilot</p>
+                          </div>
+                          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
+                            <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">PhD Elite</span>
+                            <p className="text-xs font-bold text-white">Rs. 16,000 / mo</p>
+                            <p className="text-[10px] text-slate-400">100% Worldwide &bull; Unlimited</p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setShowUpgradeModal(true)}
+                            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
+                          >
+                            <Zap className="w-4 h-4 fill-slate-950" /> Unlock Worldwide Access Now
+                          </button>
+                          <Link
+                            href="/choose-plan"
+                            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition-all text-center"
+                          >
+                            Compare All Packages →
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <>
               {visibleProfessors.map(prof => {
               const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
               const isSaved = savedProfIds.includes(prof.id);
@@ -856,8 +1035,105 @@ export default function SearchPage() {
             )}
           </>
         )}
+      </>
+    );
+  })()}
         </div>
       </div>
+
+      {/* Upgrade Plan Interactive Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
+          <div className="relative max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 shadow-2xl shadow-emerald-500/10 space-y-6 max-h-[90vh] overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => setShowUpgradeModal(false)}
+              className="absolute top-5 right-5 p-2 rounded-xl bg-slate-800 text-slate-400 hover:text-white hover:bg-slate-700 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="text-center space-y-2 max-w-xl mx-auto">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                <Globe className="w-3.5 h-3.5" />
+                <span>190+ Countries Worldwide Database</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-heading font-bold text-white tracking-tight">
+                Unlock Verified Global Faculty
+              </h2>
+              <p className="text-xs text-slate-400">
+                Choose your package. Fast verification via SadaPay, NayaPay, Meezan Bank, JazzCash, EasyPaisa, Wise, or USDT Crypto.
+              </p>
+            </div>
+
+            {/* 3 Packages Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {/* Starter */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-slate-800 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Scholar Starter</span>
+                  <div className="text-2xl font-heading font-bold text-white">Rs. 3,500 <span className="text-xs text-slate-400 font-normal">/ mo</span></div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 10 Major Academic Countries</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 50 Grounded Searches / mo</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 30 AI Cold Email Drafts / mo</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Basic AutoPilot (5 drafts/batch)</li>
+                  </ul>
+                </div>
+                <Link
+                  href="/checkout?plan=starter"
+                  className="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold text-center block transition-all"
+                >
+                  Choose Starter →
+                </Link>
+              </div>
+
+              {/* Pro Researcher */}
+              <div className="p-5 rounded-2xl bg-slate-950 border-2 border-emerald-500 relative flex flex-col justify-between space-y-4 shadow-xl shadow-emerald-500/10">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap">
+                  ⭐ Most Popular
+                </div>
+                <div className="space-y-3">
+                  <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Pro Researcher</span>
+                  <div className="text-2xl font-heading font-bold text-white">Rs. 8,000 <span className="text-xs text-slate-400 font-normal">/ mo</span></div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 45+ Global Destinations</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 250 Grounded Searches / mo</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> 150 AI Cold Email Drafts / mo</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Full AutoPilot (20 drafts/batch + Gmail)</li>
+                  </ul>
+                </div>
+                <Link
+                  href="/checkout?plan=pro"
+                  className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold text-center block transition-all shadow-md"
+                >
+                  Get Pro Researcher →
+                </Link>
+              </div>
+
+              {/* PhD Elite */}
+              <div className="p-5 rounded-2xl bg-slate-950 border border-teal-500/40 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <span className="text-[10px] font-bold text-teal-300 uppercase tracking-wider">PhD Elite (Worldwide)</span>
+                  <div className="text-2xl font-heading font-bold text-white">Rs. 16,000 <span className="text-xs text-slate-400 font-normal">/ mo</span></div>
+                  <ul className="space-y-2 text-xs text-slate-300">
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> 🌐 100% Worldwide Access (190+ Countries)</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Unlimited Searches</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Unlimited AI Grounded Drafts</li>
+                    <li className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-teal-400 shrink-0" /> Priority AutoPilot (Unlimited Batches)</li>
+                  </ul>
+                </div>
+                <Link
+                  href="/checkout?plan=elite"
+                  className="w-full py-2.5 rounded-xl bg-teal-500 hover:bg-teal-400 text-slate-950 text-xs font-bold text-center block transition-all shadow-md"
+                >
+                  Get PhD Elite →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

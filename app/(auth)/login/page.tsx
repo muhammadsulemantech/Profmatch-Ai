@@ -9,7 +9,7 @@ import { useAuth } from '@/lib/auth/auth-context';
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || '/choose-plan';
 
   const { login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState('student@example.com');

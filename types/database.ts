@@ -7,7 +7,7 @@ export type VerificationStatus = 'VERIFIED' | 'PARTIALLY_VERIFIED' | 'UNVERIFIED
 export type EmailVerificationStatus = 'VERIFIED' | 'LIKELY' | 'UNVERIFIED' | 'NOT_FOUND';
 export type RecruitingStatus = 'VERIFIED_RECRUITING' | 'POSSIBLY_RECRUITING' | 'NO_PUBLIC_INFORMATION' | 'NOT_RECRUITING' | 'UNKNOWN' | 'ACTIVELY_RECRUITING' | 'POTENTIALLY_RECRUITING';
 export type OutreachStatus = 'NOT_CONTACTED' | 'DRAFT' | 'APPROVED' | 'SENT' | 'DELIVERED' | 'OPENED' | 'REPLIED' | 'POSITIVE' | 'NEGATIVE' | 'FOLLOW_UP_DUE' | 'CLOSED';
-export type PlanTier = 'FREE' | 'STUDENT' | 'PRO';
+export type PlanTier = 'FREE' | 'STARTER' | 'PRO' | 'ELITE' | 'STUDENT';
 export type JobStatus = 'QUEUED' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export type FreshnessStatus = 'FRESH' | 'STALE' | 'NEEDS_REVERIFY';
 

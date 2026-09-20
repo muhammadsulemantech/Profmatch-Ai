@@ -34,7 +34,7 @@ export default function SignupPage() {
       return;
     }
 
-    router.push('/dashboard');
+    router.push('/choose-plan');
     router.refresh();
   };
 

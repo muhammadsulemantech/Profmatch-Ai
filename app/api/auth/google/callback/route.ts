@@ -7,7 +7,7 @@ export async function GET(request: NextRequest) {
   const stateEncoded = searchParams.get('state');
   const error = searchParams.get('error');
 
-  let redirectTo = '/dashboard';
+  let redirectTo = '/choose-plan';
   let origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
 
   if (stateEncoded) {

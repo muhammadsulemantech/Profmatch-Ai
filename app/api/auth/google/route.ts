@@ -3,7 +3,7 @@ import { mockDb } from '@/lib/supabase/mock-db';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard';
+  const redirectTo = searchParams.get('redirectTo') || '/choose-plan';
   const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
 
   const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
