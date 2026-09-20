@@ -58,8 +58,12 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
     - 5 Application Stages: Saved Faculty, Outreach Sent, Replied, Interview, Accepted.
     - Drag & Move between stages, custom note modal, persistent state.
 
-[7] Real-Time Editable Admin & Pricing Panel (app/admin/pricing/page.tsx, app/admin/page.tsx)
-    - Full CRUD editability for plans, features, and price tags with instant real-time sync.
+[7] Real-Time Editable Admin, Pricing Panel & Persistence Engine (app/admin/page.tsx, lib/supabase/mock-db.ts)
+    - Full CRUD editability for plans, tier highlighting, features, and price tags with instant real-time sync across user pages.
+    - Permanent Disk Persistence: `mockDb.loadFromDisk()` and `mockDb.persist()` integrated across all API routes (`pricing`, `payment-methods`, `content`, `settings`, `checkout/submit`, `matches/analyze`, `auth/login`, `auth/signup`) saving data permanently to `database/persistent_store.json`.
+    - Auto User Registration: Every signup auto-saved to database store with Free vs Paid plan tracking in Admin Panel.
+    - Floating WhatsApp Button: Linked directly to 03227342728 (https://wa.me/923227342728).
+    - Webpack Client Fallback: Webpack `fs: false` & `path: false` in `next.config.mjs` preventing client-side browser hydration exceptions.
 
 [8] Payment Status & Digital PDF Receipts (app/checkout/status/[reference]/page.tsx)
     - 3-Step Live Payment Verification Progress Bar.
@@ -76,7 +80,7 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
 --------------------------------------------------------------------
 4. SYSTEM ARCHITECTURE & CODE CONVENTIONS
 --------------------------------------------------------------------
-• State & Database: lib/supabase/mock-db.ts (Fallback DB) + Supabase Client/Server SDKs.
+• State & Database: lib/supabase/mock-db.ts (Fallback DB) + Supabase Client/Server SDKs + database/persistent_store.json.
 • Responsive Styling: Pure Tailwind CSS with dark theme (#030712 background, Emerald accents, Slate/Zinc cards).
-• Zero Build Errors: Strictly typed TypeScript (npx tsc --noEmit passes cleanly).
+• Zero Build Errors: Strictly typed TypeScript & 60/60 static/dynamic Next.js routes compiled with 0 errors.
 ====================================================================

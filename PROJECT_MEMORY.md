@@ -67,8 +67,12 @@
    - 3-Step Live Payment Verification Audit Progress Bar.
    - Digital PDF Billing Receipt print/download generator.
 
-### ⚙️ Real-Time Admin Panel & Disk Persistence Engine
-8. [app/admin/page.tsx](file:///e:/profmatch%20ai%20project/app/admin/page.tsx) & [database/persistent_store.json](file:///e:/profmatch%20ai%20project/database/persistent_store.json):
-   - Single unified Sign Out control in top navbar (removed redundant in-page banner logout).
-   - Dynamic real-time editable pricing plans, hero copy, site settings, payment methods, feature flags, user accounts & audit logs.
-   - Mandatory disk storage re-sync (`mockDb.loadFromDisk()`) added across all API GET handlers (`/api/admin/settings`, `/api/admin/content`, `/api/admin/payment-methods`, `/api/admin/payments`, `/api/admin/audit-logs`) ensuring 100% data persistence across logins, reboots, and multi-day gaps.
+### ⚙️ Real-Time Admin Panel, Dynamic Persistence & WhatsApp Engine
+8. [app/admin/page.tsx](file:///e:/profmatch%20ai%20project/app/admin/page.tsx), [database/persistent_store.json](file:///e:/profmatch%20ai%20project/database/persistent_store.json) & [lib/supabase/mock-db.ts](file:///e:/profmatch%20ai%20project/lib/supabase/mock-db.ts):
+   - Single unified Sign Out control in top navbar.
+   - Dynamic real-time editable pricing plans, tier highlighting, hero copy, site settings, payment methods, feature flags, user accounts & audit logs.
+   - **Persistent Storage**: Mandatory disk storage re-sync (`mockDb.loadFromDisk()` & `mockDb.persist()`) added across all API handlers (`pricing`, `payment-methods`, `content`, `settings`, `checkout/submit`, `matches/analyze`, `auth/login`, `auth/signup`) ensuring 100% data persistence across logins, reboots, and multi-day gaps.
+   - **Auto User Registration & Plan Tracking**: Every new signup via [`/api/auth/signup`](file:///e:/profmatch%20ai%20project/app/api/auth/signup/route.ts) is automatically saved to the database store and categorized into Free or Paid plan tiers in the Admin Panel.
+   - **Floating WhatsApp Support Link**: Direct WhatsApp quick action button linking to `03227342728` (`https://wa.me/923227342728`).
+   - **Webpack Client Fallback**: Webpack `fs: false` & `path: false` fallback configured in [`next.config.mjs`](file:///e:/profmatch%20ai%20project/next.config.mjs) preventing client-side execution exceptions during browser hydration.
+
