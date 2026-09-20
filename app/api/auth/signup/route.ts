@@ -121,6 +121,22 @@ export async function POST(request: NextRequest) {
     };
     mockDb.studentProfiles.push(newStudentProfile);
 
+    // Create default FREE subscription record
+    mockDb.subscriptions.push({
+      id: `sub_${newUserId}`,
+      user_id: newUser.id,
+      plan_type: 'FREE',
+      status: 'active',
+      current_period_start: now,
+      current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+      cancel_at_period_end: false,
+      created_at: now,
+      updated_at: now,
+    });
+
+    // Save to disk immediately so user appears in admin dashboard and persistent DB
+    mockDb.persist();
+
     // 4. Send the required Welcome Email immediately upon account creation
     try {
       await sendWelcomeEmail({

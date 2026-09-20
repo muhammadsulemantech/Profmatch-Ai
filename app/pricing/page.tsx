@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Globe,
@@ -15,10 +15,86 @@ import {
   HelpCircle,
   MessageCircle,
 } from 'lucide-react';
-import { ACADEMIC_PLANS } from '@/lib/services/usage-service';
+import { ACADEMIC_PLANS, getCustomPlans } from '@/lib/services/usage-service';
 
 export default function PricingPage() {
   const [currency, setCurrency] = useState<'PKR' | 'USD'>('PKR');
+  const [plans, setPlans] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetch('/api/pricing')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.plans && data.plans.length > 0) {
+          setPlans(data.plans);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const freePlan = plans.find(p => p.tier === 'FREE') || {
+    name: 'Free Explorer',
+    badge: 'Preview Tier',
+    pricePkr: 0,
+    priceUsd: 0,
+    description: 'Basic preview of verified academic research records and faculty appointments.',
+    features: [
+      '2 Preview Countries (Pakistan, Germany)',
+      '3 Grounded Faculty Searches Total',
+      '2 AI Email Outreach Previews',
+      'Worldwide professors blurred after limit',
+      'No autonomous AutoPilot engine',
+    ],
+    ctaText: 'Get Started Free',
+  };
+
+  const starterPlan = plans.find(p => p.tier === 'STARTER') || {
+    name: 'Scholar Starter',
+    badge: 'Focused Intake',
+    pricePkr: 3500,
+    priceUsd: 12,
+    description: 'Essential tools for graduate applicants targeting top 10 academic nations.',
+    features: [
+      '10+ Major Academic Countries (USA, UK, Canada, Germany, etc.)',
+      '50 Grounded Searches / mo',
+      '30 AI Cold Email Drafts / mo',
+      'Basic AutoPilot (5 drafts/batch)',
+      'Direct Institutional Email Access',
+    ],
+    ctaText: 'Get Starter',
+  };
+
+  const proPlan = plans.find(p => p.tier === 'PRO') || {
+    name: 'Pro Researcher',
+    badge: 'Recommended for 2026/2027',
+    pricePkr: 8000,
+    priceUsd: 29,
+    description: 'Broad international reach across 45+ countries with autonomous Gmail drafts.',
+    features: [
+      '45+ Global Destinations (Europe, US, UK, East Asia, Oceania)',
+      '250 Grounded Searches / mo',
+      '150 AI Grounded Drafts / mo',
+      'Full AutoPilot (20 drafts/batch + Gmail)',
+      'Phone & Lab Appointment Indexing',
+    ],
+    ctaText: 'Get Pro Researcher',
+  };
+
+  const elitePlan = plans.find(p => p.tier === 'ELITE') || {
+    name: 'PhD Elite',
+    badge: '100% Worldwide Ultra',
+    pricePkr: 16000,
+    priceUsd: 59,
+    description: 'Unrestricted worldwide access to all 190+ countries with high-capacity autonomous outreach.',
+    features: [
+      '🌐 100% Worldwide Access (190+ Countries)',
+      'Unlimited Faculty Searches',
+      'Unlimited AI Grounded Drafts',
+      'AutoPilot Engine (Up to 500 Emails / mo)',
+      'Direct Phone/Office & 1-on-1 Support',
+    ],
+    ctaText: 'Get PhD Elite',
+  };
 
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-16 selection:bg-emerald-500/25 selection:text-emerald-300">
@@ -40,13 +116,13 @@ export default function PricingPage() {
             </div>
 
             {/* Currency Selector */}
-            <div className="flex items-center gap-2 bg-slate-950/90 p-1.5 rounded-2xl border border-slate-800 shrink-0">
+            <div className="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-2xl border border-slate-800 shrink-0">
               <button
                 type="button"
                 onClick={() => setCurrency('PKR')}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   currency === 'PKR'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -57,7 +133,7 @@ export default function PricingPage() {
                 onClick={() => setCurrency('USD')}
                 className={`px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                   currency === 'USD'
-                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20 font-bold'
+                    ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -67,21 +143,26 @@ export default function PricingPage() {
           </div>
         </div>
 
-        {/* Section Header */}
-        <div className="text-center max-w-2xl mx-auto space-y-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-            <span>Transparent Academic Subscriptions</span>
+        {/* Header Title */}
+        <div className="text-center max-w-3xl mx-auto space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold bg-slate-900 border border-slate-800 text-slate-400">
+            <span>Academic Research Platform</span>
+            <span>•</span>
+            <span className="text-emerald-400">Transparent Flat Pricing</span>
           </div>
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-heading font-bold text-white tracking-tight">
-            Designed for serious graduate researchers.
+          <h2 className="text-3xl sm:text-5xl font-heading font-bold text-white tracking-tight">
+            Fair Plans for Global Researchers &amp; Applicants
           </h2>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-xl mx-auto leading-relaxed">
-            No recurring hidden lock-ins. Grounded entirely on verifiable university records, official faculty publications, and ethical one-to-one outreach standards.
+          <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
+            Choose the plan that fits your intake stage. No surprise subscription lock-ins. Upgrade or downgrade anytime with instantaneous access activation.
           </p>
-
-          <div className="pt-2">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-slate-900/90 border border-emerald-500/30 text-xs text-slate-300 shadow-md">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping shrink-0" />
+          <div className="pt-2 flex items-center justify-center gap-6 text-xs text-slate-400">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Verified Institutional Directories</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="w-4 h-4 text-emerald-400" />
               <span>Over <strong className="text-emerald-400">1,420+ MS &amp; PhD candidates</strong> matched with verified faculty worldwide.</span>
             </div>
           </div>
@@ -94,11 +175,11 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 uppercase tracking-wider mb-2">
-                  Preview Tier
+                  {freePlan.badge || 'Preview Tier'}
                 </div>
-                <h3 className="text-lg font-heading font-bold text-white">Free Explorer</h3>
+                <h3 className="text-lg font-heading font-bold text-white">{freePlan.name}</h3>
                 <p className="text-[11px] text-slate-400 mt-1 min-h-[32px] leading-relaxed">
-                  Basic preview of verified academic research records and faculty appointments.
+                  {freePlan.description || freePlan.tagline}
                 </p>
               </div>
 
@@ -108,26 +189,19 @@ export default function PricingPage() {
               </div>
 
               <div className="space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span>2 Preview Countries (Pakistan, Germany)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span>3 Grounded Faculty Searches Total</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-                  <span>2 AI Email Outreach Previews</span>
-                </div>
-                <div className="flex items-start gap-2 text-slate-500">
-                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-amber-500/70" />
-                  <span>Worldwide professors blurred after limit</span>
-                </div>
-                <div className="flex items-start gap-2 text-slate-500">
-                  <Lock className="w-4 h-4 shrink-0 mt-0.5 text-amber-500/70" />
-                  <span>No autonomous AutoPilot engine</span>
-                </div>
+                {(freePlan.features || []).map((feat: string, i: number) => {
+                  const isLocked = feat.toLowerCase().includes('blurred') || feat.toLowerCase().includes('no autonomous');
+                  return (
+                    <div key={i} className={`flex items-start gap-2 ${isLocked ? 'text-slate-500' : ''}`}>
+                      {isLocked ? (
+                        <Lock className="w-4 h-4 shrink-0 mt-0.5 text-amber-500/70" />
+                      ) : (
+                        <Check className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                      )}
+                      <span>{feat}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -135,7 +209,7 @@ export default function PricingPage() {
               href="/signup"
               className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center justify-center gap-1.5"
             >
-              Get Started Free <ArrowRight className="w-3.5 h-3.5" />
+              {freePlan.ctaText || 'Get Started Free'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -144,42 +218,28 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider mb-2">
-                  Focused Intake
+                  {starterPlan.badge || 'Focused Intake'}
                 </div>
-                <h3 className="text-lg font-heading font-bold text-white">Scholar Starter</h3>
+                <h3 className="text-lg font-heading font-bold text-white">{starterPlan.name}</h3>
                 <p className="text-[11px] text-slate-400 mt-1 min-h-[32px] leading-relaxed">
-                  Essential tools for graduate applicants targeting top 10 academic nations.
+                  {starterPlan.description || starterPlan.tagline}
                 </p>
               </div>
 
               <div className="py-3 border-y border-slate-800">
                 <span className="text-3xl font-heading font-bold text-white">
-                  {currency === 'PKR' ? 'Rs. 3,500' : '$12'}
+                  {currency === 'PKR' ? `Rs. ${Number(starterPlan.pricePkr).toLocaleString()}` : `$${starterPlan.priceUsd}`}
                 </span>
                 <span className="text-xs text-slate-400 ml-1.5">/ month</span>
               </div>
 
               <div className="space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>10+ Major Academic Countries</strong> (USA, UK, Canada, Germany, etc.)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>50 Grounded Searches</strong> / mo</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>30 AI Cold Email Drafts</strong> / mo</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Basic AutoPilot (5 drafts/batch)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Direct Institutional Email Access</span>
-                </div>
+                {(starterPlan.features || []).map((feat: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -187,7 +247,7 @@ export default function PricingPage() {
               href={`/checkout?plan=starter&currency=${currency}`}
               className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all flex items-center justify-center gap-1.5"
             >
-              Get Starter <ArrowRight className="w-3.5 h-3.5" />
+              {starterPlan.ctaText || 'Get Starter'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
@@ -200,42 +260,28 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider mb-2">
-                  Recommended for 2026/2027
+                  {proPlan.badge || 'Recommended for 2026/2027'}
                 </div>
-                <h3 className="text-lg font-heading font-bold text-white">Pro Researcher</h3>
+                <h3 className="text-lg font-heading font-bold text-white">{proPlan.name}</h3>
                 <p className="text-[11px] text-slate-400 mt-1 min-h-[32px] leading-relaxed">
-                  Broad international reach across 45+ countries with autonomous Gmail drafts.
+                  {proPlan.description || proPlan.tagline}
                 </p>
               </div>
 
               <div className="py-3 border-y border-slate-800">
                 <span className="text-3xl font-heading font-bold text-white">
-                  {currency === 'PKR' ? 'Rs. 8,000' : '$29'}
+                  {currency === 'PKR' ? `Rs. ${Number(proPlan.pricePkr).toLocaleString()}` : `$${proPlan.priceUsd}`}
                 </span>
                 <span className="text-xs text-slate-400 ml-1.5">/ month</span>
               </div>
 
               <div className="space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>45+ Global Destinations</strong> (Europe, US, UK, East Asia, Oceania)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>250 Grounded Searches</strong> / mo</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span><strong>150 AI Grounded Drafts</strong> / mo</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Full AutoPilot (20 drafts/batch + Gmail)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                  <span>Phone &amp; Lab Appointment Indexing</span>
-                </div>
+                {(proPlan.features || []).map((feat: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -243,7 +289,7 @@ export default function PricingPage() {
               href={`/checkout?plan=pro&currency=${currency}`}
               className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-1.5"
             >
-              Get Pro Researcher <Zap className="w-3.5 h-3.5 fill-slate-950" />
+              {proPlan.ctaText || 'Get Pro Researcher'} <Zap className="w-3.5 h-3.5 fill-slate-950" />
             </Link>
           </div>
 
@@ -252,42 +298,28 @@ export default function PricingPage() {
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/30 uppercase tracking-wider mb-2">
-                  100% Worldwide Ultra
+                  {elitePlan.badge || '100% Worldwide Ultra'}
                 </div>
-                <h3 className="text-lg font-heading font-bold text-white">PhD Elite</h3>
+                <h3 className="text-lg font-heading font-bold text-white">{elitePlan.name}</h3>
                 <p className="text-[11px] text-slate-400 mt-1 min-h-[32px] leading-relaxed">
-                  Unrestricted worldwide access to all 190+ countries with high-capacity autonomous outreach.
+                  {elitePlan.description || elitePlan.tagline}
                 </p>
               </div>
 
               <div className="py-3 border-y border-slate-800">
                 <span className="text-3xl font-heading font-bold text-white">
-                  {currency === 'PKR' ? 'Rs. 16,000' : '$59'}
+                  {currency === 'PKR' ? `Rs. ${Number(elitePlan.pricePkr).toLocaleString()}` : `$${elitePlan.priceUsd}`}
                 </span>
                 <span className="text-xs text-slate-400 ml-1.5">/ month</span>
               </div>
 
               <div className="space-y-2.5 text-xs text-slate-300">
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span>🌐 <strong>100% Worldwide Access (190+ Countries)</strong></span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span><strong>Unlimited</strong> Faculty Searches</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span><strong>Unlimited</strong> AI Grounded Drafts</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span><strong>AutoPilot Engine</strong> (Up to 500 Emails / mo)</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
-                  <span>Direct Phone/Office &amp; 1-on-1 Support</span>
-                </div>
+                {(elitePlan.features || []).map((feat: string, i: number) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <Check className="w-4 h-4 text-teal-400 shrink-0 mt-0.5" />
+                    <span>{feat}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -295,7 +327,7 @@ export default function PricingPage() {
               href={`/checkout?plan=elite&currency=${currency}`}
               className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-1.5"
             >
-              Get PhD Elite <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
+              {elitePlan.ctaText || 'Get PhD Elite'} <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
             </Link>
           </div>
         </div>

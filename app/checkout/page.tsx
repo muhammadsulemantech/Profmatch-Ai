@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { PaymentMethod, PlanTier } from '@/types/database';
 import { getAllCountries } from '@/lib/geography/global-geography';
-import { ACADEMIC_PLANS, setUserTierOverride } from '@/lib/services/usage-service';
+import { ACADEMIC_PLANS, getPlanConfig, syncLivePricingFromServer, PlanConfig, setUserTierOverride } from '@/lib/services/usage-service';
 import { useAuth } from '@/lib/auth/auth-context';
 
 function CheckoutContent() {
@@ -45,7 +45,18 @@ function CheckoutContent() {
     return 'PRO';
   }, [planParam]);
 
-  const planConfig = ACADEMIC_PLANS[targetTier] || ACADEMIC_PLANS.PRO;
+  const [currentPlanConfig, setCurrentPlanConfig] = useState<PlanConfig>(() => getPlanConfig(targetTier));
+
+  useEffect(() => {
+    setCurrentPlanConfig(getPlanConfig(targetTier));
+    syncLivePricingFromServer().then(plans => {
+      if (plans && plans[targetTier]) {
+        setCurrentPlanConfig(plans[targetTier]);
+      }
+    });
+  }, [targetTier]);
+
+  const planConfig = currentPlanConfig;
 
   // States
   const allCountries = useMemo(() => getAllCountries(), []);

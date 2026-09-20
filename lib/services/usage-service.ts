@@ -214,6 +214,23 @@ export function getPlanConfig(tier: PlanTier): PlanConfig {
   return plans[tier] || plans.FREE || ACADEMIC_PLANS.FREE;
 }
 
+export async function syncLivePricingFromServer(): Promise<Record<string, PlanConfig>> {
+  if (typeof window === 'undefined') return ACADEMIC_PLANS;
+  try {
+    const res = await fetch('/api/pricing');
+    if (res.ok) {
+      const data = await res.json();
+      if (data.plansMap) {
+        saveCustomPlans(data.plansMap);
+        return { ...ACADEMIC_PLANS, ...data.plansMap };
+      }
+    }
+  } catch (err) {
+    console.warn('[PRICING SYNC NOTICE]', err);
+  }
+  return getCustomPlans();
+}
+
 export function getSearchUsage(userId?: string): {
   used: number;
   limit: number;
