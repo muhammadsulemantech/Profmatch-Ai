@@ -200,7 +200,8 @@ export class EmailQualityAgent {
     if (emailText.includes('prestigious esteemed') || emailText.includes('world renowned') || emailText.includes('greatest professor')) {
       issues.push('Contains generic flattery clichés; replace with specific publication citations.');
     }
-    if (!emailText.includes('CV') && !emailText.includes('curriculum vitae') && !emailText.includes('resume')) {
+    const lower = emailText.toLowerCase();
+    if (!lower.includes('cv') && !lower.includes('curriculum vitae') && !lower.includes('resume')) {
       issues.push('Academic CV is not mentioned in email body.');
     }
 

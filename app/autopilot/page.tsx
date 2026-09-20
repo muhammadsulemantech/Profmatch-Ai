@@ -165,7 +165,7 @@ export default function AutoPilotPage() {
     let completedCount = 0;
     const contactedEmails: string[] = [];
 
-    // Pre-populate already contacted emails from localStorage
+    // Pre-populate already contacted and drafted emails to ensure 100% uniqueness
     try {
       const existingSent = localStorage.getItem(`profmatch_sent_emails_${userId}`);
       if (existingSent) {
@@ -175,6 +175,19 @@ export default function AutoPilotPage() {
           if (item.to_email) contactedEmails.push(item.to_email);
         });
       }
+
+      const existingDrafts = localStorage.getItem(`profmatch_draft_emails_${userId}`);
+      if (existingDrafts) {
+        const parsed = JSON.parse(existingDrafts);
+        parsed.forEach((item: any) => {
+          if (item.recipientEmail) contactedEmails.push(item.recipientEmail);
+          if (item.to_email) contactedEmails.push(item.to_email);
+        });
+      }
+
+      contactedHistory.forEach((rec) => {
+        if (rec.email) contactedEmails.push(rec.email);
+      });
     } catch {}
 
     while (completedCount < batchLimit) {

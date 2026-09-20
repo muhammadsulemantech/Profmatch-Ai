@@ -3,10 +3,11 @@ import { MockAIProvider } from './mock-ai-provider';
 import { GeminiProvider } from './gemini-provider';
 
 export function getAIProvider(): AIProvider {
-  const providerType = process.env.AI_PROVIDER || 'mock';
+  const providerType = process.env.AI_PROVIDER || 'gemini';
 
-  if (providerType === 'gemini' && process.env.AI_API_KEY && !process.env.AI_API_KEY.includes('your-ai-api-key')) {
-    return new GeminiProvider(process.env.AI_API_KEY, process.env.AI_MODEL || 'gemini-1.5-pro');
+  const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
+  if (apiKey && !apiKey.includes('your-ai-api-key')) {
+    return new GeminiProvider(apiKey, process.env.AI_MODEL || 'gemini-flash-latest');
   }
 
   // Default to robust Mock provider if credentials are not configured
