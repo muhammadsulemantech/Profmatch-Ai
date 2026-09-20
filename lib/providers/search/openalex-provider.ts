@@ -15,7 +15,10 @@ export class OpenAlexProvider implements SearchProvider {
       const searchTerm = query || filters.discipline || filters.academicDomain || filters.customField || 'computer science';
       const url = new URL('https://api.openalex.org/authors');
       url.searchParams.append('search', searchTerm);
-      url.searchParams.append('per_page', '15');
+      const limit = filters.limit || 30;
+      const page = filters.page || 1;
+      url.searchParams.append('per_page', String(limit));
+      url.searchParams.append('page', String(page));
 
       if (this.apiKey && !this.apiKey.includes('your-search-api-key')) {
         url.searchParams.append('api_key', this.apiKey);

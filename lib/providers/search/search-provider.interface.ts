@@ -16,6 +16,8 @@ export interface SearchFilters {
   emailVerifiedOnly?: boolean;
   roleTitles?: string[];
   minConfidenceScore?: number;
+  page?: number;
+  limit?: number;
 }
 
 export interface SearchDiscoveryProgress {

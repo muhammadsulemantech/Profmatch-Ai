@@ -19,7 +19,9 @@ import {
   Globe,
   BookOpen,
   Layers,
-  RefreshCw
+  RefreshCw,
+  ChevronDown,
+  PlusCircle
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
@@ -54,6 +56,9 @@ export default function SearchPage() {
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedProfIds, setSavedProfIds] = useState<string[]>([]);
   const [professorsList, setProfessorsList] = useState<Professor[]>(mockDb.professors);
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [searchPage, setSearchPage] = useState(1);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isRestored, setIsRestored] = useState(false);
 
   // Restore saved search filters & results from sessionStorage on mount
@@ -157,6 +162,10 @@ export default function SearchPage() {
     }
     return professorsList;
   }, [professorsList, savedOnly, savedProfIds]);
+
+  const visibleProfessors = useMemo(() => {
+    return displayedProfessors.slice(0, visibleCount);
+  }, [displayedProfessors, visibleCount]);
   
   // Progress & loading states
   const [isSearching, setIsSearching] = useState(false);
@@ -224,12 +233,18 @@ export default function SearchPage() {
     });
   };
 
-  const runSearchPayload = async (overrides?: any) => {
-    setIsSearching(true);
-    setProgressPercent(20);
-    setDiscoveryStageIndex(1);
+  const runSearchPayload = async (overrides?: any, append: boolean = false) => {
+    if (append) {
+      setIsLoadingMore(true);
+    } else {
+      setIsSearching(true);
+      setProgressPercent(20);
+      setDiscoveryStageIndex(1);
+      setVisibleCount(10);
+    }
 
     try {
+      const currentPage = append ? searchPage + 1 : 1;
       const payload = {
         query: naturalQuery || undefined,
         country: country !== 'Global (All Countries)' ? country : undefined,
@@ -241,6 +256,8 @@ export default function SearchPage() {
         recruitingOnly,
         verifiedOnly,
         emailVerifiedOnly,
+        page: currentPage,
+        limit: 30,
         ...overrides,
       };
 
@@ -261,12 +278,30 @@ export default function SearchPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setProfessorsList(data.professors || []);
+        const incomingProfs: Professor[] = data.professors || [];
+        if (append) {
+          setProfessorsList(prev => {
+            const existingIds = new Set(prev.map(p => p.id));
+            const existingNames = new Set(prev.map(p => p.name.toLowerCase()));
+            const newUnique = incomingProfs.filter(
+              p => !existingIds.has(p.id) && !existingNames.has(p.name.toLowerCase())
+            );
+            return [...prev, ...newUnique];
+          });
+          setSearchPage(currentPage);
+          setVisibleCount(prev => prev + 10);
+        } else {
+          setProfessorsList(incomingProfs);
+          setSearchPage(1);
+        }
       }
     } catch (err) {
       console.error('Search request failed', err);
     } finally {
-      setTimeout(() => setIsSearching(false), 200);
+      setTimeout(() => {
+        setIsSearching(false);
+        setIsLoadingMore(false);
+      }, 200);
     }
   };
 
@@ -293,6 +328,8 @@ export default function SearchPage() {
     setSavedOnly(false);
     setNaturalQuery('');
     setProfessorsList(mockDb.professors);
+    setVisibleCount(10);
+    setSearchPage(1);
   };
 
   return (
@@ -557,7 +594,13 @@ export default function SearchPage() {
         <div className="lg:col-span-8 space-y-4">
           <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
             <span>
-              Showing <strong className="text-white font-semibold">{displayedProfessors.length}</strong> {savedOnly ? 'saved' : 'verified'} faculty records
+              Showing{' '}
+              <strong className="text-white font-semibold">
+                {displayedProfessors.length > 0 && visibleCount < displayedProfessors.length
+                  ? `${Math.min(visibleCount, displayedProfessors.length)} of ${displayedProfessors.length}`
+                  : displayedProfessors.length}
+              </strong>{' '}
+              {savedOnly ? 'saved' : 'verified'} faculty records
             </span>
             <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
               <ShieldCheck className="w-3.5 h-3.5" /> Cross-verified with official registries
@@ -586,7 +629,8 @@ export default function SearchPage() {
               </button>
             </div>
           ) : (
-            displayedProfessors.map(prof => {
+            <>
+              {visibleProfessors.map(prof => {
               const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
               const isSaved = savedProfIds.includes(prof.id);
 
@@ -758,8 +802,60 @@ export default function SearchPage() {
                   </div>
                 </div>
               );
-            })
-          )}
+            })}
+
+            {/* Pagination & Show More Actions */}
+            {displayedProfessors.length > 0 && (
+              <div className="pt-4 pb-2 space-y-3">
+                {visibleCount < displayedProfessors.length ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <button
+                      type="button"
+                      id="btn-show-more-faculty"
+                      onClick={() => setVisibleCount(prev => prev + 10)}
+                      className="w-full sm:w-auto px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs border border-slate-700 hover:border-slate-600 transition-all flex items-center justify-center gap-2 shadow-sm"
+                    >
+                      <ChevronDown className="w-4 h-4 text-emerald-400" />
+                      Show More Faculty ({displayedProfessors.length - visibleCount} remaining)
+                    </button>
+                    <button
+                      type="button"
+                      id="btn-show-all-faculty"
+                      onClick={() => setVisibleCount(displayedProfessors.length)}
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-950/80 hover:bg-slate-900 text-slate-300 hover:text-white text-xs font-medium border border-slate-800 transition-all"
+                    >
+                      Show All ({displayedProfessors.length})
+                    </button>
+                  </div>
+                ) : (
+                  !savedOnly && (
+                    <div className="flex items-center justify-center pt-2">
+                      <button
+                        type="button"
+                        id="btn-load-more-api"
+                        onClick={() => runSearchPayload(undefined, true)}
+                        disabled={isLoadingMore}
+                        className="w-full sm:w-auto px-6 py-3 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold text-xs border border-emerald-500/30 transition-all flex items-center justify-center gap-2 shadow-sm disabled:opacity-50"
+                      >
+                        {isLoadingMore ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            Discovering Next Batch of Faculty...
+                          </>
+                        ) : (
+                          <>
+                            <PlusCircle className="w-4 h-4" />
+                            Load More Verified Faculty ({displayedProfessors.length} currently loaded)
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )
+                )}
+              </div>
+            )}
+          </>
+        )}
         </div>
       </div>
     </div>

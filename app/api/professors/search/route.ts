@@ -36,6 +36,8 @@ export async function POST(request: NextRequest) {
       verifiedOnly,
       emailVerifiedOnly,
       roleTitles,
+      page,
+      limit,
     } = body;
 
     const provider = getSearchProvider();
@@ -53,11 +55,15 @@ export async function POST(request: NextRequest) {
       verifiedOnly: verifiedOnly !== false,
       emailVerifiedOnly: emailVerifiedOnly || false,
       roleTitles,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 30,
     });
 
     return NextResponse.json({
       professors: results,
       count: results.length,
+      page: page ? Number(page) : 1,
+      hasMore: results.length >= 10,
       scope: {
         country: country || 'Global',
         region: region || state || 'All Regions',
