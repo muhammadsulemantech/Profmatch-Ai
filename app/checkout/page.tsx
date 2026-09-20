@@ -261,7 +261,7 @@ function CheckoutContent() {
 
               {/* WhatsApp Live Billing Help */}
               <a
-                href="https://wa.me/923001234567?text=Hi%20ProfMatch%20AI%20Team%2C%20I%20am%20making%20a%20payment%20for%20my%20academic%20subscription%20and%20need%20assistance."
+                href="https://wa.me/923227342728?text=Hi%20ProfMatch%20AI%20Team%2C%20I%20am%20making%20a%20payment%20for%20my%20academic%20subscription%20and%20need%20assistance."
                 target="_blank"
                 rel="noreferrer"
                 className="w-full py-2.5 px-4 rounded-xl bg-emerald-950/50 hover:bg-emerald-900/50 border border-emerald-600/30 text-emerald-300 text-xs font-semibold flex items-center justify-center gap-2 transition-all shadow-sm"

@@ -317,7 +317,7 @@ export default function PricingPage() {
           </div>
 
           <a
-            href="https://wa.me/923001234567?text=Hi%20ProfMatch%20AI%20Team%2C%20I%20have%20a%20question%20regarding%20Academic%20Plans%20and%20Payment."
+            href="https://wa.me/923227342728?text=Hi%20ProfMatch%20AI%20Team%2C%20I%20have%20a%20question%20regarding%20Academic%20Plans%20and%20Payment."
             target="_blank"
             rel="noreferrer"
             className="px-5 py-2.5 rounded-xl bg-emerald-950/60 hover:bg-emerald-900/60 border border-emerald-600/30 text-emerald-300 text-xs font-semibold flex items-center gap-2 transition-all shrink-0"
