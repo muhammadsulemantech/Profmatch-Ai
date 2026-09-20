@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    mockDb.loadFromDisk();
     const method = mockDb.getPaymentMethodById(paymentMethodId);
     if (!method) {
       return NextResponse.json(

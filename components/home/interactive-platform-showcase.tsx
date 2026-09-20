@@ -13,7 +13,6 @@ import {
   FileCheck
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
-import { mockDb } from '@/lib/supabase/mock-db';
 
 export default function InteractivePlatformShowcase() {
   const [activeTab, setActiveTab] = useState<'match' | 'papers' | 'proposal' | 'pipeline'>('match');

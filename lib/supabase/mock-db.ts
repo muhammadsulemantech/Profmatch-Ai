@@ -49,8 +49,9 @@ class MockDatabase {
   public loadFromDisk() {
     if (typeof window !== 'undefined') return;
     try {
-      const fs = require('fs');
-      const path = require('path');
+      const req = eval('require');
+      const fs = req('fs');
+      const path = req('path');
       const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
       if (fs.existsSync(dbPath)) {
         const raw = fs.readFileSync(dbPath, 'utf-8');
@@ -81,8 +82,9 @@ class MockDatabase {
   public saveToDisk() {
     if (typeof window !== 'undefined') return;
     try {
-      const fs = require('fs');
-      const path = require('path');
+      const req = eval('require');
+      const fs = req('fs');
+      const path = req('path');
       const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
       const dataToSave = {
         siteSettings: this.siteSettings,

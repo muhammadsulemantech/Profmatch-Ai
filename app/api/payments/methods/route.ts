@@ -6,6 +6,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const country = searchParams.get('country') || undefined;
 
+    mockDb.loadFromDisk();
     const methods = mockDb.getPaymentMethods(country);
 
     return NextResponse.json({

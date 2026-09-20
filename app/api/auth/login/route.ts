@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
 
     const isAdminEmail = email === 'sulemanmunir6752@gmail.com' || email === 'admin@profmatch.ai';
 
+    mockDb.loadFromDisk();
     let matchedUser = mockDb.profiles.find((p) => p.email.toLowerCase() === email);
 
     // Try Supabase auth if configured

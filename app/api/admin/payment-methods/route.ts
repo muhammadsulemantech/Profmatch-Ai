@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
       ip_address: '127.0.0.1',
       created_at: new Date().toISOString(),
     });
+    mockDb.persist();
 
     return NextResponse.json({
       success: true,
@@ -93,6 +94,7 @@ export async function PUT(request: NextRequest) {
       ip_address: '127.0.0.1',
       created_at: new Date().toISOString(),
     });
+    mockDb.persist();
 
     return NextResponse.json({
       success: true,
@@ -138,6 +140,7 @@ export async function DELETE(request: NextRequest) {
       ip_address: '127.0.0.1',
       created_at: new Date().toISOString(),
     });
+    mockDb.persist();
 
     return NextResponse.json({
       success: true,

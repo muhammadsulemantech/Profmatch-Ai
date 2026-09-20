@@ -20,6 +20,7 @@ export async function POST(request: NextRequest) {
     // Resolve Professor
     let prof: Professor | undefined = professor;
     if (!prof && professorId) {
+      mockDb.loadFromDisk();
       prof = mockDb.professors.find(p => p.id === professorId);
     }
 

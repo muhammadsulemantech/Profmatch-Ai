@@ -38,6 +38,7 @@ export async function POST(request: NextRequest) {
     const { fullName, email, password, targetDegree } = parsed.data;
 
     // 1. Check if user already exists
+    mockDb.loadFromDisk();
     const existingInMock = mockDb.profiles.find(
       (p) => p.email.toLowerCase() === email
     );

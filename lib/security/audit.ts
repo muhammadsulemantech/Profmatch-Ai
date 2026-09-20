@@ -30,6 +30,7 @@ export async function logAuditEvent(params: LogAuditEventParams): Promise<void> 
   if (mockDb.auditLogs.length > 500) {
     mockDb.auditLogs.pop();
   }
+  mockDb.persist();
 
   // 2. If Supabase is connected, write to PostgreSQL
   const supabase = createAdminClient();
