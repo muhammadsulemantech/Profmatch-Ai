@@ -12,6 +12,8 @@ export interface PlanConfig {
   autopilotBatchLimit: number;
   allowedCountries: 'ALL' | string[];
   features: string[];
+  highlighted?: boolean;
+  ctaText?: string;
 }
 
 export const ACADEMIC_PLANS: Record<string, PlanConfig> = {

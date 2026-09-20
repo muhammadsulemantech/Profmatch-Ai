@@ -12,6 +12,7 @@ import {
   Lock,
   MessageCircle,
 } from 'lucide-react';
+import { getCustomPlans } from '@/lib/services/usage-service';
 
 interface HomePricingSectionProps {
   initialPlans?: any[];
@@ -22,14 +23,39 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
   const [plans, setPlans] = useState<any[]>(initialPlans && initialPlans.length > 0 ? initialPlans : []);
 
   useEffect(() => {
-    fetch('/api/pricing')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.plans && data.plans.length > 0) {
-          setPlans(data.plans);
+    // 1. Instantly check localStorage custom plans to prevent stale state
+    try {
+      const custom = getCustomPlans();
+      if (custom && Object.keys(custom).length > 0) {
+        const localPlans = Object.values(custom);
+        if (localPlans.length >= 3) {
+          setPlans(localPlans);
         }
-      })
-      .catch(() => {});
+      }
+    } catch {}
+
+    const refreshPlans = () => {
+      fetch('/api/pricing')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.plans && data.plans.length > 0) {
+            setPlans(data.plans);
+          }
+        })
+        .catch(() => {});
+    };
+
+    refreshPlans();
+
+    // Listen to admin save events or storage changes across tabs
+    const onPricingSync = () => refreshPlans();
+    window.addEventListener('profmatch_pricing_updated', onPricingSync);
+    window.addEventListener('storage', onPricingSync);
+
+    return () => {
+      window.removeEventListener('profmatch_pricing_updated', onPricingSync);
+      window.removeEventListener('storage', onPricingSync);
+    };
   }, []);
 
   const freePlan = plans.find(p => p.tier === 'FREE') || {
@@ -46,6 +72,7 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
       'No autonomous AutoPilot engine',
     ],
     ctaText: 'Get Started Free',
+    highlighted: false,
   };
 
   const starterPlan = plans.find(p => p.tier === 'STARTER') || {
@@ -62,6 +89,7 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
       'Direct Institutional Email Access',
     ],
     ctaText: 'Get Starter',
+    highlighted: false,
   };
 
   const proPlan = plans.find(p => p.tier === 'PRO') || {
@@ -78,6 +106,7 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
       'Phone & Lab Appointment Indexing',
     ],
     ctaText: 'Get Pro Researcher',
+    highlighted: true,
   };
 
   const elitePlan = plans.find(p => p.tier === 'ELITE') || {
@@ -94,7 +123,13 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
       'Direct Phone/Office & 1-on-1 Support',
     ],
     ctaText: 'Get PhD Elite',
+    highlighted: false,
   };
+
+  const isFreeHighlighted = Boolean(freePlan.highlighted);
+  const isStarterHighlighted = Boolean(starterPlan.highlighted);
+  const isProHighlighted = Boolean(proPlan.highlighted);
+  const isEliteHighlighted = Boolean(elitePlan.highlighted);
 
   return (
     <section id="pricing" className="py-24 bg-slate-950/70 border-b border-slate-800/80 selection:bg-emerald-500/25 selection:text-emerald-300">
@@ -159,7 +194,19 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
         {/* 4 Plans Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
           {/* Plan 0: Free Explorer */}
-          <div className="rounded-2xl p-6 bg-slate-900/40 border border-slate-800 hover:border-slate-700 flex flex-col justify-between transition-all">
+          <div
+            className={`rounded-2xl p-6 flex flex-col justify-between transition-all relative ${
+              isFreeHighlighted
+                ? 'bg-slate-900 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 ring-1 ring-emerald-500/20'
+                : 'bg-slate-900/40 border border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            {isFreeHighlighted && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap shadow-md z-10">
+                ⭐ Most Popular
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-800 text-slate-400 uppercase tracking-wider mb-2">
@@ -195,14 +242,30 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
 
             <Link
               href="/signup"
-              className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+              className={`mt-6 w-full py-2.5 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 ${
+                isFreeHighlighted
+                  ? 'font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25'
+                  : 'font-semibold bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700'
+              }`}
             >
-              Get Started Free <ArrowRight className="w-3.5 h-3.5" />
+              {freePlan.ctaText || 'Get Started Free'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
           {/* Plan 1: Scholar Starter */}
-          <div className="rounded-2xl p-6 bg-slate-900/70 border border-slate-800 hover:border-slate-700 flex flex-col justify-between transition-all">
+          <div
+            className={`rounded-2xl p-6 flex flex-col justify-between transition-all relative ${
+              isStarterHighlighted
+                ? 'bg-slate-900 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 ring-1 ring-emerald-500/20'
+                : 'bg-slate-900/70 border border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            {isStarterHighlighted && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap shadow-md z-10">
+                ⭐ Most Popular
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider mb-2">
@@ -233,17 +296,29 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
 
             <Link
               href={`/checkout?plan=starter&currency=${currency}`}
-              className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700 transition-all flex items-center justify-center gap-1.5"
+              className={`mt-6 w-full py-2.5 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 ${
+                isStarterHighlighted
+                  ? 'font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25'
+                  : 'font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+              }`}
             >
               {starterPlan.ctaText || 'Get Starter'} <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
 
-          {/* Plan 2: Pro Researcher (⭐ Most Popular) */}
-          <div className="rounded-2xl p-6 bg-slate-900 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 flex flex-col justify-between transition-all relative">
-            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap shadow-md">
-              ⭐ Most Popular
-            </div>
+          {/* Plan 2: Pro Researcher */}
+          <div
+            className={`rounded-2xl p-6 flex flex-col justify-between transition-all relative ${
+              isProHighlighted
+                ? 'bg-slate-900 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 ring-1 ring-emerald-500/20'
+                : 'bg-slate-900/70 border border-slate-800 hover:border-slate-700'
+            }`}
+          >
+            {isProHighlighted && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap shadow-md z-10">
+                ⭐ Most Popular
+              </div>
+            )}
 
             <div className="space-y-4">
               <div>
@@ -275,14 +350,30 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
 
             <Link
               href={`/checkout?plan=pro&currency=${currency}`}
-              className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-1.5"
+              className={`mt-6 w-full py-2.5 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 ${
+                isProHighlighted
+                  ? 'font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25'
+                  : 'font-semibold bg-slate-800 hover:bg-slate-700 text-white border border-slate-700'
+              }`}
             >
-              {proPlan.ctaText || 'Get Pro Researcher'} <Zap className="w-3.5 h-3.5 fill-slate-950" />
+              {proPlan.ctaText || 'Get Pro Researcher'} {isProHighlighted ? <Zap className="w-3.5 h-3.5 fill-slate-950" /> : <ArrowRight className="w-3.5 h-3.5" />}
             </Link>
           </div>
 
           {/* Plan 3: PhD Elite (Worldwide Ultra) */}
-          <div className="rounded-2xl p-6 bg-gradient-to-b from-teal-950/40 via-slate-900 to-slate-900 border border-teal-500/30 hover:border-teal-500/60 flex flex-col justify-between transition-all">
+          <div
+            className={`rounded-2xl p-6 flex flex-col justify-between transition-all relative ${
+              isEliteHighlighted
+                ? 'bg-slate-900 border-2 border-emerald-500 shadow-2xl shadow-emerald-500/15 ring-1 ring-emerald-500/20'
+                : 'bg-gradient-to-b from-teal-950/40 via-slate-900 to-slate-900 border border-teal-500/30 hover:border-teal-500/60'
+            }`}
+          >
+            {isEliteHighlighted && (
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500 text-slate-950 uppercase tracking-wider whitespace-nowrap shadow-md z-10">
+                ⭐ Most Popular
+              </div>
+            )}
+
             <div className="space-y-4">
               <div>
                 <div className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-teal-500/15 text-teal-300 border border-teal-500/30 uppercase tracking-wider mb-2">
@@ -313,7 +404,11 @@ export default function HomePricingSection({ initialPlans }: HomePricingSectionP
 
             <Link
               href={`/checkout?plan=elite&currency=${currency}`}
-              className="mt-6 w-full py-2.5 rounded-xl text-center text-xs font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20 transition-all flex items-center justify-center gap-1.5"
+              className={`mt-6 w-full py-2.5 rounded-xl text-center text-xs transition-all flex items-center justify-center gap-1.5 ${
+                isEliteHighlighted
+                  ? 'font-bold bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/25'
+                  : 'font-bold bg-teal-500 hover:bg-teal-400 text-slate-950 shadow-lg shadow-teal-500/20'
+              }`}
             >
               {elitePlan.ctaText || 'Get PhD Elite'} <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
             </Link>

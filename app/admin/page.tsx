@@ -95,6 +95,8 @@ interface PricingPlanItem {
   description: string;
   features: string[];
   cta: string;
+  ctaText?: string;
+  badge?: string;
   highlighted: boolean;
   searchesLimit?: number;
   draftsLimit?: number;
@@ -224,6 +226,7 @@ export default function AdminDashboardPage() {
   const handleSavePricingOnly = async () => {
     setSaving(true);
     try {
+      // 1. Update CMS Site Content
       const pRes = await fetch('/api/admin/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -237,28 +240,48 @@ export default function AdminDashboardPage() {
         }),
       });
 
+      // 2. Also directly update /api/pricing to ensure consistency
+      try {
+        await fetch('/api/pricing', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plans: pricingPlans }),
+        });
+      } catch (e) {
+        console.warn('API pricing direct sync warning:', e);
+      }
+
       const pData = await pRes.json();
       if (pRes.ok && pData.section?.content?.plans) {
         setPricingPlans(pData.section.content.plans);
       }
 
-      // Sync to custom plans in localStorage for instant live view across browser
+      // 3. Sync to custom plans in localStorage for instant live view across browser
       const planMap: Record<string, any> = {};
       pricingPlans.forEach(p => {
         const tierKey = p.tier.toUpperCase();
         planMap[tierKey] = {
           tier: tierKey,
           name: p.name,
-          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (p.price.includes('3,500') ? 3500 : p.price.includes('8,000') ? 8000 : p.price.includes('16,000') ? 16000 : 0),
-          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (p.price.includes('12') ? 12 : p.price.includes('29') ? 29 : p.price.includes('59') ? 59 : 0),
+          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (p.price?.includes('3,500') ? 3500 : p.price?.includes('8,000') ? 8000 : p.price?.includes('16,000') ? 16000 : 0),
+          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (p.price?.includes('12') ? 12 : p.price?.includes('29') ? 29 : p.price?.includes('59') ? 59 : 0),
           searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
           draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
           autopilotBatchLimit: p.autopilotLimit !== undefined ? Number(p.autopilotLimit) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500),
           features: p.features,
           tagline: p.description,
+          badge: p.badge,
+          highlighted: Boolean(p.highlighted),
+          ctaText: p.cta || p.ctaText || 'Get Started',
         };
       });
       saveCustomPlans(planMap);
+
+      // Notify any open components/tabs
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: pricingPlans, planMap } }));
+        localStorage.setItem('profmatch_pricing_last_sync', String(Date.now()));
+      }
 
       showNotice('success', 'Academic packages & pricing successfully published live across all pages!');
     } catch (err: any) {
@@ -1859,6 +1882,36 @@ export default function AdminDashboardPage() {
                         value={plan.autopilotLimit !== undefined ? plan.autopilotLimit : (plan.tier === 'FREE' ? 0 : plan.tier === 'STARTER' ? 5 : plan.tier === 'PRO' ? 20 : 500)}
                         onChange={e => handleUpdatePlan(pIdx, 'autopilotLimit', Number(e.target.value))}
                         className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-emerald-400 font-semibold focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                        Top Badge (e.g. Focused Intake, Recommended)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Focused Intake"
+                        value={plan.badge || ''}
+                        onChange={e => handleUpdatePlan(pIdx, 'badge', e.target.value)}
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-semibold text-slate-400 mb-1">
+                        CTA Button Text
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Get Starter"
+                        value={plan.cta || plan.ctaText || ''}
+                        onChange={e => {
+                          handleUpdatePlan(pIdx, 'cta', e.target.value);
+                          handleUpdatePlan(pIdx, 'ctaText', e.target.value);
+                        }}
+                        className="w-full px-3 py-1.5 bg-slate-950 border border-slate-800 rounded-lg text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
                       />
                     </div>
                   </div>
