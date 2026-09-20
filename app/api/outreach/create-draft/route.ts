@@ -28,8 +28,33 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // 2. Fetch connected email account
-    const account = mockDb.getConnectedEmailAccount(userId);
+    // 2. Fetch connected email account (from mockDb or 1-year persistent cookie)
+    let account = mockDb.getConnectedEmailAccount(userId);
+
+    const tokensCookie = request.cookies.get('profmatch_gmail_tokens')?.value;
+    const accountCookie = request.cookies.get('profmatch_gmail_account')?.value;
+
+    let parsedTokens: any = null;
+    let parsedAcc: any = null;
+    if (tokensCookie) {
+      try { parsedTokens = JSON.parse(tokensCookie); } catch {}
+    }
+    if (accountCookie) {
+      try { parsedAcc = JSON.parse(accountCookie); } catch {}
+    }
+
+    if (!account && (parsedTokens?.access_token || parsedAcc?.email)) {
+      account = mockDb.saveConnectedEmailAccount({
+        user_id: userId,
+        email: parsedAcc?.email || parsedTokens?.email || 'user@gmail.com',
+        access_token: parsedTokens?.access_token || '',
+        refresh_token: parsedTokens?.refresh_token || '',
+        token_expires_at: parsedTokens?.token_expires_at || Date.now() + 3600000,
+        connected_at: parsedAcc?.connected_at || new Date().toISOString(),
+        status: 'ACTIVE'
+      });
+    }
+
     if (!account) {
       return NextResponse.json(
         {
@@ -41,11 +66,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let accessToken = account.access_token;
+    let accessToken = account.access_token || parsedTokens?.access_token;
+    const refreshToken = account.refresh_token || parsedTokens?.refresh_token;
     const nowMs = Date.now();
 
     // 3. Auto-refresh access token if expired or near expiry
-    if (account.token_expires_at - nowMs < 300000 && account.refresh_token) {
+    if ((account.token_expires_at - nowMs < 300000 || !accessToken) && refreshToken) {
       const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
       const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -57,7 +83,7 @@ export async function POST(request: NextRequest) {
             body: new URLSearchParams({
               client_id: clientId,
               client_secret: clientSecret,
-              refresh_token: account.refresh_token,
+              refresh_token: refreshToken,
               grant_type: 'refresh_token',
             }),
           });
@@ -65,10 +91,11 @@ export async function POST(request: NextRequest) {
           const refreshData = await refreshRes.json();
           if (refreshRes.ok && refreshData.access_token) {
             accessToken = refreshData.access_token;
-            mockDb.saveConnectedEmailAccount({
+            account = mockDb.saveConnectedEmailAccount({
               user_id: userId,
               email: account.email,
               access_token: refreshData.access_token,
+              refresh_token: refreshToken,
               token_expires_at: nowMs + (refreshData.expires_in || 3600) * 1000,
             });
           }
@@ -130,13 +157,31 @@ export async function POST(request: NextRequest) {
       last_used_at: new Date().toISOString(),
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       draftId: draftData.id,
       connectedEmail: account.email,
       gmailUrl: 'https://mail.google.com/mail/u/0/#drafts',
       message: 'Gmail draft created successfully. Open Gmail to review and send.',
     });
+
+    if (accessToken) {
+      response.cookies.set('profmatch_gmail_tokens', JSON.stringify({
+        access_token: accessToken,
+        refresh_token: refreshToken || '',
+        token_expires_at: account.token_expires_at || (nowMs + 3600000),
+        email: account.email,
+        user_id: userId,
+      }), {
+        path: '/',
+        maxAge: 31536000,
+        sameSite: 'lax',
+        secure: process.env.NODE_ENV === 'production',
+        httpOnly: true,
+      });
+    }
+
+    return response;
   } catch (err: any) {
     console.error('[CREATE GMAIL DRAFT ROUTE ERROR]', err);
     return NextResponse.json(

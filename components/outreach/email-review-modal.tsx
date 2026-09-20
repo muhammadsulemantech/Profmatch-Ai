@@ -41,7 +41,20 @@ export default function EmailReviewModal({
   const [connectedStatus, setConnectedStatus] = useState<{
     connected: boolean;
     account?: { email: string; connected_at: string } | null;
-  }>({ connected: false });
+  }>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profmatch_gmail_connection');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.connected) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    return { connected: false };
+  });
   const [checkingStatus, setCheckingStatus] = useState(true);
 
   const [isCreatingDraft, setIsCreatingDraft] = useState(false);
@@ -63,7 +76,7 @@ export default function EmailReviewModal({
       const defaultSubject = initialSubject || `Prospective MS/PhD Research Student — Interested in ${professor.primary_discipline || 'Academic Research'}`;
       setSubject(defaultSubject);
 
-      const defaultBody = initialBody || `Dear ${professor.name},\n\nI am writing to express my strong interest in joining your research group at ${professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university')}. Having reviewed your recent work in ${professor.primary_discipline || 'the field'}, I am particularly fascinated by your methodologies.\n\nMy background includes graduate-level research in related domains, and I would love the opportunity to contribute to your ongoing projects.\n\nAttached is my CV for your review. Thank you for your time and consideration.\n\nSincerely,\n[Your Name]`;
+      const defaultBody = initialBody || `Dear Professor ${professor.name},\n\nI hope this email finds you well.\n\nI have been closely following your research group's work in ${professor.primary_discipline || 'your department'} at ${professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university')}. I am writing to express my strong interest in joining your lab as a prospective graduate research assistant.\n\nMy academic background and research interests align strongly with your publications. I would appreciate the opportunity to discuss any open positions in your lab for the upcoming term.\n\nThank you for your time and consideration. I have attached my CV for your review.\n\nSincerely,\n[Your Name]`;
       setBodyText(defaultBody);
 
       setDraftResult(null);
@@ -76,14 +89,52 @@ export default function EmailReviewModal({
     try {
       const res = await fetch('/api/auth/google/gmail/status');
       const data = await res.json();
-      if (res.ok) {
-        setConnectedStatus({
-          connected: !!data.connected,
+      if (res.ok && (data.connected || data.isConnected)) {
+        const state = {
+          connected: true,
           account: data.account || null,
-        });
+        };
+        setConnectedStatus(state);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('profmatch_gmail_connection', JSON.stringify(state));
+        }
+      } else {
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('profmatch_gmail_connection');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.connected && parsed.account?.email) {
+                await fetch('/api/auth/google/gmail/status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: parsed.account.email,
+                    connected_at: parsed.account.connected_at,
+                  }),
+                });
+                setConnectedStatus(parsed);
+                setCheckingStatus(false);
+                return;
+              }
+            } catch (err) {}
+          }
+        }
+        setConnectedStatus({ connected: false, account: null });
       }
     } catch (e) {
       console.error('Failed to check Gmail status:', e);
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('profmatch_gmail_connection');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.connected) {
+              setConnectedStatus(parsed);
+            }
+          } catch (err) {}
+        }
+      }
     } finally {
       setCheckingStatus(false);
     }

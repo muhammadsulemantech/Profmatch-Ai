@@ -20,10 +20,42 @@ export default function ConnectorsPage() {
   const [connectedStatus, setConnectedStatus] = useState<{
     connected: boolean;
     account?: { email: string; connected_at: string } | null;
-  }>({ connected: false });
+  }>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const saved = localStorage.getItem('profmatch_gmail_connection');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.connected) {
+            return parsed;
+          }
+        }
+      } catch (e) {}
+    }
+    return { connected: false };
+  });
   const [disconnecting, setDisconnecting] = useState(false);
 
   useEffect(() => {
+    // Check if we just redirected back from Google OAuth callback
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const isConnectedParam = params.get('gmail_connected');
+      const emailParam = params.get('gmail_email');
+
+      if (isConnectedParam === 'true' && emailParam) {
+        const backupState = {
+          connected: true,
+          account: {
+            email: emailParam,
+            connected_at: new Date().toISOString(),
+          },
+        };
+        setConnectedStatus(backupState);
+        localStorage.setItem('profmatch_gmail_connection', JSON.stringify(backupState));
+      }
+    }
+
     fetchGmailStatus();
   }, []);
 
@@ -32,14 +64,55 @@ export default function ConnectorsPage() {
     try {
       const res = await fetch('/api/auth/google/gmail/status');
       const data = await res.json();
-      if (res.ok) {
-        setConnectedStatus({
-          connected: !!(data.connected || data.isConnected),
+      if (res.ok && (data.connected || data.isConnected)) {
+        const state = {
+          connected: true,
           account: data.account || null,
-        });
+        };
+        setConnectedStatus(state);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('profmatch_gmail_connection', JSON.stringify(state));
+        }
+      } else {
+        // Check if client has local backup that can re-sync with server
+        if (typeof window !== 'undefined') {
+          const saved = localStorage.getItem('profmatch_gmail_connection');
+          if (saved) {
+            try {
+              const parsed = JSON.parse(saved);
+              if (parsed && parsed.connected && parsed.account?.email) {
+                // Server might have restarted; re-sync client status to server
+                await fetch('/api/auth/google/gmail/status', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    email: parsed.account.email,
+                    connected_at: parsed.account.connected_at,
+                  }),
+                });
+                setConnectedStatus(parsed);
+                setCheckingStatus(false);
+                return;
+              }
+            } catch (err) {}
+          }
+        }
+        setConnectedStatus({ connected: false, account: null });
       }
     } catch (e) {
       console.error('Failed to fetch Gmail status:', e);
+      // If network fails, preserve local backup state
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('profmatch_gmail_connection');
+        if (saved) {
+          try {
+            const parsed = JSON.parse(saved);
+            if (parsed && parsed.connected) {
+              setConnectedStatus(parsed);
+            }
+          } catch (err) {}
+        }
+      }
     } finally {
       setCheckingStatus(false);
     }
@@ -56,14 +129,16 @@ export default function ConnectorsPage() {
 
     setDisconnecting(true);
     try {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('profmatch_gmail_connection');
+      }
       const res = await fetch('/api/auth/google/gmail/status', {
         method: 'DELETE',
       });
-      if (res.ok) {
-        setConnectedStatus({ connected: false, account: null });
-      }
+      setConnectedStatus({ connected: false, account: null });
     } catch (e) {
       console.error('Failed to disconnect Gmail:', e);
+      setConnectedStatus({ connected: false, account: null });
     } finally {
       setDisconnecting(false);
     }

@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
       currentUserId = 'usr_student_001'; // Fallback to active student profile
     }
 
-    // 4. Save connected email account
+    // 4. Save connected email account to mockDb
     mockDb.loadFromDisk();
     mockDb.saveConnectedEmailAccount({
       user_id: currentUserId,
@@ -93,7 +93,45 @@ export async function GET(request: NextRequest) {
     });
 
     const targetUrl = `${origin}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}${redirectTo.includes('?') ? '&' : '?'}gmail_connected=true&gmail_email=${encodeURIComponent(googleUser.email)}`;
-    return NextResponse.redirect(targetUrl);
+    const response = NextResponse.redirect(targetUrl);
+
+    // 1-Year expiration (365 days) so user stays connected unless they explicitly disconnect
+    const ONE_YEAR_MS = 365 * 24 * 60 * 60 * 1000;
+    const expiresDate = new Date(Date.now() + ONE_YEAR_MS);
+
+    // Public account info cookie
+    response.cookies.set('profmatch_gmail_account', JSON.stringify({
+      connected: true,
+      email: googleUser.email.toLowerCase().trim(),
+      connected_at: new Date().toISOString(),
+      user_id: currentUserId,
+      provider: 'gmail'
+    }), {
+      path: '/',
+      expires: expiresDate,
+      maxAge: 31536000,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: false,
+    });
+
+    // Secure token cookie (refresh token + access token)
+    response.cookies.set('profmatch_gmail_tokens', JSON.stringify({
+      access_token: tokenData.access_token,
+      refresh_token: tokenData.refresh_token || '',
+      token_expires_at: Date.now() + (tokenData.expires_in || 3600) * 1000,
+      email: googleUser.email.toLowerCase().trim(),
+      user_id: currentUserId,
+    }), {
+      path: '/',
+      expires: expiresDate,
+      maxAge: 31536000,
+      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+    });
+
+    return response;
   } catch (err: any) {
     console.error('[GMAIL CALLBACK ERROR]', err);
     return NextResponse.redirect(`${origin}${redirectTo}?error=${encodeURIComponent('Failed to complete Gmail connection.')}`);
