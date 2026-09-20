@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { getSiteContentSection, updateSiteContent } from '@/lib/cms/content-service';
 import { ACADEMIC_PLANS, PlanConfig } from '@/lib/services/usage-service';
+import { verifyAdminSession } from '@/lib/auth/server-auth';
 
 export async function GET() {
   try {
@@ -129,6 +130,11 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const admin = await verifyAdminSession(request);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const { plans } = body;
 

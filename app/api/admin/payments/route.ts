@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { PaymentStatus } from '@/types/database';
+import { verifyAdminSession } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +43,14 @@ export async function GET(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const admin = await verifyAdminSession(request);
+    if (!admin) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Administrative access required.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { paymentId, action, adminNote } = body;
 

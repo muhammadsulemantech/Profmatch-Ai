@@ -102,3 +102,18 @@ export async function verifyAuthSession(request: NextRequest): Promise<AuthSessi
 
   return null;
 }
+
+/**
+ * Server-side guard to verify administrative privileges
+ */
+export async function verifyAdminSession(request: NextRequest): Promise<AuthSession | null> {
+  const session = await verifyAuthSession(request);
+  if (!session) return null;
+  const isAdminEmail = (e?: string) =>
+    e?.toLowerCase() === 'sulemanmunir6752@gmail.com' || e?.toLowerCase() === 'admin@profmatch.ai';
+
+  if (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) {
+    return session;
+  }
+  return null;
+}

@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { logAuditEvent } from '@/lib/security/audit';
+import { verifyAdminSession } from '@/lib/auth/server-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const admin = await verifyAdminSession(request);
+  if (!admin) {
+    return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
+  }
+
   mockDb.loadFromDisk();
 
   const enrichedUsers = mockDb.profiles.map(u => {
@@ -54,6 +60,11 @@ export async function PATCH(request: NextRequest) {
 
 async function handleUpdateUser(request: NextRequest) {
   try {
+    const admin = await verifyAdminSession(request);
+    if (!admin) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
+    }
+
     mockDb.loadFromDisk();
     const body = await request.json();
     const userId = body.userId || body.id;

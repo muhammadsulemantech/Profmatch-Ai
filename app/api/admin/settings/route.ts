@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { getSiteSettings, updateSiteSettings } from '@/lib/cms/settings-service';
 import { logAuditEvent } from '@/lib/security/audit';
+import { verifyAdminSession } from '@/lib/auth/server-auth';
 
 export async function GET() {
   const settings = await getSiteSettings();
@@ -18,6 +19,11 @@ export async function POST(request: NextRequest) {
 
 async function handleUpdateSettings(request: NextRequest) {
   try {
+    const adminSession = await verifyAdminSession(request);
+    if (!adminSession) {
+      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
+    }
+
     const body = await request.json();
     const updated = await updateSiteSettings(body);
 
