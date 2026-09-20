@@ -1,12 +1,43 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useAuth } from '@/lib/auth/auth-context';
 import { LogOut, User } from 'lucide-react';
+import { getSavedAvatar } from '@/lib/utils/avatar';
 
 export default function NavbarAuthControls() {
   const { user, isAuthenticated, logout, openAuthModal } = useAuth();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  const syncAvatar = useCallback(() => {
+    if (!user) {
+      setAvatarUrl(null);
+      return;
+    }
+    const saved = getSavedAvatar(user.id);
+    setAvatarUrl(saved);
+  }, [user]);
+
+  useEffect(() => {
+    syncAvatar();
+
+    const handleAvatarUpdate = (e: any) => {
+      if (e?.detail) {
+        setAvatarUrl(e.detail);
+      } else {
+        syncAvatar();
+      }
+    };
+
+    window.addEventListener('profmatch_avatar_updated', handleAvatarUpdate);
+    window.addEventListener('storage', syncAvatar);
+
+    return () => {
+      window.removeEventListener('profmatch_avatar_updated', handleAvatarUpdate);
+      window.removeEventListener('storage', syncAvatar);
+    };
+  }, [syncAvatar]);
 
   return (
     <div className="flex items-center gap-2.5">
@@ -18,9 +49,17 @@ export default function NavbarAuthControls() {
             href={user.role === 'ADMIN' ? '/admin' : '/dashboard'}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-emerald-500/30 text-xs font-medium text-slate-200 transition-colors"
           >
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-bold text-[10px]">
-              {user.full_name?.charAt(0).toUpperCase() || 'U'}
-            </div>
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt={user.full_name || 'Profile'}
+                className="w-5 h-5 rounded-full object-cover border border-emerald-400/50 shrink-0"
+              />
+            ) : (
+              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-bold text-[10px] shrink-0">
+                {user.full_name?.charAt(0).toUpperCase() || 'U'}
+              </div>
+            )}
             <span className="max-w-[140px] truncate hidden sm:inline">
               {user.full_name} {user.role === 'ADMIN' && <span className="text-[10px] text-amber-400 font-bold ml-1">(Admin)</span>}
             </span>

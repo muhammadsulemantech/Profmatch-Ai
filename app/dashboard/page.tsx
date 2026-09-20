@@ -31,9 +31,12 @@ import {
   LogOut,
   User,
   ShieldAlert,
-  Link2
+  Link2,
+  Camera,
+  Loader2
 } from 'lucide-react';
 import { Professor } from '@/types/database';
+import { compressAndSaveAvatar, getSavedAvatar, removeSavedAvatar } from '@/lib/utils/avatar';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -47,6 +50,11 @@ export default function DashboardPage() {
   const [latestReply, setLatestReply] = React.useState<any>(null);
   const [savedProfessors, setSavedProfessors] = React.useState<Professor[]>([]);
   const [sentEmailsList, setSentEmailsList] = React.useState<any[]>([]);
+
+  // Profile Avatar State
+  const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = React.useState<boolean>(false);
+  const avatarFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const student = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
   const matches = mockDb.researchMatches;
@@ -64,10 +72,15 @@ export default function DashboardPage() {
       setUnreadRepliesCount(0);
       setPositiveCount(0);
       setLatestReply(null);
+      setAvatarUrl(null);
       setSavedProfessors([]);
       setSentEmailsList([]);
       return;
     }
+
+    // 0. Load Profile Avatar
+    const savedAvatar = getSavedAvatar(user.id);
+    setAvatarUrl(savedAvatar);
 
     // 1. Saved Professors Count & List
     const savedKey = `profmatch_saved_profs_${user.id}`;
@@ -125,14 +138,49 @@ export default function DashboardPage() {
       loadUserData();
     };
 
+    const handleAvatarUpdate = (e: any) => {
+      if (e?.detail) {
+        setAvatarUrl(e.detail);
+      } else {
+        setAvatarUrl(getSavedAvatar(user?.id || 'guest'));
+      }
+    };
+
     window.addEventListener('profmatch_messages_updated', handleUpdate);
+    window.addEventListener('profmatch_avatar_updated', handleAvatarUpdate);
     window.addEventListener('storage', handleUpdate);
 
     return () => {
       window.removeEventListener('profmatch_messages_updated', handleUpdate);
+      window.removeEventListener('profmatch_avatar_updated', handleAvatarUpdate);
       window.removeEventListener('storage', handleUpdate);
     };
-  }, [loadUserData]);
+  }, [loadUserData, user]);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    try {
+      const dataUrl = await compressAndSaveAvatar(file, user?.id || 'guest');
+      setAvatarUrl(dataUrl);
+    } catch (err) {
+      console.error('Failed to upload avatar:', err);
+      alert('Failed to process image. Please try another image file.');
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarFileInputRef.current) {
+        avatarFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAvatar = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    removeSavedAvatar(user?.id || 'guest');
+    setAvatarUrl(null);
+  };
 
   const handleProtectedAction = (actionName: string, path?: string, customFn?: () => void) => {
     requireAuth(actionName, () => {
@@ -182,15 +230,90 @@ export default function DashboardPage() {
           <aside className="lg:col-span-3 space-y-6">
             <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4 shadow-sm">
               <div className="pb-3 border-b border-slate-800">
-                <span className="text-[10px] font-semibold tracking-wider uppercase text-emerald-400 block">
+                <span className="text-[10px] font-semibold tracking-wider uppercase text-emerald-400 block mb-3">
                   {isAuthenticated ? 'Active Workspace' : 'Workspace Preview'}
                 </span>
-                <p className="font-heading font-bold text-base text-white mt-0.5">
-                  {displayName}
-                </p>
-                <p className="text-xs text-slate-400">
-                  {student.target_degree} &bull; {student.target_country}
-                </p>
+
+                <div className="flex items-center gap-3.5">
+                  {/* Interactive Profile Photo Upload */}
+                  <div className="relative group shrink-0">
+                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-emerald-500/40 bg-slate-950 flex items-center justify-center shadow-lg relative">
+                      {avatarUrl ? (
+                        <img
+                          src={avatarUrl}
+                          alt={displayName}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-extrabold text-xl">
+                          {displayName.charAt(0).toUpperCase() || 'K'}
+                        </div>
+                      )}
+
+                      {isUploadingAvatar && (
+                        <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                          <Loader2 className="w-5 h-5 text-emerald-400 animate-spin" />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Camera overlay on hover */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      title="Upload or change profile picture (PC or mobile)"
+                      className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-emerald-400" />
+                      <span className="text-[8px] font-bold text-slate-200 mt-0.5">Upload</span>
+                    </button>
+
+                    {/* Camera icon badge at bottom right */}
+                    <button
+                      type="button"
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      title="Upload profile picture"
+                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
+                    >
+                      <Camera className="w-2.5 h-2.5" />
+                    </button>
+
+                    <input
+                      type="file"
+                      ref={avatarFileInputRef}
+                      onChange={handleAvatarUpload}
+                      accept="image/*"
+                      className="hidden"
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <p className="font-heading font-bold text-base text-white truncate">
+                      {displayName}
+                    </p>
+                    <p className="text-xs text-slate-400 truncate">
+                      {student.target_degree} &bull; {student.target_country}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => avatarFileInputRef.current?.click()}
+                        className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1"
+                      >
+                        {avatarUrl ? 'Change Photo' : '+ Add Photo'}
+                      </button>
+                      {avatarUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveAvatar}
+                          className="text-[11px] font-semibold text-slate-500 hover:text-red-400 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <nav className="space-y-1 text-xs font-medium">
