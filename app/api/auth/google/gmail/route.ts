@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
     client_id: clientId,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'openid email profile https://www.googleapis.com/auth/gmail.compose',
+    scope: 'openid email profile https://www.googleapis.com/auth/gmail.compose https://www.googleapis.com/auth/gmail.send',
     access_type: 'offline',
     prompt: 'consent',
     state: state,

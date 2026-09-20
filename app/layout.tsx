@@ -3,7 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { getSiteSettings } from '@/lib/cms/settings-service';
 import Link from 'next/link';
-import { GraduationCap, Search, ShieldCheck, Lock, BookOpen } from 'lucide-react';
+import { GraduationCap, Search, ShieldCheck, Lock, BookOpen, Rocket } from 'lucide-react';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
@@ -98,6 +98,10 @@ export default async function RootLayout({
                 </Link>
                 <Link href="/campaigns" className="hover:text-white transition-colors">
                   Campaigns
+                </Link>
+                <Link href="/autopilot" className="hover:text-emerald-400 flex items-center gap-1 transition-colors text-emerald-300">
+                  <Rocket className="w-3.5 h-3.5 text-emerald-400" />
+                  AutoPilot
                 </Link>
                 <Link href="/pricing" className="hover:text-white transition-colors">
                   Pricing

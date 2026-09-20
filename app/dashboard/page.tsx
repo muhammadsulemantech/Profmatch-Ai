@@ -33,7 +33,8 @@ import {
   ShieldAlert,
   Link2,
   Camera,
-  Loader2
+  Loader2,
+  Rocket
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import { compressAndSaveAvatar, getSavedAvatar, removeSavedAvatar } from '@/lib/utils/avatar';
@@ -350,6 +351,20 @@ export default function DashboardPage() {
                 >
                   <Layers className="w-4 h-4" />
                   Campaigns
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleProtectedAction('launch autonomous bulk outreach agent', '/autopilot')}
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors text-left group"
+                >
+                  <span className="flex items-center gap-2.5">
+                    <Rocket className="w-4 h-4 text-emerald-400 group-hover:animate-pulse" />
+                    AutoPilot Outreach
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gradient-to-r from-emerald-500/20 to-teal-500/20 text-emerald-400 border border-emerald-500/30">
+                    AI Agent
+                  </span>
                 </button>
 
                 <button
