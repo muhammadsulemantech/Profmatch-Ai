@@ -174,8 +174,8 @@ export default async function RootLayout({
                 <p className="text-xs text-slate-400 mb-2 leading-relaxed">
                   Questions regarding university source verification or faculty indexing?
                 </p>
-                <a href={`mailto:${settings.supportEmail}`} className="text-xs text-emerald-400 font-medium hover:underline block mb-3">
-                  {settings.supportEmail}
+                <a href={`mailto:${settings.supportEmail || 'profmatchsupport@gmail.com'}`} className="text-xs text-emerald-400 font-medium hover:underline block mb-3">
+                  {settings.supportEmail || 'profmatchsupport@gmail.com'}
                 </a>
                 <div className="flex items-center gap-2 text-slate-500 text-xs">
                   <span>US</span> &bull; <span>Canada</span> &bull; <span>UK</span> &bull; <span>EU</span> &bull; <span>Australia</span>

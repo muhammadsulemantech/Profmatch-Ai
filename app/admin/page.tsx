@@ -146,8 +146,8 @@ export default function AdminDashboardPage() {
   const [settings, setSettings] = useState<SiteSettings>({
     siteName: 'ProfMatch AI',
     tagline: 'Global faculty discovery. Deep research verification. High-converting ethical outreach.',
-    supportEmail: 'support@profmatch.ai',
-    primaryEmail: 'outreach@profmatch.ai',
+    supportEmail: 'profmatchsupport@gmail.com',
+    primaryEmail: 'profmatchsupport@gmail.com',
     defaultCountry: 'Global (All Countries)',
     maintenanceMode: false,
     announcement: {

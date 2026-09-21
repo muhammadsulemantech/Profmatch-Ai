@@ -19,8 +19,8 @@ VALUES
 ('general', '{
   "siteName": "ProfMatch AI",
   "tagline": "Find the right professors. Understand their research. Send better outreach.",
-  "supportEmail": "support@profmatch.ai",
-  "primaryEmail": "outreach@profmatch.ai",
+  "supportEmail": "profmatchsupport@gmail.com",
+  "primaryEmail": "profmatchsupport@gmail.com",
   "defaultCountry": "USA",
   "maintenanceMode": false,
   "announcement": {
