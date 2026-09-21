@@ -183,9 +183,14 @@ export default async function RootLayout({
               </div>
             </div>
 
-            <div className="border-t border-slate-800/80 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500">
-              <p>&copy; {new Date().getFullYear()} {settings.siteName}. Designed for serious academic research.</p>
-              <div className="flex items-center gap-4 mt-2 sm:mt-0">
+            <div className="border-t border-slate-800/80 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
+              <div className="flex flex-col gap-2 text-center sm:text-left">
+                <p>&copy; {new Date().getFullYear()} {settings.siteName}. Designed for serious academic research.</p>
+                <p className="text-sm font-semibold text-slate-200 tracking-wide">
+                  Powered by <span className="text-emerald-400 font-bold">Tonovox technologies</span>
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
                   <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> 100% Verifiable Academic Sources
                 </span>
