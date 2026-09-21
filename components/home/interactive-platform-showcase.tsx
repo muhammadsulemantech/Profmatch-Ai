@@ -13,8 +13,6 @@ import {
   FileCheck
 } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
-import { mockDb } from '@/lib/supabase/mock-db';
-
 export default function InteractivePlatformShowcase() {
   const [activeTab, setActiveTab] = useState<'match' | 'papers' | 'proposal' | 'pipeline'>('match');
   const [selectedField, setSelectedField] = useState('All Fields');
@@ -53,27 +51,34 @@ export default function InteractivePlatformShowcase() {
       const storedSaved = localStorage.getItem(savedKey);
       if (storedSaved) savedIds = JSON.parse(storedSaved);
     } catch {}
-    const savedCount = savedIds.length;
+    const savedCount = Array.isArray(savedIds) ? savedIds.length : 0;
 
     // 2. Sent Inquiries count
     const sentKey = `profmatch_sent_emails_${user.id}`;
     let localSent: any[] = [];
     try {
       const storedSent = localStorage.getItem(sentKey);
-      if (storedSent) localSent = JSON.parse(storedSent);
+      if (storedSent) {
+        const parsed = JSON.parse(storedSent);
+        if (Array.isArray(parsed)) localSent = parsed;
+      }
     } catch {}
-    const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
     const combinedEmailsMap = new Map();
-    [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
+    localSent.forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
     const userEmails = Array.from(combinedEmailsMap.values());
     const sentCount = userEmails.length;
 
     // 3. Replies Received & Response Rate
-    const userReps = mockDb.replies.filter(r => {
-      const matchingEmail = mockDb.emails.find(e => e.id === r.email_id);
-      return matchingEmail?.user_id === user.id;
-    });
-    const repliesCount = userReps.length;
+    const repliesKey = `profmatch_replies_${user.id}`;
+    let localReplies: any[] = [];
+    try {
+      const storedReplies = localStorage.getItem(repliesKey);
+      if (storedReplies) {
+        const parsed = JSON.parse(storedReplies);
+        if (Array.isArray(parsed)) localReplies = parsed;
+      }
+    } catch {}
+    const repliesCount = localReplies.length;
     const respRate = sentCount > 0 ? Math.round((repliesCount / sentCount) * 100) : 0;
 
     // 4. Interviews Scheduled / Active Pipeline
@@ -81,14 +86,16 @@ export default function InteractivePlatformShowcase() {
     let localApps: any[] = [];
     try {
       const storedApps = localStorage.getItem(appKey);
-      if (storedApps) localApps = JSON.parse(storedApps);
+      if (storedApps) {
+        const parsed = JSON.parse(storedApps);
+        if (Array.isArray(parsed)) localApps = parsed;
+      }
     } catch {}
-    const mockUserApps = mockDb.applications.filter(a => a.user_id === user.id);
     const combinedAppsMap = new Map();
-    [...localApps, ...mockUserApps].forEach(a => combinedAppsMap.set(a.id, a));
+    localApps.forEach(a => combinedAppsMap.set(a.id, a));
     const userApps: any[] = Array.from(combinedAppsMap.values());
-    const interviewApps = userApps.filter(a => a.status === 'Interviewing' || a.status === 'Offer');
-    const positiveReplies = userReps.filter(r => r.sentiment === 'POSITIVE');
+    const interviewApps = userApps.filter(a => a?.status === 'Interviewing' || a?.status === 'Offer');
+    const positiveReplies = localReplies.filter(r => r?.sentiment === 'POSITIVE');
     const interviewsCount = Math.max(interviewApps.length, positiveReplies.length);
 
     setStats({

@@ -4,6 +4,8 @@ import { getSiteContentSection, updateSiteContent } from '@/lib/cms/content-serv
 import { ACADEMIC_PLANS, PlanConfig } from '@/lib/services/usage-service';
 import { verifyAdminSession } from '@/lib/auth/server-auth';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   try {
     mockDb.loadFromDisk();
