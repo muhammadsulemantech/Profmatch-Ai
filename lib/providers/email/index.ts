@@ -71,10 +71,26 @@ export class MockEmailProvider implements EmailProvider {
   }
 }
 
+import { SmtpEmailProvider } from './smtp-provider';
+export { SmtpEmailProvider };
+
 export function getEmailProvider(): EmailProvider {
   const providerType = process.env.EMAIL_PROVIDER?.toLowerCase();
-  const resendApiKey = process.env.RESEND_API_KEY;
+  const smtpUser = process.env.SMTP_USER;
+  const smtpPass = process.env.SMTP_PASS;
 
+  // 1. Google / Standard SMTP has highest priority if configured
+  if (
+    providerType === 'smtp' ||
+    (!providerType && smtpUser && smtpPass && !smtpPass.includes('your-google-app-password'))
+  ) {
+    if (smtpUser && smtpPass) {
+      return new SmtpEmailProvider();
+    }
+  }
+
+  // 2. Resend API
+  const resendApiKey = process.env.RESEND_API_KEY;
   if (
     (providerType === 'resend' || (!providerType && resendApiKey)) &&
     resendApiKey &&

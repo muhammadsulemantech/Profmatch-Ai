@@ -20,6 +20,7 @@ interface AuthContextType {
   signup: (fullName: string, email: string, password: string, targetDegree?: string) => Promise<{ success: boolean; error?: string }>;
   loginWithGoogle: (googlePayload?: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
+  setAuthenticatedUser: (user: AuthUser) => void;
   openAuthModal: (reason?: string, onAuthenticated?: () => void) => void;
   closeAuthModal: () => void;
   requireAuth: (actionName: string, callback: () => void) => void;
@@ -215,6 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signup,
         loginWithGoogle,
         logout,
+        setAuthenticatedUser: handleAuthSuccess,
         openAuthModal,
         closeAuthModal,
         requireAuth,
