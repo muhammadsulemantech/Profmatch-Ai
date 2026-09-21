@@ -1,13 +1,14 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-09-17
+Last Updated: 2026-09-22
 Repository: suleman197/Profmatch-Ai (branch: main)
-Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Tavily Search, OpenAlex API
+Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Tavily Search, OpenAlex API
 
 --------------------------------------------------------------------
 1. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
+• Support Email: profmatchsupport@gmail.com
 • Admin Email: sulemanmunir6752@gmail.com
 • Admin Password: suleman6752
 • Backup Admin Email: admin@profmatch.ai
@@ -18,24 +19,33 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
 --------------------------------------------------------------------
 • Base App URL: http://localhost:3000 / https://profmatch.ai
 • Supabase URL: https://yofbhdgabzuededvceyr.supabase.co (Configured in .env.local)
-• Supabase Keys: Anon Key & Service Role Key configured in .env.local
+• Supabase Keys: Anon Key & Service Role Key (SUPABASE_SERVICE_ROLE_KEY) configured in .env.local & Vercel
 • AI Engine: AI_PROVIDER=gemini | AI_API_KEY (Google Gemini Pro active)
 • Search Provider: SEARCH_PROVIDER=tavily | TAVILY_API_KEY (Tavily Search active)
 • Academic Provider: ACADEMIC_DATA_PROVIDER=openalex | OPENALEX_API_KEY (OpenAlex active)
-• Email Provider: EMAIL_PROVIDER=resend | RESEND_API_KEY (Resend Email active)
+• Email Provider: EMAIL_PROVIDER=resend | RESEND_API_KEY / Gmail SMTP (SMTP_USER=profmatchsupport@gmail.com)
 • Payment Provider: Stripe (Mock fallback active for zero-break testing)
 
 --------------------------------------------------------------------
 3. COMPLETE FEATURE MAP & PAGES IMPLEMENTED
 --------------------------------------------------------------------
-[1] Homepage & Global Header (app/page.tsx, app/layout.tsx)
+[1] Homepage, Global Header & Footer (app/page.tsx, app/layout.tsx)
     - Global acceptance ticker: "1,420+ MS & PhD Candidates Matched across 190+ Countries".
     - Fixed Top Navbar (z-index adjusted so pages like signup/login start below navbar).
     - Added "Tracker" navigation link to top menu.
+    - Global Footer Branding: Prominently displays "Powered by Tonovox technologies" in emerald accent styling.
+    - Client Hydration Safety: Direct mockDb imports removed from client components with safe server fallbacks preventing browser hydration exceptions.
 
-[2] Authentication & Responsive Body (app/login/page.tsx, app/signup/page.tsx)
+[2] Authentication & 6-Digit Email OTP Verification (app/login/page.tsx, app/signup/page.tsx, app/api/auth/signup/route.ts)
     - Body scroll overflow locked on auth pages to prevent background website scrolling.
     - Top logo & form padding responsive across all mobile & desktop screen sizes.
+    - Mandatory 6-Digit Email OTP Verification:
+      * Flow: When a candidate submits signup info, a 6-digit OTP is immediately generated and emailed first.
+      * Welcome email is only dispatched *after* the OTP code is successfully verified.
+      * 15-minute OTP expiration validity window.
+      * Multi-layer enforcement: Signup modal UI, auth-context.tsx signup handler, and /api/auth/signup backend endpoint.
+      * Server-side secure storage in database/pending_otps.json (git-ignored).
+      * Delivered via Gmail SMTP (profmatchsupport@gmail.com) and Resend fallback.
 
 [3] Candidate Profile & AI CV Auto-Parser (app/profile/page.tsx)
     - 1-Click Resume/CV File Auto-Parser (extracts research keywords, updates bio, target degree, and displays success banner).
@@ -58,10 +68,16 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
     - 5 Application Stages: Saved Faculty, Outreach Sent, Replied, Interview, Accepted.
     - Drag & Move between stages, custom note modal, persistent state.
 
-[7] Real-Time Editable Admin, Pricing Panel & Persistence Engine (app/admin/page.tsx, lib/supabase/mock-db.ts)
+[7] Real-Time Admin Panel, Permanent Supabase Cloud Persistence & CMS Engine (app/admin/page.tsx, lib/cms/settings-service.ts, lib/cms/content-service.ts)
     - Full CRUD editability for plans, tier highlighting, features, and price tags with instant real-time sync across user pages.
-    - Permanent Disk Persistence: `mockDb.loadFromDisk()` and `mockDb.persist()` integrated across all API routes (`pricing`, `payment-methods`, `content`, `settings`, `checkout/submit`, `matches/analyze`, `auth/login`, `auth/signup`) saving data permanently to `database/persistent_store.json`.
+    - Permanent Supabase Cloud Persistence (Vercel Serverless Fix):
+      * Resolves serverless cold-start reset issue where ephemeral filesystems lost admin modifications.
+      * lib/cms/settings-service.ts and lib/cms/content-service.ts use createAdminClient() with SUPABASE_SERVICE_ROLE_KEY to write directly to live Supabase (site_settings & site_content tables) bypassing RLS.
+      * Reads prioritize live Supabase tables first with fallback to local mockDb.
+      * Seeded current settings and content to Supabase database.
+      * SUPABASE_SERVICE_ROLE_KEY configured in Vercel project environment.
     - Auto User Registration: Every signup auto-saved to database store with Free vs Paid plan tracking in Admin Panel.
+    - Official Support Email: Standardized to profmatchsupport@gmail.com across all settings, layout, and emails.
     - Floating WhatsApp Button: Linked directly to 03227342728 (https://wa.me/923227342728).
     - Webpack Client Fallback: Webpack `fs: false` & `path: false` in `next.config.mjs` preventing client-side browser hydration exceptions.
 
@@ -80,7 +96,7 @@ Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, G
 --------------------------------------------------------------------
 4. SYSTEM ARCHITECTURE & CODE CONVENTIONS
 --------------------------------------------------------------------
-• State & Database: lib/supabase/mock-db.ts (Fallback DB) + Supabase Client/Server SDKs + database/persistent_store.json.
+• State & Database: Live Supabase DB (Service Role Key writes) + lib/supabase/mock-db.ts (Fallback DB) + database/persistent_store.json.
 • Responsive Styling: Pure Tailwind CSS with dark theme (#030712 background, Emerald accents, Slate/Zinc cards).
 • Zero Build Errors: Strictly typed TypeScript & 60/60 static/dynamic Next.js routes compiled with 0 errors.
 ====================================================================
