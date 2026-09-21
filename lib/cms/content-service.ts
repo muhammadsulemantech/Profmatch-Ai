@@ -1,9 +1,11 @@
 import { mockDb } from '@/lib/supabase/mock-db';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { SiteContentSection } from '@/types/database';
 
 export async function getSiteContentSection(sectionKey: string): Promise<SiteContentSection | null> {
-  const supabase = createClient();
+  // 1. Try Supabase first (persistent, works on Vercel)
+  const supabase = createAdminClient() || createClient();
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -17,12 +19,14 @@ export async function getSiteContentSection(sectionKey: string): Promise<SiteCon
     }
   }
 
+  // 2. Fallback: in-memory mock database
   mockDb.loadFromDisk();
   return mockDb.siteContent[sectionKey] || null;
 }
 
 export async function getAllSiteContent(): Promise<Record<string, SiteContentSection>> {
-  const supabase = createClient();
+  // 1. Try Supabase first
+  const supabase = createAdminClient() || createClient();
   if (supabase) {
     try {
       const { data, error } = await supabase.from('site_content').select('*');
@@ -38,11 +42,13 @@ export async function getAllSiteContent(): Promise<Record<string, SiteContentSec
     }
   }
 
+  // 2. Fallback: in-memory mock database
   mockDb.loadFromDisk();
   return mockDb.siteContent;
 }
 
 export async function updateSiteContent(sectionKey: string, payload: Partial<SiteContentSection>, userId?: string): Promise<SiteContentSection> {
+  // 1. Always update in-memory store for immediate reads
   mockDb.loadFromDisk();
   const updatedItem: SiteContentSection = {
     section_key: sectionKey,
@@ -57,10 +63,14 @@ export async function updateSiteContent(sectionKey: string, payload: Partial<Sit
   mockDb.siteContent[sectionKey] = updatedItem;
   mockDb.persist();
 
-  const supabase = createClient();
-  if (supabase) {
+  // 2. Persist to Supabase with service role key (bypasses RLS)
+  const adminClient = createAdminClient();
+  if (adminClient) {
     try {
-      await supabase.from('site_content').upsert(updatedItem, { onConflict: 'section_key' });
+      const { error } = await adminClient.from('site_content').upsert(updatedItem, { onConflict: 'section_key' });
+      if (error) {
+        console.error('[CMS SUPABASE WRITE ERROR]', error.message);
+      }
     } catch (err) {
       console.error('[CMS DB UPDATE ERROR]', err);
     }
