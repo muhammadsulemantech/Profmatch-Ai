@@ -17,7 +17,7 @@ interface AuthContextType {
   isAuthModalOpen: boolean;
   authModalReason: string;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  signup: (fullName: string, email: string, password: string, targetDegree?: string) => Promise<{ success: boolean; error?: string }>;
+  signup: (fullName: string, email: string, password: string, targetDegree?: string) => Promise<{ success: boolean; error?: string; otpRequired?: boolean; expiresAt?: number }>;
   loginWithGoogle: (googlePayload?: any) => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   setAuthenticatedUser: (user: AuthUser) => void;
@@ -146,7 +146,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { success: false, error: data.error || 'Registration failed' };
       }
 
-      handleAuthSuccess(data.user);
+      // If OTP verification is required, do NOT auto-login — return otpRequired flag
+      if (data.otpRequired) {
+        return { success: true, otpRequired: true, expiresAt: data.expiresAt };
+      }
+
+      // Only auto-login if user data is returned (should not happen with OTP flow)
+      if (data.user) {
+        handleAuthSuccess(data.user);
+      }
       return { success: true };
     } catch {
       return { success: false, error: 'Connection failed during registration.' };
