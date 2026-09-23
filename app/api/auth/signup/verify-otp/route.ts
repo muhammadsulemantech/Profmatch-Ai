@@ -72,8 +72,8 @@ export async function POST(request: NextRequest) {
 
         if (matched) {
           newUserId = matched.id;
+          await adminClient.auth.admin.updateUserById(matched.id, { email_confirm: true });
           await adminClient.auth.admin.updateUserById(matched.id, {
-            email_confirm: true,
             user_metadata: {
               ...matched.user_metadata,
               full_name: fullName,

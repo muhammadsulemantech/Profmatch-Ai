@@ -1,5 +1,6 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { ReplyAnalysisAgent } from '@/lib/agents';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function POST(request: NextRequest) {
   try {
@@ -7,10 +8,7 @@ export async function POST(request: NextRequest) {
     const { professorName, senderEmail, subject, bodyText, originalEmail } = body;
 
     if (!bodyText || !bodyText.trim()) {
-      return NextResponse.json(
-        { error: 'Email body text is required for AI analysis' },
-        { status: 400 }
-      );
+      return apiError('Email body text is required for AI analysis', 400);
     }
 
     const cleanProfName = (professorName || 'Professor').trim();
@@ -37,15 +35,11 @@ export async function POST(request: NextRequest) {
       received_at: new Date().toISOString(),
     };
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       reply: newReply,
     });
   } catch (error: any) {
     console.error('Error analyzing reply:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to analyze professor reply' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to analyze professor reply', 500);
   }
 }

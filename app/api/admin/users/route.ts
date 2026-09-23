@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getEnrichedUsers, updateUser } from '@/lib/services/user-service';
+import { ACADEMIC_PLANS } from '@/lib/services/usage-service';
 import { logAuditEvent } from '@/lib/security/audit';
 import { assertAdmin } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';

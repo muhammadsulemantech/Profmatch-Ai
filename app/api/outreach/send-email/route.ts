@@ -38,6 +38,10 @@ export async function POST(request: NextRequest) {
       universityName,
     });
 
+    if (!result.success) {
+      return apiError('Failed to dispatch email via delivery provider', 503); // status: 503
+    }
+
     return apiSuccess({
       sentVia: result.sentVia,
       senderEmail: result.senderEmail,
@@ -46,6 +50,7 @@ export async function POST(request: NextRequest) {
       message: 'Email dispatched successfully.',
     });
   } catch (error: any) {
-    return apiError(error.message || 'Failed to dispatch email', 500);
+    const status = error.message?.includes('unconfigured') || error.message?.includes('provider') ? 503 : 500;
+    return apiError(error.message || 'Failed to dispatch email', status);
   }
 }

@@ -14,6 +14,7 @@ export interface SendEmailParams {
 }
 
 export interface SendEmailResult {
+  success: boolean;
   sentVia: 'GMAIL' | 'PROVIDER';
   senderEmail: string;
   messageId?: string;
@@ -66,6 +67,7 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
         syncIncrementUsage(userId, 'emails_sent_count', 1);
 
         return {
+          success: true,
           sentVia: 'GMAIL',
           senderEmail: account.email,
           messageId: sendData.id,
@@ -90,6 +92,7 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
   syncIncrementUsage(userId, 'emails_sent_count', 1);
 
   return {
+    success: true,
     sentVia: 'PROVIDER',
     senderEmail: result.messageId || 'system@profmatch.ai',
     messageId: result.messageId,

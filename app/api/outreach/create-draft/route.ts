@@ -43,7 +43,12 @@ export async function POST(request: NextRequest) {
       message: 'Draft created successfully in your connected Gmail account.',
     });
   } catch (error: any) {
-    const status = error.message?.includes('No active Gmail') ? 400 : 500;
-    return apiError(error.message || 'Failed to create Gmail draft', status);
+    if (error.message?.includes('No active Gmail') || error.message?.includes('connect your Gmail')) {
+      return apiError(error.message, 400); // status: 400 when no Gmail connected
+    }
+    if (error.message?.includes('Gmail API') || error.message?.includes('failed with HTTP')) {
+      return apiError(error.message, 502); // status: 502 when Gmail API draft fails
+    }
+    return apiError(error.message || 'Failed to create Gmail draft', 500);
   }
 }
