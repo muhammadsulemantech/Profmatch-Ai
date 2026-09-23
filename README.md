@@ -1,64 +1,67 @@
-# 🎓 ProfMatch AI — Global Academic Discovery & Outreach Platform
+# 🎓 ProfMatch AI — Academic Faculty Discovery & Grounded Outreach Platform
 
-![Next.js](https://img.shields.io/badge/Next.js-14-black?style=for-the-badge&logo=next.js)
+![Next.js](https://img.shields.io/badge/Next.js-14.2-black?style=for-the-badge&logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.5-blue?style=for-the-badge&logo=typescript)
-![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38B2AC?style=for-the-badge&logo=tailwind-css)
-![Supabase](https://img.shields.io/badge/Supabase-Database_%26_Auth-3ECF8E?style=for-the-badge&logo=supabase)
+![Supabase](https://img.shields.io/badge/Supabase-Auth_%26_Postgres-3ECF8E?style=for-the-badge&logo=supabase)
 ![Google Gemini](https://img.shields.io/badge/Google_Gemini-1.5_Pro-8E75B2?style=for-the-badge&logo=googlegemini)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-ProfMatch AI is an intelligent, ethical academic outreach and faculty discovery platform designed to connect prospective graduate and PhD students with faculty members and research labs globally.
+ProfMatch AI is an academic faculty discovery, research compatibility scoring, and citation-grounded outreach platform designed to assist graduate students and postdocs in finding prospective research advisors globally.
 
 ---
 
-## 🌟 Key Features
+## 🌟 Architecture & Capabilities
 
-- **🔍 AI-Powered Faculty Search:** Natural language search for professors across global institutions by field, country, region, and active recruitment status.
-- **⚡ OpenAlex & Tavily Live Integration:** Real-time retrieval of faculty publications, h-index, citations, and active research grants.
-- **✍️ Grounded AI Email Generation:** Powered by Google Gemini 1.5 Pro to write personalized, non-hallucinated outreach emails based on student profiles and professor papers.
-- **📊 Research Compatibility Scoring:** Automated 0–100 match scoring analyzing alignment between student projects and lab interests.
-- **📩 Outreach Tracking & Inbox:** Track sent cold emails, professor responses, and sentiment analysis (Positive, Meeting Requested, Follow-up due).
-- **🚀 Transactional Email Delivery:** Integrated with Resend for high-deliverability email dispatching.
-- **💳 Tiered Pricing & Subscriptions:** Free, Student, and Pro membership options with Stripe checkout flow.
-- **🛡️ Responsible Outreach Policy:** Built-in safeguards against mass spamming and unethical bulk messaging.
+- **🔍 Live Academic Search:** Real-time retrieval of faculty publications, affiliations, and citation metrics powered by OpenAlex API and Tavily Search API.
+- **🛡️ Truthful Verification Badging:** Distinct classification between verified institutional records (`VERIFIED`), web search candidates (`UNVERIFIED`), and partially sourced entries (`PARTIALLY_VERIFIED`). Zero simulated or synthetic verification claims.
+- **🧠 Citation-Grounded Cold Outreach:** Gemini 1.5 Pro generates personalized outreach referencing specific recent publications from faculty labs and student thesis abstracts.
+- **✉️ User-Isolated Gmail Integration:** Google OAuth 2.0 integration with AES-256-GCM encrypted token persistence, allowing students to save drafts directly into their connected Gmail accounts for human-in-the-loop review.
+- **🤖 Autonomous AutoPilot Engine:** Rate-limited bulk outreach with configurable anti-spam delays (45s–90s) that creates reviewable drafts directly in Gmail without automated unsupervised dispatch.
+- **🔐 Hardened Authentication & Security:** Supabase Auth integration, scrypt password hashing, timing-safe 15-minute OTP lifecycle, HTTP-only session cookies, and Row Level Security (RLS) across all user tables.
+- **💳 Multi-Tier Academic Plans:** Quota enforcement across `FREE`, `STARTER`, `PRO`, and `ELITE` plan tiers with manual and Stripe checkout verification flows.
+- **⚡ Service Layer Architecture:** Modular service layer in `lib/services/` separating database queries, third-party integrations, and route handlers.
 
 ---
 
 ## 🛠️ Technology Stack
 
-- **Framework:** [Next.js 14](https://nextjs.org/) (App Router, Server Actions, Edge Middleware)
-- **Language:** [TypeScript](https://www.typescriptlang.org/)
-- **Styling:** [Tailwind CSS](https://tailwindcss.com/) & Lucide Icons
-- **Database & Auth:** [Supabase](https://supabase.com/) (PostgreSQL with RLS)
-- **AI Engine:** [Google Gemini 1.5 Pro](https://aistudio.google.com/)
-- **Academic Data Provider:** [OpenAlex API](https://openalex.org/) & [Tavily Search API](https://tavily.com/)
-- **Email Service:** [Resend](https://resend.com/)
+- **Framework:** Next.js 14 (App Router, Route Handlers, Edge Middleware)
+- **Language:** TypeScript 5.5
+- **Styling:** Vanilla CSS, Tailwind CSS, Lucide Icons
+- **Database & Auth:** Supabase (PostgreSQL with Row Level Security)
+- **AI Engine:** Google Gemini 1.5 Pro
+- **Academic Data Providers:** OpenAlex API & Tavily Search API
+- **Email Delivery:** Connected Gmail API (OAuth 2.0) or SMTP/Resend provider
+- **Test Framework:** Node.js native test runner (`node:test`, `node:assert/strict`)
 
 ---
 
 ## 🚀 Getting Started
 
 ### 1. Prerequisites
-Ensure you have Node.js (v18+ or v20+) and npm installed on your machine.
+- Node.js (v18.17+ or v20+)
+- npm or pnpm
+- Supabase project account (for PostgreSQL database & Auth)
+- Google Cloud Console Project (for Gemini API & Gmail OAuth)
 
-### 2. Clone the Repository
+### 2. Clone & Install
 ```bash
 git clone https://github.com/suleman197/Profmatch-Ai.git
 cd Profmatch-Ai
-```
-
-### 3. Install Dependencies
-```bash
 npm install
 ```
 
-### 4. Configure Environment Variables
-Create a `.env.local` file in the root directory and copy the contents from `.env.example`:
+### 3. Configure Environment Variables
+Copy `.env.example` to `.env.local` and set required credentials:
+```bash
+cp .env.example .env.local
+```
 
+Key environment configuration:
 ```env
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 
-# Supabase
+# Supabase Database & Auth
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
@@ -66,63 +69,84 @@ SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
 # AI Provider
 AI_PROVIDER=gemini
 AI_API_KEY=your-gemini-api-key
+GEMINI_API_KEY=your-gemini-api-key
 AI_MODEL=gemini-1.5-pro
 
-# Search & Academic Data
+# Academic Search Providers
 SEARCH_PROVIDER=tavily
 TAVILY_API_KEY=your-tavily-api-key
-ACADEMIC_DATA_PROVIDER=openalex
-OPENALEX_API_KEY=your-openalex-api-key
+OPENALEX_EMAIL=your-email@university.edu
 
-# Email Outreach
-EMAIL_PROVIDER=resend
-RESEND_API_KEY=your-resend-api-key
-EMAIL_FROM="ProfMatch AI Outreach <onboarding@resend.dev>"
+# Google OAuth (Gmail Drafts Integration)
+GOOGLE_CLIENT_ID=your-google-oauth-client-id
+GOOGLE_CLIENT_SECRET=your-google-oauth-client-secret
+
+# Security Secrets
+SESSION_SECRET=your-minimum-32-char-random-secret
+ADMIN_SECRET_PASSPHRASE=your-admin-passphrase
 ```
 
-### 5. Set Up the Database
-Import the PostgreSQL schema and seed data into your Supabase SQL Editor:
-- Load `database/schema.sql` to build tables, enums, triggers, and RLS policies.
-- Load `database/seed.sql` to populate initial academic fields and faculty data.
+### 4. Database Setup
+Execute the SQL migration scripts in your Supabase SQL Editor:
+1. `database/schema.sql`: Creates enums, tables, RLS policies, triggers, and performance indexes.
+2. `database/seed.sql`: Populates academic taxonomy domains and seed faculty records.
 
-### 6. Run the Development Server
+### 5. Running the Application
 ```bash
+# Start local development server
 npm run dev
-```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser to view the application.
+# Run comprehensive test suite
+npm test
+
+# Build production bundle
+npm run build
+```
 
 ---
 
-## 📁 Directory Structure
+## 📁 Repository Structure
 
 ```text
 profmatch-ai/
 ├── app/                  # Next.js 14 App Router Pages & API Routes
-│   ├── (auth)/           # Authentication pages (Login, Register, Reset)
-│   ├── admin/            # Admin control panel & audit logs
-│   ├── api/              # API endpoints (Professors, Outreach, Payments)
-│   ├── dashboard/        # Main student dashboard
-│   ├── inbox/            # Email reply tracker
-│   ├── outreach/         # AI email generation suite
-│   ├── professors/       # Professor profile views
-│   └── search/           # Discovery & search engine
-├── components/           # Reusable UI components
-├── database/             # PostgreSQL schema & seed files
-├── lib/                  # Business logic & provider implementations
-│   ├── providers/ai/     # Gemini & Mock AI Providers
-│   ├── providers/email/  # Resend Email Provider
-│   ├── providers/search/ # OpenAlex & Tavily Search Providers
-│   └── supabase/         # Supabase client & server instances
-└── types/                # TypeScript interface definitions
+│   ├── admin/            # Role-gated admin control panel
+│   ├── api/              # Standardized API routes ({ success, data, error })
+│   ├── autopilot/        # Autonomous bulk discovery & drafting engine
+│   ├── inbox/            # Faculty reply analysis & suggested responses
+│   ├── outreach/         # Citation-grounded cold email generator
+│   ├── professors/       # Faculty profile & publication analysis
+│   ├── profile/          # Researcher profile & academic documents
+│   └── search/           # Global faculty discovery search engine
+├── components/           # Modular UI components & design system
+│   ├── admin/            # Extracted admin tabs (users, payments, flags, audit)
+│   ├── autopilot/        # Autopilot config, terminal logs, and drafts list
+│   ├── inbox/            # Reply threads, modals, and sent views
+│   ├── profile/          # Avatar, CV, target destinations, and research focus
+│   ├── search/           # Search filters, professor cards, paywall banners
+│   └── ui/               # Reusable UI primitives (Button, Card, Badge, Modal)
+├── database/             # PostgreSQL schema, seed data, and RLS definitions
+├── docs/                 # System documentation & API contract specifications
+├── lib/                  # Application core libraries & services
+│   ├── api/              # Standard API response helpers (apiSuccess, apiError)
+│   ├── auth/             # OTP store, scrypt hashing, and server session guards
+│   ├── providers/        # AI, Search, and Email provider adapters
+│   ├── services/         # Modular service layer (DB, Gmail, Outreach, Users)
+│   ├── config.ts         # Runtime environment configuration & validation
+│   └── logger.ts         # Structured JSON logger with credential redaction
+└── tests/                # Automated security, auth, and unit test suites
 ```
+
+---
+
+## 📄 Documentation
+
+- [Architecture Specification (ARCHITECTURE.md)](ARCHITECTURE.md): System architecture, component hierarchy, service layer, and data flows.
+- [Security Model (SECURITY.md)](SECURITY.md): Threat model, authentication architecture, RLS policies, and secret management.
+- [API Contract (docs/api-contract.md)](docs/api-contract.md): Complete REST endpoint documentation, schemas, and status codes.
 
 ---
 
 ## 📄 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-Made with ❤️ by [Suleman](https://github.com/suleman197) for students and researchers worldwide.
