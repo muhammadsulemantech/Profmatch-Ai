@@ -27,32 +27,8 @@ export async function POST(request: NextRequest) {
     }
     const userId = session.user.id;
 
-    // 2. Fetch connected email account (from mockDb or 1-year persistent cookie)
+    // 2. Fetch connected email account strictly isolated to this authenticated user
     let account = mockDb.getConnectedEmailAccount(userId);
-
-    const tokensCookie = request.cookies.get('profmatch_gmail_tokens')?.value;
-    const accountCookie = request.cookies.get('profmatch_gmail_account')?.value;
-
-    let parsedTokens: any = null;
-    let parsedAcc: any = null;
-    if (tokensCookie) {
-      try { parsedTokens = JSON.parse(tokensCookie); } catch {}
-    }
-    if (accountCookie) {
-      try { parsedAcc = JSON.parse(accountCookie); } catch {}
-    }
-
-    if (!account && (parsedTokens?.access_token || parsedAcc?.email)) {
-      account = mockDb.saveConnectedEmailAccount({
-        user_id: userId,
-        email: parsedAcc?.email || parsedTokens?.email || 'user@gmail.com',
-        access_token: parsedTokens?.access_token || '',
-        refresh_token: parsedTokens?.refresh_token || '',
-        token_expires_at: parsedTokens?.token_expires_at || Date.now() + 3600000,
-        connected_at: parsedAcc?.connected_at || new Date().toISOString(),
-        status: 'ACTIVE'
-      });
-    }
 
     if (!account) {
       const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(professorEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -158,31 +134,13 @@ export async function POST(request: NextRequest) {
       last_used_at: new Date().toISOString(),
     });
 
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
       draftId: draftData.id,
       connectedEmail: account.email,
       gmailUrl: 'https://mail.google.com/mail/u/0/#drafts',
       message: 'Gmail draft created successfully. Open Gmail to review and send.',
     });
-
-    if (accessToken) {
-      response.cookies.set('profmatch_gmail_tokens', JSON.stringify({
-        access_token: accessToken,
-        refresh_token: refreshToken || '',
-        token_expires_at: account.token_expires_at || (nowMs + 3600000),
-        email: account.email,
-        user_id: userId,
-      }), {
-        path: '/',
-        maxAge: 31536000,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-        httpOnly: true,
-      });
-    }
-
-    return response;
   } catch (err: any) {
     console.error('[CREATE GMAIL DRAFT ROUTE ERROR]', err);
     return NextResponse.json(

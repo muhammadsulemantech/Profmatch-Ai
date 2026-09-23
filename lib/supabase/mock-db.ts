@@ -35,6 +35,7 @@ import {
   PlanTier,
   ConnectedEmailAccount
 } from '@/types/database';
+import { encryptToken, decryptToken } from '@/lib/security/encryption';
 
 // In-Memory Database Store for Resilient Local, Test & Fallback Execution
 class MockDatabase {
@@ -2236,35 +2237,59 @@ class MockDatabase {
   }
 
   public getConnectedEmailAccount(userId?: string): ConnectedEmailAccount | undefined {
-    return this.connectedEmailAccounts.find(a => a.status === 'ACTIVE');
+    if (!userId) return undefined;
+    const acc = this.connectedEmailAccounts.find(a => a.user_id === userId && a.status === 'ACTIVE');
+    if (!acc) return undefined;
+
+    return {
+      ...acc,
+      access_token: decryptToken(acc.access_token),
+      refresh_token: decryptToken(acc.refresh_token),
+    };
   }
 
   public saveConnectedEmailAccount(data: Partial<ConnectedEmailAccount> & { email: string; user_id?: string }): ConnectedEmailAccount {
-    const existingIndex = this.connectedEmailAccounts.findIndex(a => a.provider === 'gmail');
+    const targetUserId = data.user_id;
+    if (!targetUserId) {
+      throw new Error('user_id is required to connect email account');
+    }
+
+    const existingIndex = this.connectedEmailAccounts.findIndex(
+      a => a.user_id === targetUserId && a.provider === 'gmail'
+    );
     const now = new Date().toISOString();
-    const targetUserId = data.user_id || 'global_user';
+
+    const encryptedAccessToken = data.access_token ? encryptToken(data.access_token) : undefined;
+    const encryptedRefreshToken = data.refresh_token ? encryptToken(data.refresh_token) : undefined;
 
     if (existingIndex >= 0) {
+      const existing = this.connectedEmailAccounts[existingIndex];
       const updated: ConnectedEmailAccount = {
-        ...this.connectedEmailAccounts[existingIndex],
+        ...existing,
         ...data,
         user_id: targetUserId,
         status: 'ACTIVE',
-        connected_at: this.connectedEmailAccounts[existingIndex].connected_at || now,
+        access_token: encryptedAccessToken !== undefined ? encryptedAccessToken : existing.access_token,
+        refresh_token: encryptedRefreshToken !== undefined ? encryptedRefreshToken : existing.refresh_token,
+        connected_at: existing.connected_at || now,
         last_used_at: now,
       };
       this.connectedEmailAccounts[existingIndex] = updated;
       this.persist();
-      return updated;
+      return {
+        ...updated,
+        access_token: data.access_token || decryptToken(updated.access_token),
+        refresh_token: data.refresh_token || decryptToken(updated.refresh_token),
+      };
     } else {
       const newAcc: ConnectedEmailAccount = {
-        id: data.id || `acc_gmail_${Date.now()}`,
+        id: data.id || `acc_gmail_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
         user_id: targetUserId,
         provider: 'gmail',
         email: data.email,
         google_account_id: data.google_account_id,
-        access_token: data.access_token || '',
-        refresh_token: data.refresh_token || '',
+        access_token: encryptedAccessToken || '',
+        refresh_token: encryptedRefreshToken || '',
         token_expires_at: data.token_expires_at || Date.now() + 3600000,
         scopes: data.scopes || ['https://www.googleapis.com/auth/gmail.compose'],
         status: 'ACTIVE',
@@ -2273,13 +2298,19 @@ class MockDatabase {
       };
       this.connectedEmailAccounts.push(newAcc);
       this.persist();
-      return newAcc;
+      return {
+        ...newAcc,
+        access_token: data.access_token || '',
+        refresh_token: data.refresh_token || '',
+      };
     }
   }
 
   public deleteConnectedEmailAccount(userId?: string): boolean {
-    if (this.connectedEmailAccounts.length > 0) {
-      this.connectedEmailAccounts = [];
+    if (!userId) return false;
+    const initialLen = this.connectedEmailAccounts.length;
+    this.connectedEmailAccounts = this.connectedEmailAccounts.filter(a => a.user_id !== userId);
+    if (this.connectedEmailAccounts.length !== initialLen) {
       this.persist();
       return true;
     }

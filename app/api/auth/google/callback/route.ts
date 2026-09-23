@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { isAdminEmail } from '@/lib/auth/server-auth';
+import { validateSafeRedirect } from '@/lib/security/url-validation';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -9,13 +10,14 @@ export async function GET(request: NextRequest) {
   const error = searchParams.get('error');
 
   let redirectTo = '/choose-plan';
-  let origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
+  const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
 
   if (stateEncoded) {
     try {
       const parsedState = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf-8'));
-      if (parsedState.redirectTo) redirectTo = parsedState.redirectTo;
-      if (parsedState.origin) origin = parsedState.origin;
+      if (parsedState.redirectTo) {
+        redirectTo = validateSafeRedirect(parsedState.redirectTo, '/choose-plan');
+      }
     } catch {
       // safe fallback
     }

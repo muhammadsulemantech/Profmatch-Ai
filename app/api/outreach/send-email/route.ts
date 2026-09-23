@@ -1,66 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { getEmailProvider } from '@/lib/providers/email';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Authenticate sender strictly from session
+    const session = await verifyAuthSession(request);
+    if (!session || !session.user) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+
+    const userId = session.user.id;
     const body = await request.json();
-    const { toEmail, subject, bodyText, professorName, universityName, userId = 'usr_student_001' } = body;
+    const { toEmail, subject, bodyText, professorName, universityName } = body;
 
     if (!toEmail || !subject || !bodyText) {
       return NextResponse.json(
-        { error: 'Missing required fields: toEmail, subject, and bodyText' },
+        { success: false, error: 'Missing required fields: toEmail, subject, and bodyText' },
         { status: 400 }
       );
     }
 
     mockDb.loadFromDisk();
 
-    // 1. Check for Connected Gmail Account
-    let account = mockDb.connectedEmailAccounts.find(
-      acc => acc.user_id === userId && acc.status === 'ACTIVE'
-    );
+    // 2. Fetch Connected Gmail Account strictly isolated to this authenticated user
+    let account = mockDb.getConnectedEmailAccount(userId);
 
-    // Fallback: Check cookies
-    const cookieHeader = request.headers.get('cookie') || '';
-    const gmailTokensCookie = cookieHeader.match(/profmatch_gmail_tokens=([^;]+)/);
-    const gmailAccountCookie = cookieHeader.match(/profmatch_gmail_account=([^;]+)/);
-
-    let cookieTokens: any = null;
-    let cookieAccount: any = null;
-
-    if (gmailTokensCookie) {
-      try {
-        cookieTokens = JSON.parse(decodeURIComponent(gmailTokensCookie[1]));
-      } catch {}
-    }
-    if (gmailAccountCookie) {
-      try {
-        cookieAccount = JSON.parse(decodeURIComponent(gmailAccountCookie[1]));
-      } catch {}
-    }
-
-    if (!account && cookieTokens && cookieTokens.access_token) {
-      account = {
-        id: `acc_${Date.now()}`,
-        user_id: cookieTokens.user_id || userId,
-        provider: 'gmail',
-        email: cookieTokens.email || cookieAccount?.email || 'user@gmail.com',
-        google_account_id: 'cookie_recovered',
-        access_token: cookieTokens.access_token,
-        refresh_token: cookieTokens.refresh_token || '',
-        token_expires_at: cookieTokens.token_expires_at || Date.now() + 3600000,
-        scopes: ['https://www.googleapis.com/auth/gmail.compose', 'https://www.googleapis.com/auth/gmail.send'],
-        status: 'ACTIVE',
-        connected_at: new Date().toISOString(),
-      };
-      mockDb.saveConnectedEmailAccount(account);
-    }
-
-    // 2. If Gmail Connected: Send via Gmail API
-    if (account) {
+    // 3. If Gmail Connected: Send via Gmail API using decrypted server-stored tokens
+    if (account && account.access_token) {
       let accessToken = account.access_token;
-      let newTokensCookie: string | null = null;
 
       // Auto-refresh token if expired
       if (Date.now() >= account.token_expires_at - 60000 && account.refresh_token) {
@@ -78,17 +50,12 @@ export async function POST(request: NextRequest) {
           const newTokens = await tokenRes.json();
           if (newTokens.access_token) {
             accessToken = newTokens.access_token;
-            account.access_token = accessToken;
-            account.token_expires_at = Date.now() + (newTokens.expires_in || 3600) * 1000;
-            mockDb.saveConnectedEmailAccount(account);
-
-            newTokensCookie = encodeURIComponent(JSON.stringify({
-              user_id: account.user_id,
+            mockDb.saveConnectedEmailAccount({
+              user_id: userId,
               email: account.email,
-              access_token: account.access_token,
-              refresh_token: account.refresh_token,
-              token_expires_at: account.token_expires_at,
-            }));
+              access_token: accessToken,
+              token_expires_at: Date.now() + (newTokens.expires_in || 3600) * 1000,
+            });
           }
         } catch (refreshErr) {
           console.error('[GMAIL TOKEN REFRESH ERROR IN DISPATCH]', refreshErr);
@@ -127,31 +94,19 @@ export async function POST(request: NextRequest) {
       const sendData = await sendRes.json();
 
       if (sendRes.ok) {
-        const response = NextResponse.json({
+        return NextResponse.json({
           success: true,
           sentVia: 'GMAIL',
           senderEmail: account.email,
           messageId: sendData.id,
           sentAt: new Date().toISOString(),
         });
-
-        if (newTokensCookie) {
-          response.cookies.set('profmatch_gmail_tokens', newTokensCookie, {
-            path: '/',
-            httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: 'lax',
-            maxAge: 31536000,
-          });
-        }
-
-        return response;
       }
 
       console.warn('[GMAIL SEND API WARNING, FALLING BACK TO EMAIL PROVIDER]', sendData);
     }
 
-    // 3. Fallback: Dispatch via Email Provider (Resend / SMTP)
+    // 4. Fallback: Dispatch via Email Provider (Resend / SMTP)
     const provider = getEmailProvider();
     const result = await provider.sendEmail({
       to: toEmail,
@@ -168,7 +123,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Error in outreach send-email route:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to dispatch email' },
+      { success: false, error: error.message || 'Failed to dispatch email' },
       { status: 500 }
     );
   }
