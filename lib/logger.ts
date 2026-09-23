@@ -7,7 +7,7 @@
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
-const SENSITIVE_KEYS = new Set([
+const SENSITIVE_KEYS: string[] = [
   'authorization',
   'password',
   'passwd',
@@ -23,14 +23,15 @@ const SENSITIVE_KEYS = new Set([
   'stripe_secret_key',
   'service_role_key',
   'private_key',
-]);
+];
 
 function redactValue(key: string, value: any): any {
   if (value === null || value === undefined) return value;
 
   const lowerKey = key.toLowerCase();
 
-  for (const sensitive of SENSITIVE_KEYS) {
+  for (let i = 0; i < SENSITIVE_KEYS.length; i++) {
+    const sensitive = SENSITIVE_KEYS[i];
     if (lowerKey.includes(sensitive)) {
       if (typeof value === 'string') {
         if (value.length <= 8) return '***[REDACTED]***';
