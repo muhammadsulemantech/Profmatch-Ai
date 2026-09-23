@@ -175,7 +175,7 @@ class MockDatabase {
         this.subscriptions.push({
           id: `sub_${existing.id}`,
           user_id: existing.id,
-          plan_type: isAdmin ? 'ELITE' : 'FREE',
+          plan_type: 'FREE',
           status: 'active',
           current_period_start: now,
           current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
@@ -223,7 +223,7 @@ class MockDatabase {
     this.subscriptions.push({
       id: `sub_${newUserId}`,
       user_id: newUserId,
-      plan_type: isAdmin ? 'ELITE' : 'FREE',
+      plan_type: 'FREE',
       status: 'active',
       current_period_start: now,
       current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),

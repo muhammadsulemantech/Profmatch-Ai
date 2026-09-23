@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { logAuditEvent } from '@/lib/security/audit';
 import { assertAdmin } from '@/lib/auth/server-auth';
+import { ACADEMIC_PLANS } from '@/lib/services/usage-service';
+import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
+import type { PlanTier } from '@/types/database';
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
@@ -16,13 +19,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
     const hasActiveSub = sub && sub.status === 'active';
-    let planTier = hasActiveSub ? sub.plan_type : 'FREE';
-
-    // Admins have ELITE worldwide access by default
-    if (u.role === 'ADMIN' && planTier === 'FREE') {
-      planTier = 'ELITE';
-    }
-
+    const planTier: PlanTier = hasActiveSub ? sub.plan_type : 'FREE';
     const isPaid = planTier !== 'FREE' && hasActiveSub;
 
     // Check user payment records
@@ -76,6 +73,16 @@ async function handleUpdateUser(request: NextRequest) {
       return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
+    if (planTier) {
+      const validTiers = Object.keys(ACADEMIC_PLANS);
+      if (!validTiers.includes(planTier)) {
+        return NextResponse.json(
+          { success: false, error: `Invalid plan tier: "${planTier}". Valid tiers are: ${validTiers.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
+
     if (role) profile.role = role;
     if (isSuspended !== undefined) {
       profile.is_suspended = Boolean(isSuspended);
@@ -85,27 +92,23 @@ async function handleUpdateUser(request: NextRequest) {
 
     // Update or create subscription for this plan tier
     if (planTier) {
-      const now = new Date().toISOString();
-      const subIdx = mockDb.subscriptions.findIndex(s => s.user_id === userId);
-      if (subIdx >= 0) {
-        mockDb.subscriptions[subIdx].plan_type = planTier;
-        mockDb.subscriptions[subIdx].status = 'active';
-        mockDb.subscriptions[subIdx].current_period_start = now;
-        mockDb.subscriptions[subIdx].current_period_end = new Date(Date.now() + 365 * 86400000).toISOString();
-        mockDb.subscriptions[subIdx].updated_at = now;
-      } else {
-        mockDb.subscriptions.push({
-          id: `sub_${userId}_${Date.now()}`,
-          user_id: userId,
-          plan_type: planTier,
-          status: 'active',
-          current_period_start: now,
-          current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
-          cancel_at_period_end: false,
-          created_at: now,
-          updated_at: now,
-        });
-      }
+      await saveUserSubscription({
+        user_id: userId,
+        plan_type: planTier as PlanTier,
+        status: 'active',
+        current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
+      });
+    }
+
+    if (role || isSuspended !== undefined) {
+      await saveUserProfile({
+        id: userId,
+        email: profile.email,
+        full_name: profile.full_name,
+        role: profile.role,
+        is_suspended: profile.is_suspended,
+        suspension_reason: profile.suspension_reason,
+      });
     }
 
     mockDb.persist();
