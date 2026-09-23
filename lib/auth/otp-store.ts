@@ -162,6 +162,33 @@ export function getPendingRegistration(email: string): PendingSignupRegistration
 }
 
 /**
+ * Refreshes an existing pending registration with a newly generated OTP code,
+ * resetting expiration to 15 minutes and attempts to 0, while keeping the
+ * securely hashed password intact.
+ */
+export function refreshPendingRegistration(email: string): { code: string; expiresAt: number } | null {
+  loadOtpsFromDisk();
+  const normalizedEmail = email.trim().toLowerCase();
+  const record = pendingOtpMap.get(normalizedEmail);
+  if (!record) return null;
+
+  const code = generateUniqueOtpCode();
+  const now = Date.now();
+  const expiresAt = now + OTP_EXPIRY_MS;
+
+  record.code = code;
+  record.expiresAt = expiresAt;
+  record.attempts = 0;
+  record.createdAt = now;
+
+  pendingOtpMap.set(normalizedEmail, record);
+  persistOtpsToDisk();
+
+  return { code, expiresAt };
+}
+
+
+/**
  * Validates the entered OTP code.
  * Returns { valid: boolean, error?: string, registration?: PendingSignupRegistration }
  */

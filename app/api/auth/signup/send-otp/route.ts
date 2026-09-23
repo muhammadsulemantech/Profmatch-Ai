@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
       targetDegree,
     });
 
-    console.log(`[SIGNUP OTP GENERATED] Email: ${email} | Code: ${code} | Valid for 15 minutes`);
+    console.log(`[SIGNUP OTP GENERATED] Email: ${email} | Code generated securely | Valid for 15 minutes`);
 
     // 3. Dispatch high-deliverability email to user inbox
     const emailResult = await sendSignupOtpEmail({

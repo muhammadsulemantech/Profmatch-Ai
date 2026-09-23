@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok || !tokenData.access_token) {
-      console.error('[GMAIL TOKEN EXCHANGE ERROR]', tokenData);
+      console.error('[GMAIL TOKEN EXCHANGE ERROR]', tokenData?.error || 'Token exchange failed');
       return NextResponse.redirect(
         `${origin}${safeRedirectTo}?error=${encodeURIComponent(
           tokenData.error_description || 'Failed to exchange Gmail authorization code.'

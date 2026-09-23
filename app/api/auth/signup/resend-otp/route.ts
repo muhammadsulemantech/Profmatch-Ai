@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getPendingRegistration, createPendingRegistration } from '@/lib/auth/otp-store';
+import { getPendingRegistration, refreshPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 
@@ -46,14 +46,20 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate a fresh unique OTP and reset the 15-minute expiration clock
-    const { code, expiresAt } = createPendingRegistration({
-      email: existing.email,
-      fullName: existing.fullName,
-      password: existing.password,
-      targetDegree: existing.targetDegree,
-    });
+    const refreshed = refreshPendingRegistration(email);
+    if (!refreshed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'Registration session expired. Please fill out the signup form again.',
+          isExpired: true,
+        },
+        { status: 404 }
+      );
+    }
+    const { code, expiresAt } = refreshed;
 
-    console.log(`[SIGNUP OTP RESENT] Email: ${email} | New Code: ${code} | Valid for 15 minutes`);
+    console.log(`[SIGNUP OTP RESENT] Email: ${email} | New code generated securely | Valid for 15 minutes`);
 
     const emailResult = await sendSignupOtpEmail({
       email: existing.email,

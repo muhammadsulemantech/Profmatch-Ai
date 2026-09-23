@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok || !tokenData.access_token) {
-      console.error('[GOOGLE TOKEN EXCHANGE FAILED]', tokenData);
+      console.error('[GOOGLE TOKEN EXCHANGE FAILED]', tokenData?.error || 'Token exchange failed');
       return NextResponse.redirect(`${origin}/login?error=Failed to exchange Google OAuth code.`);
     }
 
