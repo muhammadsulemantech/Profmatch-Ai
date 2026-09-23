@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
 import { getAllSiteContent, updateSiteContent } from '@/lib/cms/content-service';
 import { logAuditEvent } from '@/lib/security/audit';
-import { verifyAdminSession } from '@/lib/auth/server-auth';
+import { assertAdmin } from '@/lib/auth/server-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   const content = await getAllSiteContent();
   return NextResponse.json({ success: true, content });
 }
@@ -18,12 +20,10 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleContentUpdate(request: NextRequest) {
-  try {
-    const adminSession = await verifyAdminSession(request);
-    if (!adminSession) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
-    }
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
 
+  try {
     const body = await request.json();
     const { sectionKey, title, subtitle, content, isPublished, data } = body;
 
@@ -48,6 +48,8 @@ async function handleContentUpdate(request: NextRequest) {
         resourceType: 'SITE_CONTENT',
         resourceId: sectionKey,
         metadata: { title: finalTitle, isPublished },
+        userId: auth.session.user.id,
+        userEmail: auth.session.user.email,
       });
     } catch {
       // safe audit catch

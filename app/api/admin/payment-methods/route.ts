@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { assertAdmin } from '@/lib/auth/server-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   try {
     mockDb.loadFromDisk();
     return NextResponse.json({
@@ -18,6 +22,9 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   try {
     const body = await request.json();
     const { name, type, country, currency, account_name, account_number, instructions, enabled, sort_order } = body;
@@ -44,13 +51,13 @@ export async function POST(request: NextRequest) {
     // Log admin audit
     mockDb.auditLogs.unshift({
       id: `log_${Date.now()}_pm`,
-      user_id: 'usr_admin_001',
-      user_email: 'admin@profmatch.ai',
+      user_id: auth.session.user.id,
+      user_email: auth.session.user.email,
       action: 'PAYMENT_METHOD_CREATED',
       resource_type: 'PAYMENT_METHOD',
       resource_id: created.id,
       metadata: { name: created.name, country: created.country, account_name: created.account_name },
-      ip_address: '127.0.0.1',
+      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
       created_at: new Date().toISOString(),
     });
     mockDb.persist();
@@ -69,6 +76,9 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   try {
     const body = await request.json();
     const { id, ...updates } = body;
@@ -85,13 +95,13 @@ export async function PUT(request: NextRequest) {
     // Log admin audit
     mockDb.auditLogs.unshift({
       id: `log_${Date.now()}_pm_upd`,
-      user_id: 'usr_admin_001',
-      user_email: 'admin@profmatch.ai',
+      user_id: auth.session.user.id,
+      user_email: auth.session.user.email,
       action: 'PAYMENT_METHOD_UPDATED',
       resource_type: 'PAYMENT_METHOD',
       resource_id: updated.id,
       metadata: updates,
-      ip_address: '127.0.0.1',
+      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
       created_at: new Date().toISOString(),
     });
     mockDb.persist();
@@ -110,6 +120,9 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -131,13 +144,13 @@ export async function DELETE(request: NextRequest) {
 
     mockDb.auditLogs.unshift({
       id: `log_${Date.now()}_pm_del`,
-      user_id: 'usr_admin_001',
-      user_email: 'admin@profmatch.ai',
+      user_id: auth.session.user.id,
+      user_email: auth.session.user.email,
       action: 'PAYMENT_METHOD_DELETED',
       resource_type: 'PAYMENT_METHOD',
       resource_id: id,
       metadata: { deleted_id: id },
-      ip_address: '127.0.0.1',
+      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
       created_at: new Date().toISOString(),
     });
     mockDb.persist();

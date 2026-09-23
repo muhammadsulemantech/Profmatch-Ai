@@ -1,10 +1,21 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { UserProfile } from '@/types/database';
 
 export interface AuthSession {
   user: UserProfile;
   token: string;
+}
+
+export type AuthResult =
+  | { authorized: true; session: AuthSession }
+  | { authorized: false; errorResponse: NextResponse };
+
+export class AuthError extends Error {
+  constructor(message: string, public status: number = 401) {
+    super(message);
+    this.name = 'AuthError';
+  }
 }
 
 /**
@@ -95,4 +106,75 @@ export async function verifyAdminSession(request?: NextRequest): Promise<AuthSes
   }
 
   return null;
+}
+
+/**
+ * Require an authenticated user or throw AuthError.
+ */
+export async function requireUser(request?: NextRequest): Promise<AuthSession> {
+  const session = await verifyAuthSession(request);
+  if (!session || !session.user) {
+    throw new AuthError('Unauthorized: Authentication required', 401);
+  }
+  return session;
+}
+
+/**
+ * Require an authenticated administrator or throw AuthError.
+ */
+export async function requireAdmin(request?: NextRequest): Promise<AuthSession> {
+  const session = await verifyAuthSession(request);
+  if (!session || !session.user) {
+    throw new AuthError('Unauthorized: Authentication required', 401);
+  }
+  if (session.user.role !== 'ADMIN' && !isAdminEmail(session.user.email)) {
+    throw new AuthError('Forbidden: Administrator privileges required', 403);
+  }
+  return session;
+}
+
+/**
+ * Convenience authorization guard for Route Handlers that returns a 401/403 NextResponse if unauthorized.
+ */
+export async function assertAdmin(request?: NextRequest): Promise<AuthResult> {
+  const session = await verifyAuthSession(request);
+  if (!session || !session.user) {
+    return {
+      authorized: false,
+      errorResponse: NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      ),
+    };
+  }
+
+  if (session.user.role !== 'ADMIN' && !isAdminEmail(session.user.email)) {
+    return {
+      authorized: false,
+      errorResponse: NextResponse.json(
+        { success: false, error: 'Forbidden: Administrative privileges required.' },
+        { status: 403 }
+      ),
+    };
+  }
+
+  return { authorized: true, session };
+}
+
+/**
+ * Convenience authorization guard for Route Handlers that returns a 401 NextResponse if unauthenticated.
+ */
+export async function assertUser(request?: NextRequest): Promise<AuthResult> {
+  const session = await verifyAuthSession(request);
+  if (!session || !session.user) {
+    return {
+      authorized: false,
+      errorResponse: NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      ),
+    };
+  }
+
+  return { authorized: true, session };
 }

@@ -86,11 +86,24 @@ async function runTests() {
     failed++;
   }
 
-  const adminHeaders = {
+  let adminHeaders = {
     'Content-Type': 'application/json',
-    'x-admin-role': 'ADMIN',
-    'Cookie': 'profmatch_role=ADMIN',
   };
+
+  // Attempt real login to obtain authenticated session
+  try {
+    const adminLoginRes = await fetch(`${BASE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@profmatch.ai', password: process.env.ADMIN_PASSWORD || 'ProfMatchAdmin2026!' }),
+    });
+    const setCookie = adminLoginRes.headers.get('set-cookie');
+    if (setCookie) {
+      adminHeaders['Cookie'] = setCookie;
+    }
+  } catch (e) {
+    // If running in mocked environment
+  }
 
   // 4. Test GET /api/admin/payments (Admin querying pending payments)
   try {

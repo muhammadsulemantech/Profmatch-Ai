@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
 import { getSiteSettings, updateSiteSettings } from '@/lib/cms/settings-service';
 import { logAuditEvent } from '@/lib/security/audit';
-import { verifyAdminSession } from '@/lib/auth/server-auth';
+import { assertAdmin } from '@/lib/auth/server-auth';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   const settings = await getSiteSettings();
   return NextResponse.json({ success: true, settings });
 }
@@ -18,12 +20,10 @@ export async function POST(request: NextRequest) {
 }
 
 async function handleUpdateSettings(request: NextRequest) {
-  try {
-    const adminSession = await verifyAdminSession(request);
-    if (!adminSession) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
-    }
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
 
+  try {
     const body = await request.json();
     const updated = await updateSiteSettings(body);
 
@@ -32,6 +32,8 @@ async function handleUpdateSettings(request: NextRequest) {
         action: 'SITE_SETTINGS_UPDATED',
         resourceType: 'SITE_SETTINGS',
         metadata: { fields: Object.keys(body || {}) },
+        userId: auth.session.user.id,
+        userEmail: auth.session.user.email,
       });
     } catch {
       // safe audit catch

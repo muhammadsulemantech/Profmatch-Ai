@@ -1,13 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { logAuditEvent } from '@/lib/security/audit';
-import { verifyAdminSession } from '@/lib/auth/server-auth';
+import { assertAdmin } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
-  const admin = await verifyAdminSession(request);
-  if (!admin) {
-    return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
-  }
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
 
   mockDb.loadFromDisk();
 
@@ -59,12 +57,10 @@ export async function PATCH(request: NextRequest) {
 }
 
 async function handleUpdateUser(request: NextRequest) {
-  try {
-    const admin = await verifyAdminSession(request);
-    if (!admin) {
-      return NextResponse.json({ success: false, error: 'Unauthorized: Administrative access required.' }, { status: 401 });
-    }
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
 
+  try {
     mockDb.loadFromDisk();
     const body = await request.json();
     const userId = body.userId || body.id;
@@ -77,7 +73,7 @@ async function handleUpdateUser(request: NextRequest) {
 
     const profile = mockDb.profiles.find((p) => p.id === userId);
     if (!profile) {
-      return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
     }
 
     if (role) profile.role = role;
@@ -119,10 +115,12 @@ async function handleUpdateUser(request: NextRequest) {
       resourceType: 'USER',
       resourceId: userId,
       metadata: { newRole: role, suspended: isSuspended, newPlan: planTier },
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
     });
 
     return NextResponse.json({ success: true, user: profile });
   } catch (err: any) {
-    return NextResponse.json({ error: err?.message || 'Failed to update user.' }, { status: 500 });
+    return NextResponse.json({ success: false, error: err?.message || 'Failed to update user.' }, { status: 500 });
   }
 }

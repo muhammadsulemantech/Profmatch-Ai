@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { PaymentStatus } from '@/types/database';
-import { verifyAdminSession } from '@/lib/auth/server-auth';
+import { assertAdmin } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
+
   try {
     mockDb.loadFromDisk();
     const { searchParams } = new URL(request.url);
@@ -42,15 +45,10 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
-  try {
-    const admin = await verifyAdminSession(request);
-    if (!admin) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Administrative access required.' },
-        { status: 401 }
-      );
-    }
+  const auth = await assertAdmin(request);
+  if (!auth.authorized) return auth.errorResponse;
 
+  try {
     const body = await request.json();
     const { paymentId, action, adminNote } = body;
 
