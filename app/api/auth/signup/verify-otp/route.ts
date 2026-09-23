@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { mockDb } from '@/lib/supabase/mock-db';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
 import { sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -67,14 +68,15 @@ export async function POST(request: NextRequest) {
     let newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
 
-    // 3. Confirm/link with Supabase user ID if available
-    const supabase = createClient();
-    if (supabase) {
+    // 3. Confirm/link with Supabase Auth: mark email_confirm true
+    const adminClient = createAdminClient();
+    if (adminClient) {
       try {
-        const { data: { users } } = await (await import('@/lib/supabase/admin')).createAdminClient()?.auth?.admin?.listUsers() || { data: { users: [] } };
+        const { data: { users } } = await adminClient.auth.admin.listUsers();
         const sbUser = users?.find((u: any) => u.email?.toLowerCase() === email);
         if (sbUser) {
           newUserId = sbUser.id;
+          await adminClient.auth.admin.updateUserById(sbUser.id, { email_confirm: true });
         }
       } catch (err) {
         // Continue with local ID if admin API is unconfigured
@@ -92,7 +94,20 @@ export async function POST(request: NextRequest) {
       updated_at: now,
     };
 
-    // 4. Save to persistent database store & create student profile + subscription
+    // 4. Save to PostgreSQL via db-service & mirror to resilient disk
+    await saveUserProfile({
+      id: newUser.id,
+      email: newUser.email,
+      full_name: newUser.full_name,
+      role: newUser.role,
+    });
+
+    await saveUserSubscription({
+      user_id: newUser.id,
+      plan_type: 'FREE',
+      status: 'active',
+    });
+
     const savedUser = mockDb.autoSaveUser({
       id: newUser.id,
       email: newUser.email,
