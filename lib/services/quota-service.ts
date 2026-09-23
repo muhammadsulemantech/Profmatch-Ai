@@ -1,4 +1,4 @@
-import { mockDb } from '@/lib/supabase/mock-db';
+import { syncGetUserPlanTier, syncGetUsageRecord, syncIncrementUsage } from '@/lib/services/db-service';
 import { ACADEMIC_PLANS, PlanConfig, isCountryUnlockedForTier } from '@/lib/services/usage-service';
 import { PlanTier } from '@/types/database';
 
@@ -17,10 +17,9 @@ export function checkAndIncrementQuota(
   feature: 'search' | 'draft' | 'autopilot' | 'analysis',
   options?: { country?: string; increment?: boolean }
 ): QuotaCheckResult {
-  mockDb.loadFromDisk();
-  const tier = mockDb.getUserPlanTier(userId);
+  const tier = syncGetUserPlanTier(userId);
   const plan: PlanConfig = ACADEMIC_PLANS[tier] || ACADEMIC_PLANS.FREE;
-  const usage = mockDb.getUsageRecord(userId);
+  const usage = syncGetUsageRecord(userId);
   const shouldIncrement = options?.increment !== false;
 
   // 1. Country restriction check (for searches or autopilot)
@@ -52,7 +51,7 @@ export function checkAndIncrementQuota(
       };
     }
     if (shouldIncrement) {
-      mockDb.incrementUsage(userId, 'searches_count', 1);
+      syncIncrementUsage(userId, 'searches_count', 1);
     }
     return {
       allowed: true,
@@ -78,7 +77,7 @@ export function checkAndIncrementQuota(
       };
     }
     if (shouldIncrement) {
-      mockDb.incrementUsage(userId, 'ai_generations_count', 1);
+      syncIncrementUsage(userId, 'ai_generations_count', 1);
     }
     return {
       allowed: true,

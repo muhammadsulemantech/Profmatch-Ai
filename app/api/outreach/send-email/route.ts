@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { getConnectedEmailAccount, saveConnectedEmailAccount } from '@/lib/services/db-service';
 import { getEmailProvider } from '@/lib/providers/email';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 
@@ -25,10 +25,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    mockDb.loadFromDisk();
-
     // 2. Fetch Connected Gmail Account strictly isolated to this authenticated user
-    let account = mockDb.getConnectedEmailAccount(userId);
+    let account = await getConnectedEmailAccount(userId);
 
     // 3. If Gmail Connected: Send via Gmail API using decrypted server-stored tokens
     if (account && account.access_token) {
@@ -50,7 +48,7 @@ export async function POST(request: NextRequest) {
           const newTokens = await tokenRes.json();
           if (newTokens.access_token) {
             accessToken = newTokens.access_token;
-            mockDb.saveConnectedEmailAccount({
+            await saveConnectedEmailAccount({
               user_id: userId,
               email: account.email,
               access_token: accessToken,

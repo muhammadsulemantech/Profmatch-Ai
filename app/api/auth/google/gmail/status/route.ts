@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import {
+  getConnectedEmailAccount,
+  saveConnectedEmailAccount,
+  deleteConnectedEmailAccount,
+} from '@/lib/services/db-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    mockDb.loadFromDisk();
-
     const session = await verifyAuthSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
-    // 1. Check in-memory / persistent mockDb
-    let account = mockDb.getConnectedEmailAccount(userId);
+    // 1. Check primary DB / persistent storage
+    let account = await getConnectedEmailAccount(userId);
 
     // 2. Check 1-year persistent cookies (survives Vercel restarts & long idle periods)
     const accountCookie = request.cookies.get('profmatch_gmail_account')?.value;
@@ -33,16 +35,15 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // If mockDb lost state (e.g. fresh Vercel serverless lambda instance), restore it from cookies!
+    // If account not found in DB, restore it from cookies if present
     if (!account && (parsedAccountCookie?.connected || parsedTokensCookie?.email)) {
       const email = parsedAccountCookie?.email || parsedTokensCookie?.email;
-      account = mockDb.saveConnectedEmailAccount({
+      account = await saveConnectedEmailAccount({
         user_id: userId,
         email: email,
         access_token: parsedTokensCookie?.access_token || '',
         refresh_token: parsedTokensCookie?.refresh_token || '',
         token_expires_at: parsedTokensCookie?.token_expires_at || Date.now() + 3600000,
-        connected_at: parsedAccountCookie?.connected_at || new Date().toISOString(),
         status: 'ACTIVE',
       });
     }
@@ -103,7 +104,6 @@ export async function GET(request: NextRequest) {
 // POST endpoint to sync / restore client-side connection backup
 export async function POST(request: NextRequest) {
   try {
-    mockDb.loadFromDisk();
     const body = await request.json();
     const { email, connected_at } = body;
 
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
     const userId = session.user.id;
 
-    const saved = mockDb.saveConnectedEmailAccount({
+    const saved = await saveConnectedEmailAccount({
       user_id: userId,
       email: email.toLowerCase().trim(),
       connected_at: connected_at || new Date().toISOString(),
@@ -158,15 +158,13 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
-    mockDb.loadFromDisk();
-
     const session = await verifyAuthSession(request);
     if (!session?.user?.id) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
     const userId = session.user.id;
 
-    const disconnected = mockDb.deleteConnectedEmailAccount(userId);
+    const disconnected = await deleteConnectedEmailAccount(userId);
 
     const response = NextResponse.json({ success: true, disconnected: true });
 

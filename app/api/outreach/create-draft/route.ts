@@ -1,10 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { getConnectedEmailAccount, saveConnectedEmailAccount } from '@/lib/services/db-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
-    mockDb.loadFromDisk();
     const bodyPayload = await request.json();
     const professorEmail = bodyPayload.toEmail || bodyPayload.professorEmail;
     const subject = bodyPayload.subject;
@@ -28,7 +27,7 @@ export async function POST(request: NextRequest) {
     const userId = session.user.id;
 
     // 2. Fetch connected email account strictly isolated to this authenticated user
-    let account = mockDb.getConnectedEmailAccount(userId);
+    let account = await getConnectedEmailAccount(userId);
 
     if (!account) {
       return NextResponse.json(
@@ -65,7 +64,7 @@ export async function POST(request: NextRequest) {
           const refreshData = await refreshRes.json();
           if (refreshRes.ok && refreshData.access_token) {
             accessToken = refreshData.access_token;
-            account = mockDb.saveConnectedEmailAccount({
+            account = await saveConnectedEmailAccount({
               user_id: userId,
               email: account.email,
               access_token: refreshData.access_token,
@@ -124,7 +123,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update last used timestamp
-    mockDb.saveConnectedEmailAccount({
+    await saveConnectedEmailAccount({
       user_id: userId,
       email: account.email,
       last_used_at: new Date().toISOString(),

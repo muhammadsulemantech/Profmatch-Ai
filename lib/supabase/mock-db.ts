@@ -1,4 +1,4 @@
-import {
+import type {
   UserProfile,
   StudentProfile,
   AcademicProfile,
@@ -34,8 +34,26 @@ import {
   PaymentProof,
   PlanTier,
   ConnectedEmailAccount
-} from '@/types/database';
-import { encryptToken, decryptToken } from '@/lib/security/encryption';
+} from '../../types/database.ts';
+import { encryptToken, decryptToken } from '../security/encryption.ts';
+
+declare const __non_webpack_require__: any;
+
+function getNodeModule(name: string): any {
+  if (typeof window !== 'undefined') return null;
+  try {
+    if (typeof process !== 'undefined' && typeof (process as any).getBuiltinModule === 'function') {
+      return (process as any).getBuiltinModule(name);
+    }
+    const req = typeof __non_webpack_require__ !== 'undefined'
+      ? __non_webpack_require__
+      : (typeof require !== 'undefined' ? require : null);
+    if (req) return req(name);
+  } catch {
+    return null;
+  }
+  return null;
+}
 
 // In-Memory Database Store for Resilient Local, Test & Fallback Execution
 class MockDatabase {
@@ -50,9 +68,9 @@ class MockDatabase {
   public loadFromDisk() {
     if (typeof window !== 'undefined') return;
     try {
-      const fs = require('fs');
-      const path = require('path');
-      if (!fs || typeof fs.existsSync !== 'function') return;
+      const fs = getNodeModule('fs');
+      const path = getNodeModule('path');
+      if (!fs || typeof fs.existsSync !== 'function' || !path) return;
       const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
       if (fs.existsSync(dbPath)) {
         const raw = fs.readFileSync(dbPath, 'utf-8');
@@ -84,9 +102,9 @@ class MockDatabase {
   public saveToDisk() {
     if (typeof window !== 'undefined') return;
     try {
-      const fs = require('fs');
-      const path = require('path');
-      if (!fs || typeof fs.existsSync !== 'function') return;
+      const fs = getNodeModule('fs');
+      const path = getNodeModule('path');
+      if (!fs || typeof fs.existsSync !== 'function' || !path) return;
       const dbPath = path.join(process.cwd(), 'database', 'persistent_store.json');
       const dataToSave = {
         siteSettings: this.siteSettings,

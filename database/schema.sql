@@ -8,10 +8,10 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Enum Types
 CREATE TYPE user_role AS ENUM ('USER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT');
-CREATE TYPE verification_status AS ENUM ('VERIFIED', 'UNVERIFIED', 'PENDING', 'FLAGGED');
-CREATE TYPE recruiting_status AS ENUM ('ACTIVELY_RECRUITING', 'POTENTIALLY_RECRUITING', 'NOT_RECRUITING', 'UNKNOWN');
+CREATE TYPE verification_status AS ENUM ('VERIFIED', 'PARTIALLY_VERIFIED', 'UNVERIFIED', 'SOURCE_UNAVAILABLE', 'STALE', 'PENDING', 'FLAGGED');
+CREATE TYPE recruiting_status AS ENUM ('ACTIVELY_RECRUITING', 'POTENTIALLY_RECRUITING', 'VERIFIED_RECRUITING', 'POSSIBLY_RECRUITING', 'NO_PUBLIC_INFORMATION', 'NOT_RECRUITING', 'UNKNOWN');
 CREATE TYPE outreach_status AS ENUM ('NOT_CONTACTED', 'DRAFT', 'APPROVED', 'SENT', 'DELIVERED', 'OPENED', 'REPLIED', 'POSITIVE', 'NEGATIVE', 'FOLLOW_UP_DUE', 'CLOSED');
-CREATE TYPE plan_tier AS ENUM ('FREE', 'STUDENT', 'PRO');
+CREATE TYPE plan_tier AS ENUM ('FREE', 'STARTER', 'PRO', 'ELITE', 'STUDENT');
 CREATE TYPE job_status AS ENUM ('QUEUED', 'PROCESSING', 'COMPLETED', 'FAILED');
 
 -- 1. Profiles Table (extends Supabase auth.users)
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS public.professors (
     recruiting_notes TEXT,
     recruiting_evidence JSONB DEFAULT '{}'::jsonb,
     freshness_status TEXT DEFAULT 'FRESH', -- 'FRESH', 'VERIFIED_RECENTLY', 'STALE'
-    confidence_score NUMERIC(3,2) DEFAULT 0.95,
+    confidence_score NUMERIC(5,2) DEFAULT 0.95,
     verification_status verification_status DEFAULT 'UNVERIFIED'::verification_status NOT NULL,
     last_verified_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
@@ -516,6 +516,23 @@ CREATE TABLE IF NOT EXISTS public.payment_proofs (
     uploaded_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
+-- 35. Connected Email Accounts (Gmail OAuth Multi-Tenancy)
+CREATE TABLE IF NOT EXISTS public.connected_email_accounts (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    provider TEXT DEFAULT 'gmail' NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    token_expires_at BIGINT,
+    status TEXT DEFAULT 'ACTIVE' NOT NULL,
+    connected_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    last_used_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, provider)
+);
+
 -- ==========================================================
 -- INDEXES FOR PERFORMANCE
 -- ==========================================================
@@ -528,6 +545,16 @@ CREATE INDEX IF NOT EXISTS idx_emails_campaign ON public.emails(campaign_id);
 CREATE INDEX IF NOT EXISTS idx_campaigns_user ON public.campaigns(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_user ON public.applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created_at ON public.audit_logs(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_payments_user_status ON public.payments(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_emails_professor ON public.emails(professor_id);
+CREATE INDEX IF NOT EXISTS idx_follow_ups_scheduled ON public.follow_ups(scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, is_read);
+CREATE INDEX IF NOT EXISTS idx_replies_email ON public.replies(email_id);
+CREATE INDEX IF NOT EXISTS idx_student_skills_student ON public.student_skills(student_id);
+CREATE INDEX IF NOT EXISTS idx_prof_publications_prof ON public.professor_publications(professor_id);
+CREATE INDEX IF NOT EXISTS idx_prof_sources_prof ON public.professor_sources(professor_id);
+CREATE INDEX IF NOT EXISTS idx_connected_email_user ON public.connected_email_accounts(user_id);
 
 -- ==========================================================
 -- ROW LEVEL SECURITY (RLS) POLICIES
@@ -563,17 +590,18 @@ ALTER TABLE public.site_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.site_content ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.feature_flags ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.audit_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.connected_email_accounts ENABLE ROW LEVEL SECURITY;
 
--- Helper function to check if current user is admin
+-- Helper function to check if current user is admin (secured with empty search_path)
 CREATE OR REPLACE FUNCTION public.is_admin()
 RETURNS BOOLEAN AS $$
 BEGIN
   RETURN EXISTS (
     SELECT 1 FROM public.profiles
-    WHERE id = auth.uid() AND (role = 'ADMIN'::user_role OR role = 'SUPER_ADMIN'::user_role)
+    WHERE id = auth.uid() AND (role = 'ADMIN'::public.user_role OR role = 'SUPER_ADMIN'::public.user_role)
   );
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
 
 -- Profiles: Users can view & edit own profile; Admins can view all
 CREATE POLICY "Users can view own profile" ON public.profiles FOR SELECT USING (auth.uid() = id OR public.is_admin());
@@ -666,4 +694,77 @@ CREATE POLICY "Admin write feature_flags" ON public.feature_flags FOR ALL USING 
 
 -- Audit logs: Admin only
 CREATE POLICY "Admin access audit_logs" ON public.audit_logs FOR ALL USING (public.is_admin());
+
+-- Connected Email Accounts: User access own; Admin access all
+CREATE POLICY "User access connected_email_accounts" ON public.connected_email_accounts FOR ALL USING (user_id = auth.uid() OR public.is_admin());
+
+-- ==========================================================
+-- PERFORMANCE INDEXES
+-- ==========================================================
+
+CREATE INDEX IF NOT EXISTS idx_payments_user_status ON public.payments(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_orders_user ON public.orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_subscriptions_user_status ON public.subscriptions(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_connected_email_accounts_user ON public.connected_email_accounts(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_professors_university ON public.professors(university_id);
+CREATE INDEX IF NOT EXISTS idx_professors_department ON public.professors(department_id);
+CREATE INDEX IF NOT EXISTS idx_emails_user_status ON public.emails(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_applications_user ON public.applications(user_id);
+CREATE INDEX IF NOT EXISTS idx_campaigns_user ON public.campaigns(user_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON public.notifications(user_id, is_read);
+
+-- ==========================================================
+-- AUTOMATION TRIGGERS
+-- ==========================================================
+
+-- 1. Automatic Profile Creation on Supabase Auth Signup
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, role)
+  VALUES (
+    NEW.id,
+    NEW.email,
+    COALESCE(NEW.raw_user_meta_data->>'full_name', NEW.raw_user_meta_data->>'name', ''),
+    'USER'::public.user_role
+  )
+  ON CONFLICT (id) DO UPDATE SET
+    email = EXCLUDED.email,
+    full_name = CASE WHEN public.profiles.full_name IS NULL OR public.profiles.full_name = '' THEN EXCLUDED.full_name ELSE public.profiles.full_name END;
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = '';
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
+
+-- 2. Generic updated_at timestamp refresher
+CREATE OR REPLACE FUNCTION public.update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = timezone('utc'::text, now());
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Attach updated_at trigger to tables maintaining it
+CREATE OR REPLACE TRIGGER update_profiles_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_student_profiles_updated_at BEFORE UPDATE ON public.student_profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_academic_profiles_updated_at BEFORE UPDATE ON public.academic_profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_research_profiles_updated_at BEFORE UPDATE ON public.research_profiles FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_universities_updated_at BEFORE UPDATE ON public.universities FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_departments_updated_at BEFORE UPDATE ON public.departments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_professors_updated_at BEFORE UPDATE ON public.professors FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_campaigns_updated_at BEFORE UPDATE ON public.campaigns FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_emails_updated_at BEFORE UPDATE ON public.emails FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_applications_updated_at BEFORE UPDATE ON public.applications FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_subscriptions_updated_at BEFORE UPDATE ON public.subscriptions FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_usage_records_updated_at BEFORE UPDATE ON public.usage_records FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_payment_methods_updated_at BEFORE UPDATE ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_orders_updated_at BEFORE UPDATE ON public.orders FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_payments_updated_at BEFORE UPDATE ON public.payments FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+CREATE OR REPLACE TRIGGER update_connected_emails_updated_at BEFORE UPDATE ON public.connected_email_accounts FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+
 

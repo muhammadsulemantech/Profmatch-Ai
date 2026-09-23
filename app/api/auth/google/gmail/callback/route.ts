@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { saveConnectedEmailAccount } from '@/lib/services/db-service';
 import { verifySignedOAuthState } from '@/lib/security/oauth-state';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
 
@@ -67,16 +67,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${safeRedirectTo}?error=Failed to fetch connected Gmail user profile.`);
     }
 
-    // 4. Save connected email account to mockDb (tokens are encrypted server-side automatically)
-    mockDb.loadFromDisk();
-    mockDb.saveConnectedEmailAccount({
+    // 4. Save connected email account (persisted to Supabase and encrypted server-side)
+    await saveConnectedEmailAccount({
       user_id: currentUserId,
       email: googleUser.email.toLowerCase().trim(),
-      google_account_id: googleUser.id,
       access_token: tokenData.access_token,
       refresh_token: tokenData.refresh_token || '',
       token_expires_at: Date.now() + (tokenData.expires_in || 3600) * 1000,
-      scopes: ['https://www.googleapis.com/auth/gmail.compose'],
       status: 'ACTIVE',
     });
 

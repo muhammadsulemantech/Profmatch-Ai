@@ -1,5 +1,5 @@
 import { Order, Payment, PaymentMethod, PlanTier } from '@/types/database';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { createOrder, createPayment, getOrderByReference } from '@/lib/services/db-service';
 
 export interface CreateCheckoutSessionParams {
   userId: string;
@@ -44,7 +44,7 @@ export class ManualPaymentProvider implements PaymentProvider {
   type = 'manual';
 
   async createCheckout(params: CreateCheckoutSessionParams): Promise<{ checkoutUrl?: string; orderReference: string }> {
-    const order = mockDb.createOrder({
+    const order = await createOrder({
       user_id: params.userId,
       user_email: params.userEmail,
       user_name: params.userName,
@@ -64,9 +64,9 @@ export class ManualPaymentProvider implements PaymentProvider {
   }
 
   async submitProof(params: SubmitManualPaymentParams): Promise<{ payment: Payment; orderReference: string }> {
-    let order = mockDb.orders.find((o: Order) => o.order_reference === params.orderReference);
+    let order = await getOrderByReference(params.orderReference);
     if (!order) {
-      order = mockDb.createOrder({
+      order = await createOrder({
         order_reference: params.orderReference,
         user_id: params.userId,
         user_email: params.userEmail,
@@ -81,7 +81,7 @@ export class ManualPaymentProvider implements PaymentProvider {
         status: 'PENDING',
       });
     }
-    const payment = mockDb.createPayment({
+    const payment = await createPayment({
       order_id: order.id,
       order_reference: params.orderReference,
       user_id: params.userId,
