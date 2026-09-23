@@ -53,13 +53,12 @@ export class OpenAlexProvider implements SearchProvider {
           university_name: instName,
           university_country: countryName,
           university_region: 'Academic Region',
-          department_name: concepts[0] ? `${concepts[0]} Department` : 'Academic Department',
           email: formatCleanProfessorEmail({ name: displayName, university_name: instName }),
-          email_verification_status: 'LIKELY' as EmailVerificationStatus,
-          verification_status: 'VERIFIED' as VerificationStatus,
-          confidence_score: 95,
-          recruiting_status: 'ACTIVELY_RECRUITING' as RecruitingStatus,
-          recruiting_notes: 'Active researcher with recent openalex citations & publications.',
+          email_verification_status: 'UNVERIFIED' as EmailVerificationStatus,
+          verification_status: 'UNVERIFIED' as VerificationStatus,
+          confidence_score: author.works_count > 10 ? 65 : 45,
+          recruiting_status: 'UNKNOWN' as RecruitingStatus,
+          recruiting_notes: 'Academic author indexed in OpenAlex graph. Recruitment status not specified.',
           academic_domain: filters.academicDomain || concepts[0] || 'STEM & Technology',
           primary_discipline: filters.discipline || concepts[0] || 'Computer Science & AI',
           interdisciplinary_tags: concepts.slice(1, 3),
@@ -87,12 +86,12 @@ export class OpenAlexProvider implements SearchProvider {
     emailStatus?: EmailVerificationStatus;
   }> {
     return {
-      isVerified: true,
+      isVerified: false,
       sourceUrl: profileUrl || 'https://openalex.org',
       sourceType: 'OPENALEX_ACADEMIC_GRAPH',
-      snippet: 'Verified faculty record via OpenAlex Academic Data Graph with API key authentication.',
-      confidenceScore: 0.95,
-      emailStatus: 'VERIFIED',
+      snippet: 'OpenAlex graph citation record — email and faculty active status require institutional confirmation.',
+      confidenceScore: 0.3,
+      emailStatus: 'UNVERIFIED',
     };
   }
 }

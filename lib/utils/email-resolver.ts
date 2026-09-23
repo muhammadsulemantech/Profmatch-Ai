@@ -1,6 +1,8 @@
 /**
- * Official University Domain & Verified Professor Email Resolution Engine
- * Ensures 100% accurate, clean, verified faculty emails across global institutions.
+ * Institutional Domain & Candidate Faculty Email Pattern Generator
+ * Constructs candidate email patterns for academic faculty based on university domain records.
+ * Note: Pattern-constructed addresses are candidate hypotheses and must be marked UNVERIFIED
+ * until confirmed via active institutional mailboxes or verified university directories.
  */
 
 interface ProfessorEmailInput {
