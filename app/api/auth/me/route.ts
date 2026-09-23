@@ -27,6 +27,9 @@ export async function GET(request: NextRequest) {
       role: session.user.role,
     });
 
+    const tier = mockDb.getUserPlanTier(savedUser.id);
+    const usage = mockDb.getUsageRecord(savedUser.id);
+
     return NextResponse.json({
       success: true,
       authenticated: true,
@@ -36,6 +39,8 @@ export async function GET(request: NextRequest) {
         full_name: savedUser.full_name,
         role: savedUser.role,
         avatar_url: savedUser.avatar_url,
+        tier,
+        usage,
       },
     });
   } catch (err) {

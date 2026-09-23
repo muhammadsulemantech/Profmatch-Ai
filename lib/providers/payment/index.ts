@@ -112,25 +112,11 @@ export class StripePaymentProvider implements PaymentProvider {
   type = 'stripe';
 
   async createCheckout(params: CreateCheckoutSessionParams): Promise<{ checkoutUrl: string; orderReference: string }> {
-    const order = mockDb.createOrder({
-      user_id: params.userId,
-      user_email: params.userEmail,
-      user_name: params.userName,
-      plan_tier: params.planTier,
-      plan_name: params.planName,
-      amount: params.amount,
-      currency: params.currency,
-      billing_interval: params.billingInterval,
-      payment_method_id: params.paymentMethodId,
-      payment_method_name: 'Credit / Debit Card (Stripe)',
-      status: 'PENDING',
-    });
-
-    const sessionId = `cs_stripe_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-    return {
-      orderReference: order.order_reference,
-      checkoutUrl: `${params.successUrl}?session_id=${sessionId}&order_ref=${order.order_reference}`,
-    };
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeSecretKey || stripeSecretKey.trim() === '' || stripeSecretKey.includes('placeholder')) {
+      throw new Error('Stripe gateway is not configured on this server. Please choose an active manual payment method or bank transfer.');
+    }
+    throw new Error('Stripe automated checkout is currently unavailable. Please choose manual academic verification.');
   }
 }
 
@@ -139,24 +125,11 @@ export class PayPalPaymentProvider implements PaymentProvider {
   type = 'paypal';
 
   async createCheckout(params: CreateCheckoutSessionParams): Promise<{ checkoutUrl: string; orderReference: string }> {
-    const order = mockDb.createOrder({
-      user_id: params.userId,
-      user_email: params.userEmail,
-      user_name: params.userName,
-      plan_tier: params.planTier,
-      plan_name: params.planName,
-      amount: params.amount,
-      currency: params.currency,
-      billing_interval: params.billingInterval,
-      payment_method_id: params.paymentMethodId,
-      payment_method_name: 'PayPal Academic Checkout',
-      status: 'PENDING',
-    });
-
-    return {
-      orderReference: order.order_reference,
-      checkoutUrl: `${params.successUrl}?paypal_order=${order.order_reference}`,
-    };
+    const paypalClientId = process.env.PAYPAL_CLIENT_ID;
+    if (!paypalClientId || paypalClientId.trim() === '') {
+      throw new Error('PayPal gateway is not configured on this server. Please choose an active manual payment method or bank transfer.');
+    }
+    throw new Error('PayPal automated checkout is currently unavailable. Please choose manual academic verification.');
   }
 }
 

@@ -1,4 +1,4 @@
-import { PlanTier } from '@/types/database';
+import type { PlanTier } from '@/types/database';
 
 export interface PlanConfig {
   tier: PlanTier;
@@ -154,28 +154,12 @@ export const ACADEMIC_PLANS: Record<string, PlanConfig> = {
 ACADEMIC_PLANS.STUDENT = ACADEMIC_PLANS.STARTER;
 
 const SEARCH_USAGE_KEY = 'profmatch_search_usage_count';
-const USER_TIER_OVERRIDE_KEY = 'profmatch_user_tier_override';
 
-export function getEffectiveUserTier(userId?: string): PlanTier {
-  if (typeof window === 'undefined') return 'FREE';
-
-  try {
-    // Check if there is an override in localStorage (e.g. after approval or testing)
-    const override = localStorage.getItem(USER_TIER_OVERRIDE_KEY);
-    if (override && (override === 'STARTER' || override === 'PRO' || override === 'ELITE' || override === 'STUDENT')) {
-      return override as PlanTier;
-    }
-
-    // Check user cookie or auth object - removed client cookie trust
-  } catch {}
-
-  return 'FREE';
-}
-
-export function setUserTierOverride(tier: PlanTier) {
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(USER_TIER_OVERRIDE_KEY, tier);
+export function getEffectiveUserTier(userTier?: PlanTier | string): PlanTier {
+  if (userTier && (userTier === 'STARTER' || userTier === 'PRO' || userTier === 'ELITE' || userTier === 'STUDENT')) {
+    return userTier === 'STUDENT' ? 'STARTER' : (userTier as PlanTier);
   }
+  return 'FREE';
 }
 
 export function getCustomPlans(): Record<string, PlanConfig> {

@@ -2,12 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
+import { PlanTier } from '@/types/database';
+
 export interface AuthUser {
   id: string;
   email: string;
   full_name: string;
   role: string;
   target_degree?: string;
+  tier?: PlanTier;
+  usage?: any;
 }
 
 interface AuthContextType {

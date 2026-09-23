@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { EmailQualityAgent } from '@/lib/agents';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 
 // Helper to clean messy scraped professor names & titles
 function cleanProfessorSalutation(rawName: string): { salutation: string; cleanName: string } {
@@ -40,8 +42,17 @@ function cleanProfessorSalutation(rawName: string): { salutation: string; cleanN
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await verifyAuthSession(request);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+    const userId = session.user.id;
+
     const body = await request.json();
-    const { professor, studentProfile, tone = 'academic', userId = 'usr_student_001' } = body;
+    const { professor, studentProfile, tone = 'academic' } = body;
 
     if (!professor || !professor.name) {
       return NextResponse.json(
@@ -50,8 +61,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const quotaCheck = checkAndIncrementQuota(userId, 'draft');
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: quotaCheck.error,
+          message: quotaCheck.message,
+          tier: quotaCheck.tier,
+          limit: quotaCheck.limit,
+          used: quotaCheck.used,
+        },
+        { status: 403 }
+      );
+    }
+
     mockDb.loadFromDisk();
-    const studentUser = mockDb.profiles.find((u: any) => u.id === userId) || mockDb.profiles[1] || { id: userId, full_name: 'Alex Vance' };
+    const studentUser = mockDb.profiles.find((u: any) => u.id === userId) || { id: userId, full_name: session.user.full_name || 'Academic Researcher' };
     const academic = mockDb.academicProfiles.find(a => a.student_id === studentUser.id) || mockDb.academicProfiles[0];
     const research = mockDb.researchProfiles.find(r => r.student_id === studentUser.id) || mockDb.researchProfiles[0];
 

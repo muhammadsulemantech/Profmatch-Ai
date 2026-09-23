@@ -1,9 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { getSearchProvider } from '@/lib/providers/search';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await verifyAuthSession(request);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const {
       targetCountry = 'United States',
@@ -12,6 +22,19 @@ export async function POST(request: NextRequest) {
       keywords = [],
       alreadyContactedEmails = [],
     } = body;
+
+    const quotaCheck = checkAndIncrementQuota(session.user.id, 'autopilot', { country: targetCountry, increment: false });
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: quotaCheck.error,
+          message: quotaCheck.message,
+          tier: quotaCheck.tier,
+        },
+        { status: 403 }
+      );
+    }
 
     const contactedSet = new Set(
       alreadyContactedEmails.map((e: string) => e?.toLowerCase().trim())

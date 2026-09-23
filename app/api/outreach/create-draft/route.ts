@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    let accessToken = account.access_token || parsedTokens?.access_token;
-    const refreshToken = account.refresh_token || parsedTokens?.refresh_token;
+    let accessToken = account.access_token;
+    const refreshToken = account.refresh_token;
     const nowMs = Date.now();
 
     // 3. Auto-refresh access token if expired or near expiry

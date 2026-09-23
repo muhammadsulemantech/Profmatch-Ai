@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSearchProvider } from '@/lib/providers/search';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 
 export async function POST(request: NextRequest) {
   try {
     // 1. Verify Authentication Guard (Requirement #4 - Backend Enforcement)
     const session = await verifyAuthSession(request);
-    if (!session) {
+    if (!session || !session.user || !session.user.id) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized: You must create an account or sign in to search professors.' },
         { status: 401 }
@@ -39,6 +40,22 @@ export async function POST(request: NextRequest) {
       page,
       limit,
     } = body;
+
+    // 2. Server-side Quota & Destination Access Guard
+    const quotaCheck = checkAndIncrementQuota(session.user.id, 'search', { country });
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: quotaCheck.error,
+          message: quotaCheck.message,
+          tier: quotaCheck.tier,
+          limit: quotaCheck.limit,
+          used: quotaCheck.used,
+        },
+        { status: 403 }
+      );
+    }
 
     const provider = getSearchProvider();
     const results = await provider.searchProfessors(query || '', {

@@ -4,11 +4,33 @@ import { mockDb } from '@/lib/supabase/mock-db';
 import { Professor, ResearchMatch } from '@/types/database';
 import { ResearchMatchAnalysisPrompt } from '@/lib/providers/ai/ai-provider.interface';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 
 export async function POST(request: NextRequest) {
   try {
     const session = await verifyAuthSession(request);
-    const userId = session?.user?.id || 'guest';
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
+    }
+    const userId = session.user.id;
+
+    const quotaCheck = checkAndIncrementQuota(userId, 'analysis');
+    if (!quotaCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: quotaCheck.error,
+          message: quotaCheck.message,
+          tier: quotaCheck.tier,
+          limit: quotaCheck.limit,
+          used: quotaCheck.used,
+        },
+        { status: 403 }
+      );
+    }
 
     const body = await request.json();
     const { professorId, professor, studentProfile: clientProfile } = body;

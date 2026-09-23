@@ -71,6 +71,7 @@ class MockDatabase {
           if (parsed.universities) this.universities = parsed.universities;
           if (parsed.professors) this.professors = parsed.professors;
           if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = parsed.connectedEmailAccounts;
+          if (parsed.usageRecords) this.usageRecords = parsed.usageRecords;
         }
       } else {
         this.saveToDisk();
@@ -101,6 +102,7 @@ class MockDatabase {
         universities: this.universities,
         professors: this.professors,
         connectedEmailAccounts: this.connectedEmailAccounts,
+        usageRecords: this.usageRecords,
       };
       const dir = path.dirname(dbPath);
       if (!fs.existsSync(dir)) {
@@ -2083,11 +2085,74 @@ class MockDatabase {
     return false;
   }
 
+  public isTransactionIdUsed(transactionId: string): boolean {
+    if (!transactionId) return false;
+    const clean = transactionId.trim().toLowerCase();
+    return this.payments.some(p => p.transaction_id && p.transaction_id.trim().toLowerCase() === clean);
+  }
+
+  public getOrderByReference(orderReference: string): Order | undefined {
+    return this.orders.find(o => o.order_reference === orderReference);
+  }
+
+  public getUserSubscription(userId: string): SubscriptionRecord | undefined {
+    return this.subscriptions.find(s => s.user_id === userId && s.status === 'active');
+  }
+
+  public getUserPlanTier(userId: string): PlanTier {
+    const sub = this.getUserSubscription(userId);
+    if (sub && sub.plan_type) {
+      if (sub.current_period_end && new Date(sub.current_period_end).getTime() < Date.now()) {
+        return 'FREE';
+      }
+      return sub.plan_type;
+    }
+    return 'FREE';
+  }
+
+  public getCurrentMonthYear(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  public getUsageRecord(userId: string, monthYear?: string): UsageRecord {
+    const ym = monthYear || this.getCurrentMonthYear();
+    let record = this.usageRecords.find(u => u.user_id === userId && u.month_year === ym);
+    if (!record) {
+      const suffix = Math.random().toString(36).substring(2, 8);
+      record = {
+        id: `usg_${Date.now()}_${suffix}`,
+        user_id: userId,
+        month_year: ym,
+        searches_count: 0,
+        ai_generations_count: 0,
+        emails_sent_count: 0,
+        updated_at: new Date().toISOString(),
+      };
+      this.usageRecords.push(record);
+      this.persist();
+    }
+    return record;
+  }
+
+  public incrementUsage(
+    userId: string,
+    field: 'searches_count' | 'ai_generations_count' | 'emails_sent_count',
+    delta: number = 1
+  ): UsageRecord {
+    const record = this.getUsageRecord(userId);
+    record[field] = (record[field] || 0) + delta;
+    record.updated_at = new Date().toISOString();
+    this.persist();
+    return record;
+  }
+
   public createOrder(orderData: Partial<Order>): Order {
     const now = new Date().toISOString();
+    const hex = Math.random().toString(36).substring(2, 8).toUpperCase();
     const order: Order = {
       id: orderData.id || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
-      order_reference: orderData.order_reference || `PM-${Math.floor(100000 + Math.random() * 900000)}`,
+      order_reference: orderData.order_reference || `PM-${Date.now()}-${hex}`,
       user_id: orderData.user_id || 'usr_student_001',
       user_email: orderData.user_email || 'student@example.com',
       user_name: orderData.user_name || 'Alex Vance',

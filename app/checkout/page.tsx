@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { PaymentMethod, PlanTier } from '@/types/database';
 import { getAllCountries } from '@/lib/geography/global-geography';
-import { ACADEMIC_PLANS, getPlanConfig, syncLivePricingFromServer, PlanConfig, setUserTierOverride } from '@/lib/services/usage-service';
+import { ACADEMIC_PLANS, getPlanConfig, syncLivePricingFromServer, PlanConfig } from '@/lib/services/usage-service';
 import { useAuth } from '@/lib/auth/auth-context';
 
 function CheckoutContent() {
@@ -158,6 +158,11 @@ function CheckoutContent() {
       return;
     }
 
+    if (!user) {
+      setErrorMessage('Please sign in or create an account before submitting payment details.');
+      return;
+    }
+
     setSubmitting(true);
     setErrorMessage(null);
 
@@ -167,26 +172,16 @@ function CheckoutContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           planTier: planConfig.tier,
-          planName: planConfig.name,
-          amount: currentAmount,
-          currency: currentCurrency,
-          billingInterval: 'monthly',
           paymentMethodId: activeMethod.id,
-          paymentMethodName: activeMethod.name,
           transactionId: transactionId.trim(),
           paymentNote: paymentNote.trim(),
           proofFileName: proofFile?.name || 'payment_screenshot.png',
           proofFileUrl: proofPreviewUrl || undefined,
-          userEmail: user?.email || 'student@example.com',
-          userName: user?.full_name || 'Academic Researcher',
-          userId: user?.id || 'usr_student_001',
         }),
       });
 
       const data = await res.json();
       if (data.success && data.orderReference) {
-        // Also set optimistic override so user can preview their access
-        setUserTierOverride(planConfig.tier);
         router.push(`/checkout/status/${data.orderReference}`);
       } else {
         setErrorMessage(data.error || 'Failed to submit payment details.');
