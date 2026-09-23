@@ -2,52 +2,21 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
-import {
-  Rocket,
-  Search,
-  Sparkles,
-  Send,
-  Pause,
-  Play,
-  Square,
-  ShieldCheck,
-  CheckCircle2,
-  AlertCircle,
-  Clock,
-  ArrowLeft,
-  Loader2,
-  Terminal,
-  Building2,
-  ExternalLink,
-  ChevronRight,
-  Flame,
-  Globe,
-  GraduationCap,
-  Layers,
-  FileText
-} from 'lucide-react';
+import { Rocket, Sparkles, ArrowLeft } from 'lucide-react';
 import { useAuth } from '@/lib/auth/auth-context';
 import { getAllCountries } from '@/lib/geography/global-geography';
-import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
-
-interface TerminalLog {
-  id: string;
-  time: string;
-  type: 'INFO' | 'SEARCH' | 'AI' | 'SEND' | 'WAIT' | 'SUCCESS' | 'WARN' | 'ERROR';
-  message: string;
-}
-
-interface ContactedProfRecord {
-  id: string;
-  name: string;
-  university: string;
-  country: string;
-  email: string;
-  subject: string;
-  sentAt: string;
-  sentVia: string;
-  draftUrl?: string;
-}
+import {
+  CampaignConfigPanel,
+  EngineStatus,
+} from '@/components/autopilot/campaign-config-panel';
+import {
+  CampaignTerminal,
+  TerminalLog,
+} from '@/components/autopilot/campaign-terminal';
+import {
+  PreparedDraftsList,
+  ContactedProfRecord,
+} from '@/components/autopilot/prepared-drafts-list';
 
 export default function AutoPilotPage() {
   const { user } = useAuth();
@@ -58,7 +27,6 @@ export default function AutoPilotPage() {
   // Campaign Configuration State
   const [targetCountry, setTargetCountry] = useState('United States');
   const [targetDegree, setTargetDegree] = useState('PhD');
-  const [academicDomain, setAcademicDomain] = useState('Computing, Artificial Intelligence & Informatics');
   const [discipline, setDiscipline] = useState('Artificial Intelligence & NLP');
   const [keywordsText, setKeywordsText] = useState('Large Language Models, AI Reasoning, Multi-Agent Systems');
   const [batchLimit, setBatchLimit] = useState<number>(10);
@@ -68,15 +36,12 @@ export default function AutoPilotPage() {
   // Safeguard Consent State
   const [hasAuthorized, setHasAuthorized] = useState(false);
 
-  type EngineStatus = 'IDLE' | 'SEARCHING' | 'DRAFTING' | 'SAVING_DRAFT' | 'SENDING' | 'COOLDOWN' | 'PAUSED' | 'COMPLETED';
-
   // Execution Engine State
   const [engineStatus, setEngineStatus] = useState<EngineStatus>('IDLE');
   const [currentProgress, setCurrentProgress] = useState(0);
   const [remainingCooldown, setRemainingCooldown] = useState(0);
   const [logs, setLogs] = useState<TerminalLog[]>([]);
   const [contactedHistory, setContactedHistory] = useState<ContactedProfRecord[]>([]);
-  const [activeProfessor, setActiveProfessor] = useState<any | null>(null);
 
   const logsContainerRef = useRef<HTMLDivElement>(null);
   const isPausedRef = useRef<boolean>(false);
@@ -219,13 +184,13 @@ export default function AutoPilotPage() {
         });
 
         const discoverData = await discoverRes.json();
-        if (!discoverRes.ok || !discoverData.success || !discoverData.professor) {
+        const prof = discoverData.professor || (discoverData.data && discoverData.data.professor);
+        if (!discoverRes.ok || !prof) {
           appendLog('WARN', discoverData.message || 'No additional matching professors found for current criteria.');
           break;
         }
 
-        discoveredProf = discoverData.professor;
-        setActiveProfessor(discoveredProf);
+        discoveredProf = prof;
         contactedEmails.push(discoveredProf.email);
 
         appendLog(
@@ -251,101 +216,102 @@ export default function AutoPilotPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             professor: discoveredProf,
-            studentProfile: {
-              targetDegree,
-              researchInterests: keywordsArray,
+            targetDegree,
+            userProfile: {
+              field: discipline,
+              keywords: keywordsArray,
             },
             tone,
-            userId,
           }),
         });
 
         const draftData = await draftRes.json();
-        if (!draftRes.ok || !draftData.success) {
-          throw new Error(draftData.error || 'AI generation failed');
+        const payload = draftData.data || draftData;
+        if (!draftRes.ok || (!draftData.success && !payload.subject)) {
+          throw new Error(draftData.error || 'Failed to generate email');
         }
 
-        generatedSubject = draftData.subject;
-        generatedBody = draftData.bodyText;
-        appendLog('AI', `✍️ Generated custom subject: "${generatedSubject}" (Quality: ${draftData.qualityScore}/100)`);
+        generatedSubject = payload.subject || draftData.subject;
+        generatedBody = payload.bodyText || draftData.bodyText;
+        appendLog('SUCCESS', `✨ Personalized email tailored to: "${generatedSubject}"`);
       } catch (err: any) {
-        appendLog('ERROR', `Personalization error: ${err.message}`);
+        appendLog('ERROR', `Draft generation failed: ${err.message}`);
         break;
       }
 
       if (isPausedRef.current || isCancelledRef.current) break;
 
-      // STEP 3: Automated Creation in Gmail Drafts
+      // STEP 3: Save directly to Gmail Drafts
       setEngineStatus('SAVING_DRAFT');
-      appendLog('AI', `📝 Preparing personalized draft in Gmail for ${discoveredProf.name}...`);
+      appendLog('SEND', `📤 Saving reviewable draft directly into Gmail account for ${discoveredProf.name}...`);
 
       try {
-        const draftRes = await fetch('/api/outreach/create-draft', {
+        const saveDraftRes = await fetch('/api/autopilot/save-gmail-draft', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            toEmail: discoveredProf.email,
-            subject: generatedSubject,
-            bodyText: generatedBody,
+            recipientEmail: discoveredProf.email,
             professorName: discoveredProf.name,
             universityName: discoveredProf.university_name,
+            subject: generatedSubject,
+            bodyText: generatedBody,
             userId,
           }),
         });
 
-        const draftData = await draftRes.json();
-        if (!draftRes.ok || !draftData.success) {
-          throw new Error(draftData.error || 'Failed to create Gmail draft');
-        }
+        const saveDraftData = await saveDraftRes.json();
+        const savePayload = saveDraftData.data || saveDraftData;
+        const draftUrl = savePayload?.draftUrl || saveDraftData.draftUrl;
 
         completedCount += 1;
         setCurrentProgress(completedCount);
 
-        const draftUrl = draftData.gmailUrl || 'https://mail.google.com/mail/u/0/#drafts';
-
         const newRecord: ContactedProfRecord = {
-          id: `draft_${Date.now()}`,
+          id: `draft_${Date.now()}_${discoveredProf.id || Math.random().toString(36).substring(2, 6)}`,
           name: discoveredProf.name,
           university: discoveredProf.university_name,
           country: discoveredProf.university_country || targetCountry,
           email: discoveredProf.email,
           subject: generatedSubject,
           sentAt: new Date().toLocaleTimeString(),
-          sentVia: draftData.connectedEmail || 'Gmail Drafts',
+          sentVia: 'Gmail Drafts',
           draftUrl,
         };
 
         setContactedHistory((prev) => [newRecord, ...prev]);
 
+        // Persist draft into browser storage
         if (typeof window !== 'undefined') {
           const draftsKey = `profmatch_draft_emails_${userId}`;
-          let existingDrafts: any[] = [];
-          try {
-            const raw = localStorage.getItem(draftsKey);
-            if (raw) existingDrafts = JSON.parse(raw);
-          } catch {}
+          const currentDraftsStr = localStorage.getItem(draftsKey);
+          let currentDrafts: any[] = [];
+          if (currentDraftsStr) {
+            try {
+              currentDrafts = JSON.parse(currentDraftsStr);
+            } catch {}
+          }
 
-          const draftItem = {
-            id: `draft_${Date.now()}`,
-            user_id: userId,
-            recipientEmail: discoveredProf.email,
+          currentDrafts.unshift({
+            id: newRecord.id,
             professor_name: discoveredProf.name,
+            recipientEmail: discoveredProf.email,
+            to_email: discoveredProf.email,
             subject: generatedSubject,
             bodyText: generatedBody,
-            status: 'DRAFT',
             created_at: new Date().toISOString(),
+            status: 'DRAFT',
             draftUrl,
-          };
-          localStorage.setItem(draftsKey, JSON.stringify([draftItem, ...existingDrafts]));
+          });
 
-          // Save to Kanban
+          localStorage.setItem(draftsKey, JSON.stringify(currentDrafts));
+
+          // Also track in Kanban as outreach draft
           const kanbanKey = `profmatch_kanban_cards_${userId}`;
           try {
-            const rawCards = localStorage.getItem(kanbanKey);
-            let cards: any[] = rawCards ? JSON.parse(rawCards) : [];
+            const currentCards = localStorage.getItem(kanbanKey);
+            const cards = currentCards ? JSON.parse(currentCards) : [];
             cards.unshift({
               id: `card_${Date.now()}`,
-              professorId: discoveredProf.id,
               professorName: discoveredProf.name,
               universityName: discoveredProf.university_name,
               country: discoveredProf.university_country || targetCountry,
@@ -401,7 +367,12 @@ export default function AutoPilotPage() {
     appendLog('ERROR', '🛑 AutoPilot campaign terminated.');
   };
 
-  const isRunning = engineStatus === 'SEARCHING' || engineStatus === 'DRAFTING' || engineStatus === 'SAVING_DRAFT' || engineStatus === 'SENDING' || engineStatus === 'COOLDOWN';
+  const isRunning =
+    engineStatus === 'SEARCHING' ||
+    engineStatus === 'DRAFTING' ||
+    engineStatus === 'SAVING_DRAFT' ||
+    engineStatus === 'SENDING' ||
+    engineStatus === 'COOLDOWN';
 
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-10 selection:bg-emerald-500/25 selection:text-emerald-300">
@@ -433,381 +404,46 @@ export default function AutoPilotPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* LEFT: Setup Wizard & Safeguard Authorization (5 cols) */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-5 shadow-xl">
-              <div className="border-b border-slate-800 pb-3 flex items-center gap-2">
-                <Layers className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-sm font-bold text-white">1. Campaign Parameters</h2>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                {/* Mode: Always Save to Gmail Drafts */}
-                <div className="p-3.5 rounded-xl bg-slate-950/80 border border-emerald-500/30 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-white flex items-center gap-1.5 text-xs">
-                      <FileText className="w-3.5 h-3.5 text-emerald-400" />
-                      Mode: Save to Gmail Drafts
-                    </span>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                      Safe &amp; Reviewable
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 leading-relaxed">
-                    AI discovers verified faculty and prepares personalized research drafts directly inside your Gmail Drafts folder. You can review and click Send whenever you choose.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
-                    <Globe className="w-3.5 h-3.5 text-emerald-400" /> Target Destination Country
-                  </label>
-                  <select
-                    value={targetCountry}
-                    disabled={isRunning}
-                    onChange={(e) => setTargetCountry(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                  >
-                    <option value="Worldwide">Worldwide (Global Universities)</option>
-                    {countries.map((c) => (
-                      <option key={c.code} value={c.name}>
-                        {c.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
-                      <GraduationCap className="w-3.5 h-3.5 text-emerald-400" /> Target Degree
-                    </label>
-                    <select
-                      value={targetDegree}
-                      disabled={isRunning}
-                      onChange={(e) => setTargetDegree(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                    >
-                      <option value="PhD">Ph.D. / Doctorate</option>
-                      <option value="MS">M.S. with Thesis</option>
-                      <option value="Postdoc">Postdoctoral Fellowship</option>
-                      <option value="Internship">Research Internship</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Batch Limit</label>
-                    <select
-                      value={batchLimit}
-                      disabled={isRunning}
-                      onChange={(e) => setBatchLimit(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                    >
-                      <option value={5}>5 Professors (Test Run)</option>
-                      <option value={10}>10 Professors (Standard)</option>
-                      <option value={20}>20 Professors (Targeted)</option>
-                      <option value={35}>35 Professors (Aggressive)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">Academic Discipline</label>
-                  <input
-                    type="text"
-                    value={discipline}
-                    disabled={isRunning}
-                    onChange={(e) => setDiscipline(e.target.value)}
-                    placeholder="e.g. Artificial Intelligence, Bioinformatics, Quantum Physics"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-slate-300 font-semibold mb-1">
-                    Research Focus Keywords <span className="text-slate-500">(Used by Gemini AI for Paper Matching)</span>
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={keywordsText}
-                    disabled={isRunning}
-                    onChange={(e) => setKeywordsText(e.target.value)}
-                    placeholder="e.g. LLM Reasoning, Graph Neural Networks, Multi-Hop QA"
-                    className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed disabled:opacity-50"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 text-emerald-400" /> Anti-Spam Delay
-                    </label>
-                    <select
-                      value={cooldownSec}
-                      disabled={isRunning}
-                      onChange={(e) => setCooldownSec(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                    >
-                      <option value={45}>45 seconds</option>
-                      <option value={60}>60 seconds (Safe Recommended)</option>
-                      <option value={90}>90 seconds (Ultra-Safe)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold mb-1">Outreach Tone</label>
-                    <select
-                      value={tone}
-                      disabled={isRunning}
-                      onChange={(e) => setTone(e.target.value as any)}
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-                    >
-                      <option value="academic">Academic &amp; Formal</option>
-                      <option value="concise">Direct &amp; Concise</option>
-                      <option value="inquisitive">Publication-Centric</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Safeguard & Launch Card */}
-            <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-              <div className="border-b border-slate-800 pb-3 flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                <h2 className="text-sm font-bold text-white">2. One-Time Authorization</h2>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2 text-xs">
-                <label className="flex items-start gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={hasAuthorized}
-                    onChange={(e) => setHasAuthorized(e.target.checked)}
-                    disabled={isRunning}
-                    className="mt-0.5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 shrink-0"
-                  />
-                  <span className="text-slate-300 leading-relaxed text-[11px]">
-                    <strong className="text-white">One-Time Safeguard Consent:</strong> I authorize ProfMatch AI to
-                    autonomously search verified global professors matching my research criteria, synthesize personalized
-                    academic emails with Gemini AI, and prepare reviewable drafts directly in my Gmail account.
-                  </span>
-                </label>
-              </div>
-
-              {/* Action Trigger Buttons */}
-              <div className="pt-2">
-                {engineStatus === 'IDLE' || engineStatus === 'COMPLETED' ? (
-                  <button
-                    type="button"
-                    onClick={runAutoPilotCampaign}
-                    disabled={!hasAuthorized}
-                    className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
-                  >
-                    <FileText className="w-4 h-4 text-slate-950" />
-                    Launch AutoPilot (Create {batchLimit} Gmail Drafts)
-                  </button>
-                ) : isRunning ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handlePause}
-                      className="flex-1 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-2 transition-colors"
-                    >
-                      <Pause className="w-4 h-4" /> Pause AutoPilot
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAbort}
-                      className="px-4 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Square className="w-3.5 h-3.5" /> Stop
-                    </button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={handleResume}
-                      className="flex-1 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-2 transition-colors shadow-md"
-                    >
-                      <Play className="w-4 h-4" /> Resume Campaign
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAbort}
-                      className="px-4 py-2.5 rounded-xl bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors"
-                    >
-                      <Square className="w-3.5 h-3.5" /> Abort
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <CampaignConfigPanel
+              countries={countries}
+              targetCountry={targetCountry}
+              setTargetCountry={setTargetCountry}
+              targetDegree={targetDegree}
+              setTargetDegree={setTargetDegree}
+              discipline={discipline}
+              setDiscipline={setDiscipline}
+              keywordsText={keywordsText}
+              setKeywordsText={setKeywordsText}
+              batchLimit={batchLimit}
+              setBatchLimit={setBatchLimit}
+              cooldownSec={cooldownSec}
+              setCooldownSec={setCooldownSec}
+              tone={tone}
+              setTone={setTone}
+              hasAuthorized={hasAuthorized}
+              setHasAuthorized={setHasAuthorized}
+              engineStatus={engineStatus}
+              isRunning={isRunning}
+              onLaunch={runAutoPilotCampaign}
+              onPause={handlePause}
+              onResume={handleResume}
+              onAbort={handleAbort}
+            />
           </div>
 
           {/* RIGHT: Real-time Live Terminal & Sent Activity Stream (7 cols) */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Live Status & Progress Bar */}
-            <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    {isRunning && (
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                    )}
-                    <span
-                      className={`relative inline-flex rounded-full h-3 w-3 ${
-                        isRunning ? 'bg-emerald-500' : engineStatus === 'PAUSED' ? 'bg-amber-500' : 'bg-slate-600'
-                      }`}
-                    />
-                  </span>
-                  <h3 className="font-bold text-sm text-white uppercase tracking-wider">
-                    Engine Status: <span className="text-emerald-400">{engineStatus}</span>
-                  </h3>
-                </div>
+            <CampaignTerminal
+              engineStatus={engineStatus}
+              currentProgress={currentProgress}
+              batchLimit={batchLimit}
+              remainingCooldown={remainingCooldown}
+              isRunning={isRunning}
+              logs={logs}
+              logsContainerRef={logsContainerRef}
+            />
 
-                <span className="text-xs font-mono font-bold text-slate-300">
-                  {currentProgress} / {batchLimit} Drafts Prepared
-                </span>
-              </div>
-
-              {/* Progress Bar */}
-              <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden border border-slate-800">
-                <div
-                  className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-500"
-                  style={{ width: `${(currentProgress / Math.max(batchLimit, 1)) * 100}%` }}
-                />
-              </div>
-
-              {/* Live Sub-Status Box */}
-              {engineStatus === 'COOLDOWN' && remainingCooldown > 0 && (
-                <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
-                  <span className="flex items-center gap-2 font-medium">
-                    <Clock className="w-4 h-4 animate-spin text-amber-400" />
-                    Anti-spam protection active. Holding queue...
-                  </span>
-                  <span className="font-mono font-bold text-sm bg-amber-950/60 px-2.5 py-0.5 rounded border border-amber-500/40">
-                    {remainingCooldown}s remaining
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* Terminal Live Activity Logs */}
-            <div className="glass-panel bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="px-4 py-2.5 bg-slate-900 border-b border-slate-800 flex items-center justify-between text-xs text-slate-400">
-                <div className="flex items-center gap-2 font-mono">
-                  <Terminal className="w-4 h-4 text-emerald-400" />
-                  <span>autonomous_agent.log</span>
-                </div>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  {logs.length} events logged
-                </span>
-              </div>
-
-              <div
-                ref={logsContainerRef}
-                className="p-4 h-64 overflow-y-auto font-mono text-[11px] leading-relaxed space-y-1.5 scrollbar-thin scrollbar-thumb-slate-800"
-              >
-                {logs.length === 0 ? (
-                  <div className="text-slate-600 italic py-10 text-center">
-                    AutoPilot is in standby mode. Configure campaign parameters on the left and click &quot;Launch Autonomous Campaign&quot; to begin.
-                  </div>
-                ) : (
-                  logs.map((log) => (
-                    <div key={log.id} className="flex items-start gap-2">
-                      <span className="text-slate-600 shrink-0 select-none">[{log.time}]</span>
-                      <span
-                        className={
-                          log.type === 'SUCCESS'
-                            ? 'text-emerald-400 font-bold'
-                            : log.type === 'AI'
-                            ? 'text-cyan-400'
-                            : log.type === 'SEARCH'
-                            ? 'text-amber-400'
-                            : log.type === 'WARN'
-                            ? 'text-amber-300'
-                            : log.type === 'ERROR'
-                            ? 'text-rose-400'
-                            : 'text-slate-300'
-                        }
-                      >
-                        {log.message}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
-            {/* Campaign Output Activity Table */}
-            <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-emerald-400" />
-                  <h3 className="font-bold text-sm text-white">
-                    Prepared Gmail Drafts ({contactedHistory.length})
-                  </h3>
-                </div>
-                <div className="flex items-center gap-3">
-                  <a
-                    href="https://mail.google.com/mail/u/0/#drafts"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1"
-                  >
-                    Open Gmail Drafts <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <Link
-                    href="/tracker"
-                    className="text-[11px] font-semibold text-slate-400 hover:text-white flex items-center gap-1"
-                  >
-                    Kanban <ExternalLink className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-
-              {contactedHistory.length === 0 ? (
-                <p className="text-xs text-slate-500 text-center py-6">
-                  No outreach drafts prepared yet in this session.
-                </p>
-              ) : (
-                <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-                  {contactedHistory.map((item) => (
-                    <div
-                      key={item.id}
-                      className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-3"
-                    >
-                      <div className="min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-white truncate">{item.name}</span>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 bg-cyan-500/15 text-cyan-400 border-cyan-500/30">
-                            <FileText className="w-2.5 h-2.5" /> Draft in {item.sentVia}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-400 truncate">
-                          {item.university} &bull; {item.email}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {item.draftUrl && (
-                          <a
-                            href={item.draftUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-2.5 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-[10px] flex items-center gap-1 transition-all shadow-sm shadow-emerald-500/20"
-                          >
-                            Open Draft <ExternalLink className="w-2.5 h-2.5" />
-                          </a>
-                        )}
-                        <span className="text-[10px] font-mono text-slate-500">
-                          {item.sentAt}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <PreparedDraftsList contactedHistory={contactedHistory} />
           </div>
         </div>
       </div>

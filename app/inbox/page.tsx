@@ -5,27 +5,18 @@ import Link from 'next/link';
 import {
   MessageSquare,
   Mail,
-  ShieldCheck,
   Send,
-  Copy,
-  Edit3,
-  CheckCircle2,
-  ArrowRight,
-  ThumbsUp,
-  User,
-  Plus,
-  ArrowLeft,
-  RefreshCw,
   Trash2,
+  RefreshCw,
   Sparkles,
-  ExternalLink,
-  Clock,
-  Check,
-  Loader2,
-  X
+  ArrowLeft,
+  CheckCircle2,
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { useAuth } from '@/lib/auth/auth-context';
+import { InboundEmailModal } from '@/components/inbox/inbound-email-modal';
+import { ReplyDetailView } from '@/components/inbox/reply-detail-view';
+import { SentOutreachView } from '@/components/inbox/sent-outreach-view';
 
 export default function InboxPage() {
   const { user } = useAuth();
@@ -94,7 +85,7 @@ export default function InboxPage() {
       if (storedSent) loadedSent = JSON.parse(storedSent);
     } catch {}
 
-    const mockEmails = mockDb.emails.filter(e => e.user_id === userId);
+    const mockEmails = mockDb.emails.filter((e) => e.user_id === userId);
     const combinedSent = [...loadedSent, ...mockEmails];
     setSentMessages(combinedSent);
     if (combinedSent[0] && !selectedSentMessage) {
@@ -211,11 +202,11 @@ export default function InboxPage() {
       });
 
       const data = await res.json();
-      if (!res.ok || !data.success) {
+      if (!res.ok || (!data.success && !data.reply)) {
         throw new Error(data.error || 'Failed to analyze reply');
       }
 
-      const newReply = data.reply;
+      const newReply = data.reply || (data.data && data.data.reply);
       const updated = [newReply, ...replies];
       setReplies(updated);
       setSelectedReply(newReply);
@@ -446,325 +437,47 @@ export default function InboxPage() {
             </div>
 
             {/* Reply Detail & AI Assistant (8 cols) */}
-            <div className="lg:col-span-8 space-y-6">
-              {selectedReply ? (
-                <>
-                  {/* Original Reply Header & Body */}
-                  <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
-                    <div className="flex items-start sm:items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-center font-bold text-emerald-400 text-sm shadow-sm shrink-0">
-                          {selectedReply.professor_name?.split(' ').map((n: string) => n[0]).slice(0, 2).join('') || 'PR'}
-                        </div>
-                        <div>
-                          <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                            {selectedReply.professor_name}
-                            <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 font-normal">
-                              Verified Faculty
-                            </span>
-                          </h3>
-                          <p className="text-xs text-slate-400 font-mono">{selectedReply.sender_email}</p>
-                        </div>
-                      </div>
-
-                      <div className="text-right text-[11px] text-slate-400">
-                        <span>{new Date(selectedReply.received_at).toLocaleString()}</span>
-                      </div>
-                    </div>
-
-                    <div className="pt-2 border-t border-slate-800">
-                      <h4 className="text-xs font-semibold text-white mb-2">{selectedReply.subject}</h4>
-                      <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans selection:bg-emerald-500/30">
-                        {selectedReply.body_text}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* AI Analysis Summary */}
-                  <div className="glass-panel rounded-2xl p-6 border border-emerald-500/25 bg-[#0b1325]/80 space-y-4 shadow-xl">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <Sparkles className="w-4 h-4 text-emerald-400" /> AI Reply Analysis
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400">Classified Sentiment:</span>
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs font-bold ${
-                            selectedReply.sentiment === 'POSITIVE'
-                              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                              : selectedReply.sentiment === 'MEETING_REQUESTED'
-                              ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30'
-                              : 'bg-slate-800 text-slate-300'
-                          }`}
-                        >
-                          <ThumbsUp className="w-3 h-3 inline mr-1" />
-                          {selectedReply.sentiment || 'NEUTRAL'}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="p-3.5 bg-slate-950/70 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
-                      {selectedReply.summary || 'Summary generated based on key faculty directives.'}
-                    </div>
-                  </div>
-
-                  {/* Suggested Response Draft */}
-                  <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                        <Edit3 className="w-4 h-4 text-emerald-400" /> Suggested Professional Response
-                      </h3>
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setIsEditing(!isEditing)}
-                          className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
-                        >
-                          {isEditing ? 'Preview' : 'Edit Response'}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleCopy}
-                          className="px-3 py-1.5 rounded-lg border border-slate-700 text-xs font-semibold text-slate-300 hover:bg-slate-800 flex items-center gap-1 transition-colors"
-                        >
-                          {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                          {copied ? 'Copied!' : 'Copy'}
-                        </button>
-                      </div>
-                    </div>
-
-                    {isEditing ? (
-                      <textarea
-                        rows={8}
-                        value={suggestedDraft}
-                        onChange={(e) => setSuggestedDraft(e.target.value)}
-                        className="w-full p-4 bg-slate-950 border border-emerald-500/50 rounded-xl text-xs text-white leading-relaxed focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      />
-                    ) : (
-                      <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans">
-                        {suggestedDraft}
-                      </div>
-                    )}
-
-                    <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-800">
-                      <button
-                        type="button"
-                        onClick={handleSendResponse}
-                        disabled={isSending}
-                        className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all"
-                      >
-                        {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
-                        {isSending ? 'Sending Response...' : 'Send Response'}
-                      </button>
-                      <p className="text-[11px] text-slate-400 italic">
-                        Manual review is confirmed before transmission.
-                      </p>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="glass-panel p-16 rounded-2xl border border-slate-800 text-center space-y-3">
-                  <MessageSquare className="w-10 h-10 text-slate-600 mx-auto" />
-                  <p className="text-sm font-bold text-white">Select a reply from the left to view AI analysis</p>
-                  <p className="text-xs text-slate-400 max-w-sm mx-auto">
-                    Choose any incoming faculty message or import a received email to generate actionable summaries.
-                  </p>
-                </div>
-              )}
+            <div className="lg:col-span-8">
+              <ReplyDetailView
+                selectedReply={selectedReply}
+                suggestedDraft={suggestedDraft}
+                setSuggestedDraft={setSuggestedDraft}
+                isEditing={isEditing}
+                setIsEditing={setIsEditing}
+                copied={copied}
+                onCopy={handleCopy}
+                isSending={isSending}
+                onSendResponse={handleSendResponse}
+              />
             </div>
           </div>
         )}
 
         {/* TAB 2: SENT OUTREACH & DRAFTS */}
         {activeTab === 'sent' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            <div className="lg:col-span-4 space-y-3">
-              <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                Sent Emails &amp; Drafts ({sentMessages.length})
-              </h2>
-
-              {sentMessages.length === 0 ? (
-                <div className="glass-panel p-8 rounded-2xl border border-slate-800 text-center space-y-3">
-                  <Send className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-xs font-bold text-white">No Outreach Sent Yet</p>
-                  <p className="text-[11px] text-slate-400">
-                    Draft outreach emails to professors and they will be archived here in real time.
-                  </p>
-                  <Link
-                    href="/search"
-                    className="inline-block mt-2 px-3 py-1.5 rounded-lg bg-emerald-500 text-slate-950 text-xs font-bold"
-                  >
-                    Find Professors
-                  </Link>
-                </div>
-              ) : (
-                sentMessages.map((msg, idx) => {
-                  const isSelected = selectedSentMessage === msg;
-                  const profName = msg.professor_name || msg.recipientEmail || 'Target Faculty';
-                  const dateStr = msg.sent_at || msg.created_at || new Date().toISOString();
-
-                  return (
-                    <button
-                      key={msg.id || idx}
-                      type="button"
-                      onClick={() => setSelectedSentMessage(msg)}
-                      className={`w-full text-left p-4 rounded-xl border transition-all ${
-                        isSelected
-                          ? 'border-emerald-500/50 bg-emerald-950/20 shadow-md'
-                          : 'border-slate-800 bg-slate-900/60 hover:border-slate-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="text-xs font-bold text-white truncate max-w-[180px]">{profName}</span>
-                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-300">
-                          {msg.status || 'SENT'}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-300 font-medium truncate">{msg.subject}</p>
-                      <p className="text-[11px] text-slate-500 mt-1">
-                        {new Date(dateStr).toLocaleDateString()}
-                      </p>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-
-            <div className="lg:col-span-8">
-              {selectedSentMessage ? (
-                <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-                    <div>
-                      <h3 className="text-sm font-bold text-white">
-                        {selectedSentMessage.professor_name || selectedSentMessage.recipientEmail || 'Outreach Email'}
-                      </h3>
-                      <p className="text-xs text-slate-400 font-mono">
-                        {selectedSentMessage.recipientEmail || selectedSentMessage.to_email || 'faculty@university.edu'}
-                      </p>
-                    </div>
-                    <span className="text-xs text-slate-500">
-                      {new Date(selectedSentMessage.sent_at || selectedSentMessage.created_at || Date.now()).toLocaleString()}
-                    </span>
-                  </div>
-
-                  <div className="space-y-2">
-                    <span className="text-xs font-bold text-slate-300 block">Subject: {selectedSentMessage.subject}</span>
-                    <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans">
-                      {selectedSentMessage.bodyText || selectedSentMessage.body_text}
-                    </div>
-                  </div>
-
-                  {selectedSentMessage.follow_up_due_at && (
-                    <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 flex items-center gap-2 text-xs text-slate-300">
-                      <Clock className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Follow-up scheduled for: {new Date(selectedSentMessage.follow_up_due_at).toLocaleDateString()}</span>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="glass-panel p-16 rounded-2xl border border-slate-800 text-center space-y-3">
-                  <Send className="w-10 h-10 text-slate-600 mx-auto" />
-                  <p className="text-sm font-bold text-white">Select a sent outreach email to inspect details</p>
-                </div>
-              )}
-            </div>
-          </div>
+          <SentOutreachView
+            sentMessages={sentMessages}
+            selectedSentMessage={selectedSentMessage}
+            onSelectSentMessage={setSelectedSentMessage}
+          />
         )}
 
         {/* MODAL: Analyze Inbound Email */}
-        {isAnalyzeModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-            <div className="glass-panel bg-slate-950 border border-slate-800 rounded-2xl max-w-lg w-full p-6 space-y-5 shadow-2xl relative">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-emerald-400" />
-                  <h3 className="font-bold text-base text-white">Analyze Inbound Professor Email</h3>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsAnalyzeModalOpen(false)}
-                  className="text-slate-400 hover:text-white"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {analyzeError && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs">
-                  {analyzeError}
-                </div>
-              )}
-
-              <form onSubmit={handleAnalyzeInboundEmail} className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Professor Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Dr. Greg Durrett"
-                      value={importProfName}
-                      onChange={(e) => setImportProfName(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-[11px] font-semibold text-slate-400 block mb-1">Professor Email</label>
-                    <input
-                      type="email"
-                      placeholder="faculty@university.edu"
-                      value={importEmail}
-                      onChange={(e) => setImportEmail(e.target.value)}
-                      className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">Email Subject</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Re: Prospective PhD Student Inquiry"
-                    value={importSubject}
-                    onChange={(e) => setImportSubject(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[11px] font-semibold text-slate-400 block mb-1">
-                    Inbound Email Body Text <span className="text-emerald-400">*</span>
-                  </label>
-                  <textarea
-                    rows={6}
-                    required
-                    placeholder="Paste the message content received from the professor..."
-                    value={importBody}
-                    onChange={(e) => setImportBody(e.target.value)}
-                    className="w-full p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsAnalyzeModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-400 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isAnalyzing || !importBody.trim()}
-                    className="px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50"
-                  >
-                    {isAnalyzing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
-                    {isAnalyzing ? 'Analyzing with AI...' : 'Analyze & Save'}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
+        <InboundEmailModal
+          isOpen={isAnalyzeModalOpen}
+          onClose={() => setIsAnalyzeModalOpen(false)}
+          onSubmit={handleAnalyzeInboundEmail}
+          importProfName={importProfName}
+          setImportProfName={setImportProfName}
+          importEmail={importEmail}
+          setImportEmail={setImportEmail}
+          importSubject={importSubject}
+          setImportSubject={setImportSubject}
+          importBody={importBody}
+          setImportBody={setImportBody}
+          isAnalyzing={isAnalyzing}
+          analyzeError={analyzeError}
+        />
       </div>
     </div>
   );
