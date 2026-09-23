@@ -152,4 +152,44 @@ describe('Tier 0.6 Verified Faculty Pipeline Integrity Suite', () => {
       assert.ok(!email.includes('..'));
     });
   });
+
+  describe('5. Global Academic Discovery Engine Verification Integrity', () => {
+    const searchIndexCode = fs.readFileSync(
+      path.join(process.cwd(), 'lib', 'providers', 'search', 'index.ts'),
+      'utf-8'
+    );
+    const searchRouteCode = fs.readFileSync(
+      path.join(process.cwd(), 'app', 'api', 'professors', 'search', 'route.ts'),
+      'utf-8'
+    );
+
+    test('GlobalAcademicDiscoveryEngine.verifyFacultyProfile never claims fake isVerified: true', () => {
+      assert.ok(
+        searchIndexCode.includes('isVerified: false'),
+        'GlobalAcademicDiscoveryEngine must return isVerified: false'
+      );
+      assert.equal(
+        searchIndexCode.includes('isVerified: Boolean(isEduDomain)'),
+        false,
+        'GlobalAcademicDiscoveryEngine must not fabricate isVerified: true based merely on .edu substring'
+      );
+      assert.equal(
+        searchIndexCode.includes("emailStatus: isEduDomain ? 'VERIFIED' : 'UNVERIFIED'"),
+        false,
+        'GlobalAcademicDiscoveryEngine must not claim verified email solely from URL substring'
+      );
+    });
+
+    test('Search API route does not force verifiedOnly=true when omitted', () => {
+      assert.equal(
+        searchRouteCode.includes('verifiedOnly !== false'),
+        false,
+        'verifiedOnly must not default to true when omitted'
+      );
+      assert.ok(
+        searchRouteCode.includes('verifiedOnly: Boolean(verifiedOnly)'),
+        'verifiedOnly must respect client query boolean flag'
+      );
+    });
+  });
 });

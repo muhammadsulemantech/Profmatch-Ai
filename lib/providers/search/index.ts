@@ -354,14 +354,14 @@ export class GlobalAcademicDiscoveryEngine implements SearchProvider {
       lower.includes('u-tokyo.ac.jp');
 
     return {
-      isVerified: Boolean(isEduDomain),
+      isVerified: false,
       sourceUrl: profileUrl,
-      sourceType: isEduDomain ? 'UNIVERSITY_FACULTY_PAGE' : 'DEPARTMENT_DIRECTORY',
+      sourceType: isEduDomain ? 'INSTITUTIONAL_DIRECTORY_CANDIDATE' : 'SECONDARY_ACADEMIC_DIRECTORY',
       snippet: isEduDomain
-        ? 'Verified directly against accredited academic domain registry (.edu / .ac.uk / .se / .de / .it / .jp).'
-        : 'Source profile registered with secondary academic directory.',
-      confidenceScore: isEduDomain ? 0.98 : 0.75,
-      emailStatus: isEduDomain ? 'VERIFIED' : 'UNVERIFIED',
+        ? 'Institutional domain detected (.edu / .ac / accredited ccTLD). Record is unverified and requires direct email ping.'
+        : 'Source profile registered with secondary academic directory — unverified.',
+      confidenceScore: isEduDomain ? 0.6 : 0.3,
+      emailStatus: 'UNVERIFIED',
     };
   }
 }
