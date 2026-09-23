@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     mockDb.loadFromDisk();
     const method = mockDb.getPaymentMethodById(paymentMethodId);
-    if (!method || !method.is_active) {
+    if (!method || !method.enabled) {
       return NextResponse.json(
         { success: false, error: 'Selected payment method does not exist or is unavailable' },
         { status: 404 }
