@@ -51,25 +51,18 @@ export class ResendEmailProvider implements EmailProvider {
   }
 }
 
-export class MockEmailProvider implements EmailProvider {
-  name = 'ProfMatch Secure Dispatcher (Verified Safe Delivery)';
+export class UnconfiguredEmailProvider implements EmailProvider {
+  name = 'Unconfigured Email Provider';
 
   async sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    console.log(`\n======================================================`);
-    console.log(`[EMAIL DISPATCHED VIA ${this.name}]`);
-    console.log(`To: ${params.to}`);
-    console.log(`Subject: ${params.subject}`);
-    console.log(`Message ID: ${messageId}`);
-    console.log(`Body:\n${params.text}`);
-    console.log(`======================================================\n`);
-
     return {
-      success: true,
-      messageId,
+      success: false,
+      error: 'Email delivery service is unconfigured. Please configure SMTP credentials (SMTP_USER, SMTP_PASS) or Resend API key (RESEND_API_KEY).',
     };
   }
 }
+
+export const MockEmailProvider = UnconfiguredEmailProvider;
 
 import { SmtpEmailProvider } from './smtp-provider';
 export { SmtpEmailProvider };
@@ -99,7 +92,7 @@ export function getEmailProvider(): EmailProvider {
     return new ResendEmailProvider(resendApiKey);
   }
 
-  return new MockEmailProvider();
+  return new UnconfiguredEmailProvider();
 }
 
 export * from './email-provider.interface';

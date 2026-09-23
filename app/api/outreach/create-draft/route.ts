@@ -31,15 +31,13 @@ export async function POST(request: NextRequest) {
     let account = mockDb.getConnectedEmailAccount(userId);
 
     if (!account) {
-      const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(professorEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      return NextResponse.json({
-        success: true,
-        draftId: `draft_${Date.now()}`,
-        isLocalDraft: true,
-        connectedEmail: 'Workspace Drafts',
-        gmailUrl: composeUrl,
-        message: 'Draft prepared successfully. Click to review in Gmail.',
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'No connected Gmail account found. Please connect your Gmail account in Connectors or Settings before creating drafts.',
+        },
+        { status: 400 }
+      );
     }
 
     let accessToken = account.access_token;
@@ -115,16 +113,14 @@ export async function POST(request: NextRequest) {
     const draftData = await draftRes.json();
 
     if (!draftRes.ok) {
-      console.warn('[GMAIL DRAFT CREATION API ERROR, FALLING BACK TO WEB DRAFT]', draftData);
-      const composeUrl = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(professorEmail)}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-      return NextResponse.json({
-        success: true,
-        draftId: `draft_${Date.now()}`,
-        isLocalDraft: true,
-        connectedEmail: account.email,
-        gmailUrl: composeUrl,
-        message: 'Draft prepared. Click to review in Gmail.',
-      });
+      console.warn('[GMAIL DRAFT CREATION API ERROR]', draftData);
+      return NextResponse.json(
+        {
+          success: false,
+          error: draftData?.error?.message || 'Failed to create Gmail draft. Please verify your Gmail connection.',
+        },
+        { status: 502 }
+      );
     }
 
     // Update last used timestamp

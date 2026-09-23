@@ -46,6 +46,16 @@ export async function POST(request: NextRequest) {
       text: bodyText,
     });
 
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Failed to dispatch email. Email service may be unconfigured.',
+        },
+        { status: 503 }
+      );
+    }
+
     // Log audit
     await logAuditEvent({
       action: 'EMAIL_SENT',
@@ -61,7 +71,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      success: result.success,
+      success: true,
       messageId: result.messageId,
       provider: provider.name,
     });

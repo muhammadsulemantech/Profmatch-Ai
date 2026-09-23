@@ -114,10 +114,20 @@ export async function POST(request: NextRequest) {
       text: bodyText,
     });
 
+    if (!result.success) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: result.error || 'Failed to dispatch email. No configured email delivery provider is available.',
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       sentVia: provider.name.toUpperCase(),
-      messageId: result.messageId || `msg_${Date.now()}`,
+      messageId: result.messageId,
       sentAt: new Date().toISOString(),
     });
   } catch (error: any) {
