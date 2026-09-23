@@ -7,11 +7,9 @@
 ---
 
 ## 1. Core Credentials & Admin Auth
-- **Support Email:** `profmatchsupport@gmail.com`
-- **Admin Email:** `sulemanmunir6752@gmail.com`
-- **Admin Password:** `suleman6752`
-- **Backup Admin Email:** `admin@profmatch.ai`
-- **Admin Security Guarantee:** [middleware.ts](file:///e:/profmatch%20ai%20project/middleware.ts) + Server Cookie (`profmatch_role=admin`) automatically enforces admin dashboard privileges whenever logging in from Admin Console.
+- **Support Email:** `support@profmatch.ai` (configured via env)
+- **Admin Accounts:** Configured via Supabase Auth & `ADMIN_EMAILS` environment variable
+- **Admin Security Guarantee:** Verified server-side session and role check (`requireAdmin()`) enforced on all admin endpoints.
 
 ---
 

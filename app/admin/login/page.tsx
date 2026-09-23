@@ -19,40 +19,31 @@ export default function AdminLoginPage() {
     const inputEmail = email.trim().toLowerCase();
     const inputPass = passphrase.trim();
 
-    // Strict Administrative Credential Check
-    if (inputEmail === 'sulemanmunir6752@gmail.com' && inputPass === 'suleman6752') {
-      const sessionToken = `admin_elevated_${Date.now()}`;
-      const adminObj = {
-        id: 'usr_admin_001',
-        email: 'sulemanmunir6752@gmail.com',
-        full_name: 'Suleman Munir (Admin)',
-        role: 'ADMIN'
-      };
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: inputEmail, password: inputPass }),
+      });
 
-      // Set secure admin session & role cookies with 7-day max-age
-      document.cookie = `profmatch_session=${sessionToken}; path=/; max-age=604800; SameSite=Lax`;
-      document.cookie = `profmatch_role=ADMIN; path=/; max-age=604800; SameSite=Lax`;
-      document.cookie = `profmatch_user=${encodeURIComponent(JSON.stringify(adminObj))}; path=/; max-age=604800; SameSite=Lax`;
+      const data = await res.json();
 
-      // Log audit event
-      try {
-        await fetch('/api/admin/audit-logs', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'ADMIN_PORTAL_SIGN_IN',
-            userEmail: inputEmail,
-            resourceType: 'ADMIN_CONSOLE',
-          }),
-        });
-      } catch {
-        // silent audit catch
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Invalid administrative credentials.');
+        setLoading(false);
+        return;
       }
 
-      // Perform full page redirect so AuthContext and client state re-hydrate cleanly as ADMIN
+      if (data.user?.role !== 'ADMIN') {
+        setError('Access denied. Administrator privileges required.');
+        setLoading(false);
+        return;
+      }
+
+      // Successful admin login: redirect to admin console
       window.location.href = '/admin';
-    } else {
-      setError('Invalid elevated administrative credentials.');
+    } catch (err) {
+      setError('An error occurred during authentication. Please try again.');
       setLoading(false);
     }
   };
