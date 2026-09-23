@@ -1,63 +1,60 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
-import { logAuditEvent } from '@/lib/security/audit';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { getFeatureFlags, updateFeatureFlag } from '@/lib/services/admin-service';
 import { assertAdmin } from '@/lib/auth/server-auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
-  mockDb.loadFromDisk();
-  return NextResponse.json({ success: true, flags: mockDb.featureFlags });
+  try {
+    const flags = await getFeatureFlags();
+    return apiSuccess({ flags }, { total: flags.length });
+  } catch (error: any) {
+    return apiError(error.message || 'Failed to fetch feature flags', 500);
+  }
 }
+
+const UpdateFlagSchema = z.object({
+  flagKey: z.string().optional(),
+  key: z.string().optional(),
+  isEnabled: z.boolean().optional(),
+  enabled: z.boolean().optional(),
+});
 
 export async function PUT(request: NextRequest) {
-  return handleUpdateFlag(request);
-}
-
-export async function POST(request: NextRequest) {
-  return handleUpdateFlag(request);
-}
-
-export async function PATCH(request: NextRequest) {
-  return handleUpdateFlag(request);
-}
-
-async function handleUpdateFlag(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
   try {
-    mockDb.loadFromDisk();
     const body = await request.json();
-    const flagKey = body.flagKey || body.key;
-    const isEnabled = body.isEnabled !== undefined ? body.isEnabled : body.enabled;
-
-    if (!flagKey) {
-      return NextResponse.json({ success: false, error: 'flagKey or key is required.' }, { status: 400 });
+    const parsed = UpdateFlagSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid flag update payload', 400);
     }
 
-    const flag = mockDb.featureFlags.find((f) => f.flag_key === flagKey);
-    if (!flag) {
-      return NextResponse.json({ success: false, error: 'Feature flag not found.' }, { status: 404 });
+    const flagKey = parsed.data.flagKey || parsed.data.key;
+    const isEnabled = parsed.data.isEnabled !== undefined ? parsed.data.isEnabled : parsed.data.enabled;
+
+    if (!flagKey || isEnabled === undefined) {
+      return apiError('flagKey and isEnabled are required.', 400);
     }
 
-    flag.is_enabled = Boolean(isEnabled);
-    flag.updated_at = new Date().toISOString();
-
-    mockDb.persist();
-
-    await logAuditEvent({
-      action: 'FEATURE_FLAG_TOGGLED',
-      resourceType: 'FEATURE_FLAG',
-      resourceId: flagKey,
-      metadata: { isEnabled: flag.is_enabled },
-      userId: auth.session.user.id,
-      userEmail: auth.session.user.email,
+    const updated = await updateFeatureFlag(flagKey, isEnabled, {
+      id: auth.session.user.id,
+      email: auth.session.user.email,
     });
 
-    return NextResponse.json({ success: true, flag, flags: mockDb.featureFlags });
-  } catch (err) {
-    return NextResponse.json({ success: false, error: 'Failed to update feature flag.' }, { status: 500 });
+    const allFlags = await getFeatureFlags();
+
+    return apiSuccess({
+      flag: updated,
+      flags: allFlags,
+      message: 'Feature flag updated successfully.',
+    });
+  } catch (error: any) {
+    const status = error.message?.includes('not found') ? 404 : 500;
+    return apiError(error.message || 'Failed to update feature flag', status);
   }
 }

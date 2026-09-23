@@ -1,129 +1,133 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { getEnrichedUsers, updateUser } from '@/lib/services/user-service';
 import { logAuditEvent } from '@/lib/security/audit';
 import { assertAdmin } from '@/lib/auth/server-auth';
-import { ACADEMIC_PLANS } from '@/lib/services/usage-service';
-import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
-import type { PlanTier } from '@/types/database';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
-  mockDb.loadFromDisk();
+  try {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('q') || searchParams.get('search') || undefined;
+    const role = searchParams.get('role') || undefined;
+    const planTier = searchParams.get('planTier') || undefined;
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
 
-  const enrichedUsers = mockDb.profiles.map(u => {
-    // Check for subscription in mockDb.subscriptions
-    const sub = mockDb.subscriptions
-      .filter(s => s.user_id === u.id)
-      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+    const result = await getEnrichedUsers({
+      search,
+      role,
+      planTier,
+      page,
+      pageSize,
+    });
 
-    const hasActiveSub = sub && sub.status === 'active';
-    const planTier: PlanTier = hasActiveSub ? sub.plan_type : 'FREE';
-    const isPaid = planTier !== 'FREE' && hasActiveSub;
-
-    // Check user payment records
-    const userPayments = mockDb.payments.filter(p => p.user_id === u.id || p.user_email?.toLowerCase() === u.email.toLowerCase());
-    const userOrders = mockDb.orders.filter(o => o.user_id === u.id || o.user_email?.toLowerCase() === u.email.toLowerCase());
-
-    return {
-      ...u,
-      plan_tier: planTier,
-      is_paid: isPaid,
-      subscription_status: sub ? sub.status : 'free',
-      subscription_end: sub ? sub.current_period_end : null,
-      payments_count: userPayments.length,
-      orders_count: userOrders.length,
-      last_order_date: userOrders[0]?.created_at || null,
-    };
-  });
-
-  return NextResponse.json({ success: true, users: enrichedUsers, total: enrichedUsers.length });
+    return apiSuccess(
+      {
+        users: result.users,
+      },
+      {
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasMore: result.page < result.totalPages,
+      }
+    );
+  } catch (error: any) {
+    return apiError(error.message || 'Failed to fetch users', 500);
+  }
 }
+
+const UpdateUserSchema = z.object({
+  userId: z.string().optional(),
+  id: z.string().optional(),
+  role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT']).optional(),
+  isSuspended: z.boolean().optional(),
+  is_suspended: z.boolean().optional(),
+  suspensionReason: z.string().nullable().optional(),
+  suspension_reason: z.string().nullable().optional(),
+  planTier: z.string().optional(),
+  plan_tier: z.string().optional(),
+  updates: z
+    .object({
+      role: z.enum(['USER', 'ADMIN', 'SUPER_ADMIN', 'SUPPORT']).optional(),
+      isSuspended: z.boolean().optional(),
+      is_suspended: z.boolean().optional(),
+      suspensionReason: z.string().nullable().optional(),
+      suspension_reason: z.string().nullable().optional(),
+      planTier: z.string().optional(),
+      plan_tier: z.string().optional(),
+    })
+    .optional(),
+});
 
 export async function PUT(request: NextRequest) {
-  return handleUpdateUser(request);
-}
-
-export async function POST(request: NextRequest) {
-  return handleUpdateUser(request);
-}
-
-export async function PATCH(request: NextRequest) {
-  return handleUpdateUser(request);
-}
-
-async function handleUpdateUser(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
   try {
-    mockDb.loadFromDisk();
     const body = await request.json();
-    const userId = body.userId || body.id;
-    const updates = body.updates || {};
-
-    const role = body.role || updates.role;
-    const isSuspended = body.isSuspended !== undefined ? body.isSuspended : updates.is_suspended !== undefined ? updates.is_suspended : updates.isSuspended;
-    const suspensionReason = body.suspensionReason || updates.suspension_reason || updates.suspensionReason;
-    const planTier = body.plan_tier || body.planTier || updates.plan_tier || updates.planTier;
-
-    const profile = mockDb.profiles.find((p) => p.id === userId);
-    if (!profile) {
-      return NextResponse.json({ success: false, error: 'User not found.' }, { status: 404 });
+    const parsed = UpdateUserSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid user update payload', 400);
     }
 
-    if (planTier) {
-      const validTiers = Object.keys(ACADEMIC_PLANS);
-      if (!validTiers.includes(planTier)) {
-        return NextResponse.json(
-          { success: false, error: `Invalid plan tier: "${planTier}". Valid tiers are: ${validTiers.join(', ')}` },
-          { status: 400 }
-        );
-      }
+    const data = parsed.data;
+    const targetUserId = data.userId || data.id;
+    if (!targetUserId) {
+      return apiError('User ID is required.', 400);
     }
 
-    if (role) profile.role = role;
-    if (isSuspended !== undefined) {
-      profile.is_suspended = Boolean(isSuspended);
-      profile.suspension_reason = suspensionReason || null;
-    }
-    profile.updated_at = new Date().toISOString();
+    const updates = data.updates || {};
+    const role = data.role || updates.role;
+    const isSuspended =
+      data.isSuspended !== undefined
+        ? data.isSuspended
+        : data.is_suspended !== undefined
+        ? data.is_suspended
+        : updates.isSuspended !== undefined
+        ? updates.isSuspended
+        : updates.is_suspended;
 
-    // Update or create subscription for this plan tier
-    if (planTier) {
-      await saveUserSubscription({
-        user_id: userId,
-        plan_type: planTier as PlanTier,
-        status: 'active',
-        current_period_end: new Date(Date.now() + 365 * 86400000).toISOString(),
-      });
-    }
+    const suspensionReason =
+      data.suspensionReason !== undefined
+        ? data.suspensionReason
+        : data.suspension_reason !== undefined
+        ? data.suspension_reason
+        : updates.suspensionReason !== undefined
+        ? updates.suspensionReason
+        : updates.suspension_reason;
 
-    if (role || isSuspended !== undefined) {
-      await saveUserProfile({
-        id: userId,
-        email: profile.email,
-        full_name: profile.full_name,
-        role: profile.role,
-        is_suspended: profile.is_suspended,
-        suspension_reason: profile.suspension_reason,
-      });
-    }
+    const planTier = (data.planTier || data.plan_tier || updates.planTier || updates.plan_tier) as any;
 
-    mockDb.persist();
-
-    await logAuditEvent({
-      action: isSuspended ? 'USER_SUSPENDED' : planTier ? 'USER_PLAN_CHANGED' : role ? 'USER_ROLE_CHANGED' : 'USER_UPDATED',
-      resourceType: 'USER',
-      resourceId: userId,
-      metadata: { newRole: role, suspended: isSuspended, newPlan: planTier },
-      userId: auth.session.user.id,
-      userEmail: auth.session.user.email,
+    const updatedProfile = await updateUser({
+      userId: targetUserId,
+      role,
+      isSuspended,
+      suspensionReason,
+      planTier,
     });
 
-    return NextResponse.json({ success: true, user: profile });
-  } catch (err: any) {
-    return NextResponse.json({ success: false, error: err?.message || 'Failed to update user.' }, { status: 500 });
+    await logAuditEvent({
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
+      action: 'ADMIN_USER_UPDATED',
+      resourceType: 'USER',
+      resourceId: targetUserId,
+      metadata: { role, isSuspended, planTier },
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
+    });
+
+    return apiSuccess({
+      message: 'User updated successfully.',
+      user: updatedProfile,
+    });
+  } catch (error: any) {
+    const status = error.message?.includes('not found') ? 404 : error.message?.includes('Invalid plan') ? 400 : 500;
+    return apiError(error.message || 'Failed to update user', status);
   }
 }

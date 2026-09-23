@@ -1,47 +1,44 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { getSiteSettings, updateSiteSettings } from '@/lib/cms/settings-service';
 import { logAuditEvent } from '@/lib/security/audit';
 import { assertAdmin } from '@/lib/auth/server-auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
-  const settings = await getSiteSettings();
-  return NextResponse.json({ success: true, settings });
+  try {
+    const settings = await getSiteSettings();
+    return apiSuccess({ settings });
+  } catch (error: any) {
+    return apiError(error.message || 'Failed to fetch settings', 500);
+  }
 }
 
 export async function PUT(request: NextRequest) {
-  return handleUpdateSettings(request);
-}
-
-export async function POST(request: NextRequest) {
-  return handleUpdateSettings(request);
-}
-
-async function handleUpdateSettings(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
   try {
     const body = await request.json();
-    const updated = await updateSiteSettings(body);
-
-    try {
-      await logAuditEvent({
-        action: 'SITE_SETTINGS_UPDATED',
-        resourceType: 'SITE_SETTINGS',
-        metadata: { fields: Object.keys(body || {}) },
-        userId: auth.session.user.id,
-        userEmail: auth.session.user.email,
-      });
-    } catch {
-      // safe audit catch
+    if (!body || typeof body !== 'object') {
+      return apiError('Settings payload must be an object', 400);
     }
 
-    return NextResponse.json({ success: true, settings: updated });
+    const updated = await updateSiteSettings(body);
+
+    await logAuditEvent({
+      action: 'SITE_SETTINGS_UPDATED',
+      resourceType: 'SITE_SETTINGS',
+      metadata: { fields: Object.keys(body || {}) },
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
+    });
+
+    return apiSuccess({ settings: updated, message: 'Settings updated successfully.' });
   } catch (err: any) {
-    console.error('[SETTINGS API ERROR]', err);
-    return NextResponse.json({ success: false, error: err.message || 'Failed to update settings.' }, { status: 500 });
+    return apiError(err.message || 'Failed to update settings.', 500);
   }
 }

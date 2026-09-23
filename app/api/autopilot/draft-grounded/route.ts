@@ -1,98 +1,86 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { EmailQualityAgent } from '@/lib/agents';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { checkAndIncrementQuota } from '@/lib/services/quota-service';
+import { getStudentProfileByUserId } from '@/lib/services/user-service';
+import {
+  cleanProfessorSalutation,
+  renderGroundedEmailTemplate,
+} from '@/lib/templates/email-templates';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
-// Helper to clean messy scraped professor names & titles
-function cleanProfessorSalutation(rawName: string): { salutation: string; cleanName: string } {
-  if (!rawName) return { salutation: 'Professor', cleanName: 'Professor' };
-
-  let clean = rawName.trim();
-  // Strip common academic titles from the front
-  clean = clean
-    .replace(/^(Full\s+Professor|Associate\s+Professor|Assistant\s+Professor|Distinguished\s+Professor|Chair\s+Professor|Prof\.\s*Dr\.|Professor\s+Dr\.|Prof\.|Dr\.|Professor)\s*/i, '')
-    .trim();
-  clean = clean.replace(/^(&\s*Chair|Chair\s*of|Head\s*of)\s*/i, '').trim();
-
-  // If the "name" is a department or title rather than a human name (e.g. contains "Intelligence and Machine Learning" or "Department" or is too long)
-  const isDepartmentString =
-    clean.toLowerCase().includes('intelligence') ||
-    clean.toLowerCase().includes('department') ||
-    clean.toLowerCase().includes('foundations') ||
-    clean.toLowerCase().includes('chair') ||
-    clean.toLowerCase().includes('machine learning') ||
-    clean.length > 35;
-
-  if (isDepartmentString) {
-    return { salutation: 'Dear Professor,', cleanName: 'Professor' };
-  }
-
-  const parts = clean.split(/\s+/).filter(Boolean);
-  if (parts.length === 1) {
-    return { salutation: `Dear Professor ${parts[0]},`, cleanName: parts[0] };
-  }
-  if (parts.length >= 2) {
-    const lastName = parts[parts.length - 1];
-    return { salutation: `Dear Professor ${lastName},`, cleanName: `${parts[0]} ${lastName}` };
-  }
-
-  return { salutation: 'Dear Professor,', cleanName: 'Professor' };
-}
+const DraftGroundedSchema = z.object({
+  professor: z.object({
+    name: z.string().min(1, 'Professor name is required'),
+    university_name: z.string().optional(),
+    primary_discipline: z.string().optional(),
+    department_name: z.string().optional(),
+    research_interests: z.array(z.string()).optional(),
+    publications: z
+      .array(
+        z.object({
+          title: z.string(),
+        })
+      )
+      .optional(),
+  }),
+  studentProfile: z
+    .object({
+      targetDegree: z.string().optional(),
+      researchInterests: z.array(z.string()).optional(),
+    })
+    .optional(),
+  tone: z.string().optional().default('academic'),
+});
 
 export async function POST(request: NextRequest) {
   try {
     const session = await verifyAuthSession(request);
     if (!session || !session.user || !session.user.id) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized: Authentication required.' },
-        { status: 401 }
-      );
+      return apiError('Unauthorized: Authentication required.', 401);
     }
     const userId = session.user.id;
 
     const body = await request.json();
-    const { professor, studentProfile, tone = 'academic' } = body;
-
-    if (!professor || !professor.name) {
-      return NextResponse.json(
-        { error: 'Professor details are required to generate personalized outreach' },
-        { status: 400 }
-      );
+    const parsed = DraftGroundedSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid request parameters', 400);
     }
+
+    const { professor, studentProfile } = parsed.data;
 
     const quotaCheck = checkAndIncrementQuota(userId, 'draft');
     if (!quotaCheck.allowed) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: quotaCheck.error,
-          message: quotaCheck.message,
-          tier: quotaCheck.tier,
-          limit: quotaCheck.limit,
-          used: quotaCheck.used,
-        },
-        { status: 403 }
-      );
+      return apiError(quotaCheck.error || 'Quota limit reached', 403, 'QUOTA_EXCEEDED', {
+        message: quotaCheck.message,
+        tier: quotaCheck.tier,
+        limit: quotaCheck.limit,
+        used: quotaCheck.used,
+      });
     }
 
-    mockDb.loadFromDisk();
-    const studentUser = mockDb.profiles.find((u: any) => u.id === userId) || { id: userId, full_name: session.user.full_name || 'Academic Researcher' };
-    const academic = mockDb.academicProfiles.find(a => a.student_id === studentUser.id) || mockDb.academicProfiles[0];
-    const research = mockDb.researchProfiles.find(r => r.student_id === studentUser.id) || mockDb.researchProfiles[0];
+    const userProfileData = await getStudentProfileByUserId(userId);
+    const studentUser = session.user;
+    const academic = userProfileData.academic;
+    const research = userProfileData.research;
 
     const studentName = studentUser.full_name || 'Prospective Researcher';
     const targetDegree = studentProfile?.targetDegree || 'PhD';
     const rawKeywords = studentProfile?.researchInterests || [];
-    const researchKeywords = rawKeywords.length > 0 ? rawKeywords : (research?.research_interests || ['Artificial Intelligence', 'Computational Methods']);
+    const researchKeywords =
+      rawKeywords.length > 0
+        ? rawKeywords
+        : research?.research_interests || ['Artificial Intelligence', 'Computational Methods'];
     const studentUni = academic?.university || 'my undergraduate institution';
 
     const { salutation, cleanName } = cleanProfessorSalutation(professor.name);
     const profUni = professor.university_name || 'your institution';
     const profDept = professor.primary_discipline || professor.department_name || 'your research group';
-    const profInterests = (professor.research_interests && professor.research_interests.length > 0)
-      ? professor.research_interests.join(', ')
-      : researchKeywords.join(', ');
+    const profInterests =
+      professor.research_interests && professor.research_interests.length > 0
+        ? professor.research_interests.join(', ')
+        : researchKeywords.join(', ');
     const profPaper = professor.publications?.[0]?.title || `recent advances in ${profDept}`;
 
     // 1. Attempt generation via Live Google Gemini API with model fallback
@@ -136,9 +124,10 @@ CRITICAL RULES:
               contents: [{ parts: [{ text: systemPrompt }] }],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.75, // Ensures distinct phrasing for every professor
+                temperature: 0.75,
               },
             }),
+            signal: AbortSignal.timeout(15000),
           }
         );
 
@@ -146,11 +135,11 @@ CRITICAL RULES:
           const geminiData = await geminiRes.json();
           const text = geminiData.candidates?.[0]?.content?.parts?.[0]?.text;
           if (text) {
-            const parsed = JSON.parse(text);
-            if (parsed.subject && parsed.bodyText) {
-              generatedSubject = parsed.subject;
-              generatedBody = parsed.bodyText;
-              break; // Successfully generated with live Gemini!
+            const resultParsed = JSON.parse(text);
+            if (resultParsed.subject && resultParsed.bodyText) {
+              generatedSubject = resultParsed.subject;
+              generatedBody = resultParsed.bodyText;
+              break;
             }
           }
         }
@@ -165,36 +154,33 @@ CRITICAL RULES:
       const focusKeyword = researchKeywords[0] || 'applied research';
       const secondaryKeyword = researchKeywords[1] || researchKeywords[0] || 'methodological design';
 
-      if (randomSeed === 0) {
-        generatedSubject = `Prospective ${targetDegree} Inquiry: ${focusKeyword} — ${studentName}`;
-        generatedBody = `${salutation}\n\nI hope this email finds you well amid your teaching and research responsibilities at ${profUni}.\n\nI am writing to express my strong interest in joining your group as a prospective ${targetDegree} student for the Fall 2027 admissions cycle. Having closely followed your contributions in ${profDept}—specifically your work on "${profPaper}"—I am eager to contribute to your lab's ongoing initiatives.\n\nMy academic background at ${studentUni} focused on ${focusKeyword} and ${secondaryKeyword}. In my recent projects, I explored how computational frameworks in ${focusKeyword} can improve empirical reliability. Your laboratory's focus on ${profInterests} provides the ideal environment to deepen this investigation.\n\nI have attached my academic CV and summary of research projects for your review. Would you have 10-15 minutes in the coming weeks for a brief conversation to discuss prospective student openings in your group?\n\nThank you very much for your time and consideration.\n\nSincerely,\n${studentName}\n${studentUni}`;
-      } else if (randomSeed === 1) {
-        generatedSubject = `Research Inquiry regarding ${profDept} (${targetDegree} Applicant, ${studentName})`;
-        generatedBody = `${salutation}\n\nI hope semester proceedings are going well.\n\nMy name is ${studentName}, and I am preparing my application for the ${targetDegree} program at ${profUni} for Fall 2027. Your published investigations on "${profPaper}" in ${profDept} caught my attention, as they address critical challenges in ${profInterests}.\n\nDuring my studies at ${studentUni}, my research concentrated on ${secondaryKeyword} with applications in ${focusKeyword}. I developed a deep appreciation for the analytical methodologies you employ, and I am very motivated to explore how my technical background can support your current projects.\n\nI have attached my CV and transcripts. Could you kindly let me know if you anticipate accepting new ${targetDegree} research students for the upcoming cycle?\n\nThank you for your time, consideration, and scholarship.\n\nWarm regards,\n${studentName}`;
-      } else if (randomSeed === 2) {
-        generatedSubject = `Prospective ${targetDegree} Student — Alignment with your work in ${profInterests.split(',')[0]}`;
-        generatedBody = `${salutation}\n\nI hope you are having a productive week.\n\nI am reaching out to inquire whether you will be advising new ${targetDegree} researchers at ${profUni} for the upcoming Fall 2027 intake. I have been studying your lab's focus on ${profInterests}, with particular interest in your findings concerning "${profPaper}."\n\nAt ${studentUni}, I completed research exploring ${focusKeyword}. Specifically, I worked on implementing scalable models for ${secondaryKeyword}, which directly parallels the research questions pursued by your group in ${profDept}.\n\nI have attached my curriculum vitae for your review. If your schedule permits, I would be deeply grateful for any insights on prospective openings in your lab.\n\nThank you very much for your guidance.\n\nBest regards,\n${studentName}`;
-      } else {
-        generatedSubject = `Inquiry on Doctoral Supervision in ${profDept} — ${studentName}`;
-        generatedBody = `${salutation}\n\nI hope this note finds you well.\n\nI am writing to inquire about potential research supervision as a prospective ${targetDegree} candidate at ${profUni}. I have long admired your laboratory's scholarship in ${profInterests}, and was inspired by your work on "${profPaper}."\n\nHaving conducted research in ${focusKeyword} at ${studentUni}, I am keen to direct my doctoral studies toward the intersection of ${focusKeyword} and ${profDept}. Your team's innovative approach represents the exact scholarly direction I hope to pursue.\n\nMy complete academic CV and project portfolio are attached. I would appreciate the opportunity to learn if you will be considering new graduate advisees for the upcoming cycle.\n\nThank you for your valuable time and consideration.\n\nRespectfully,\n${studentName}`;
-      }
+      const rendered = renderGroundedEmailTemplate(randomSeed, {
+        studentName,
+        salutation,
+        profUni,
+        profDept,
+        profPaper,
+        profInterests,
+        targetDegree,
+        focusKeyword,
+        secondaryKeyword,
+        studentUni,
+      });
+
+      generatedSubject = rendered.subject;
+      generatedBody = rendered.bodyText;
     }
 
     // Quality check
     const quality = EmailQualityAgent.validateQuality(generatedBody);
 
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       subject: generatedSubject,
       bodyText: generatedBody,
       qualityScore: quality.score,
       qualityIssues: quality.issues,
     });
   } catch (error: any) {
-    console.error('Error in draft-grounded route:', error);
-    return NextResponse.json(
-      { error: error.message || 'Failed to generate personalized email draft' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to generate personalized email draft', 500);
   }
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { saveUserProfile } from '@/lib/services/db-service';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
 
@@ -65,13 +65,12 @@ export async function GET(request: NextRequest) {
     const cleanEmail = googleUser.email.toLowerCase().trim();
     const isSystemAdmin = isAdminEmail(cleanEmail);
 
-    const user = mockDb.autoSaveUser({
-      id: googleUser.id ? `usr_google_${googleUser.id}` : undefined,
+    const user = await saveUserProfile({
+      id: googleUser.id ? `usr_google_${googleUser.id}` : `usr_google_${Date.now()}`,
       email: cleanEmail,
       full_name: googleUser.name || googleUser.email.split('@')[0],
       avatar_url: googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       role: isSystemAdmin ? 'ADMIN' : 'USER',
-      target_degree: 'PhD',
     });
 
     const responseUser = {

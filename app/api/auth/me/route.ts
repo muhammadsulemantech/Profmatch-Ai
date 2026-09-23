@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
-import { mockDb } from '@/lib/supabase/mock-db';
+import {
+  saveUserProfile,
+  getUserPlanTier,
+  getUsageRecord,
+} from '@/lib/services/db-service';
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +22,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Auto-save user to persistent database if not yet stored
-    const savedUser = mockDb.autoSaveUser({
+    const savedUser = await saveUserProfile({
       id: session.user.id,
       email: session.user.email,
       full_name: session.user.full_name,
@@ -27,8 +30,8 @@ export async function GET(request: NextRequest) {
       role: session.user.role,
     });
 
-    const tier = mockDb.getUserPlanTier(savedUser.id);
-    const usage = mockDb.getUsageRecord(savedUser.id);
+    const tier = await getUserPlanTier(savedUser.id);
+    const usage = await getUsageRecord(savedUser.id);
 
     return NextResponse.json({
       success: true,

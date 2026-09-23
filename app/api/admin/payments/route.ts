@@ -1,48 +1,51 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import { getAdminPayments, reviewPaymentStatus } from '@/lib/services/payment-service';
 import { PaymentStatus } from '@/types/database';
 import { assertAdmin } from '@/lib/auth/server-auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
   try {
-    mockDb.loadFromDisk();
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status') as PaymentStatus | null;
-    const query = searchParams.get('q')?.toLowerCase();
+    const status = (searchParams.get('status') as PaymentStatus | 'ALL') || undefined;
+    const query = searchParams.get('q') || undefined;
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
 
-    let payments = [...mockDb.payments];
-
-    if (status && status !== ('ALL' as any)) {
-      payments = payments.filter(p => p.status === status);
-    }
-
-    if (query && query.trim() !== '') {
-      payments = payments.filter(
-        p =>
-          p.order_reference.toLowerCase().includes(query) ||
-          p.transaction_id.toLowerCase().includes(query) ||
-          (p.user_email && p.user_email.toLowerCase().includes(query)) ||
-          (p.user_name && p.user_name.toLowerCase().includes(query)) ||
-          p.payment_method_name.toLowerCase().includes(query)
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
-      total: payments.length,
-      payments,
-      orders: mockDb.orders,
+    const result = await getAdminPayments({
+      status,
+      query,
+      page,
+      pageSize,
     });
-  } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch payments' },
-      { status: 500 }
+
+    return apiSuccess(
+      {
+        payments: result.payments,
+        orders: result.orders,
+      },
+      {
+        page: result.page,
+        pageSize: result.pageSize,
+        total: result.total,
+        totalPages: result.totalPages,
+        hasMore: result.page < result.totalPages,
+      }
     );
+  } catch (error: any) {
+    return apiError(error.message || 'Failed to fetch payments', 500);
   }
 }
+
+const ReviewPaymentSchema = z.object({
+  paymentId: z.string().min(1, 'paymentId is required'),
+  action: z.enum(['APPROVE', 'REJECT'], { errorMap: () => ({ message: 'Action must be APPROVE or REJECT' }) }),
+  adminNote: z.string().optional(),
+});
 
 export async function PUT(request: NextRequest) {
   const auth = await assertAdmin(request);
@@ -50,40 +53,19 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { paymentId, action, adminNote } = body;
-
-    if (!paymentId || !action) {
-      return NextResponse.json(
-        { success: false, error: 'paymentId and action are required' },
-        { status: 400 }
-      );
+    const parsed = ReviewPaymentSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid review payload', 400);
     }
 
-    let targetStatus: PaymentStatus = 'PENDING';
-    if (action === 'APPROVE') {
-      targetStatus = 'APPROVED';
-    } else if (action === 'REJECT') {
-      targetStatus = 'REJECTED';
-    } else {
-      return NextResponse.json(
-        { success: false, error: 'Action must be APPROVE or REJECT' },
-        { status: 400 }
-      );
-    }
+    const { paymentId, action, adminNote } = parsed.data;
+    const targetStatus = action === 'APPROVE' ? 'APPROVED' : 'REJECTED';
 
-    const result = mockDb.updatePaymentStatus(paymentId, targetStatus, adminNote);
+    const result = await reviewPaymentStatus(paymentId, targetStatus, adminNote);
 
-    if (!result.payment) {
-      return NextResponse.json(
-        { success: false, error: 'Payment not found' },
-        { status: 404 }
-      );
-    }
-
-    return NextResponse.json({
-      success: true,
+    return apiSuccess({
       message:
-        targetStatus === 'APPROVED'
+        action === 'APPROVE'
           ? 'Payment approved and student subscription activated successfully.'
           : 'Payment rejected. Status updated.',
       payment: result.payment,
@@ -91,9 +73,7 @@ export async function PUT(request: NextRequest) {
       subscription: result.subscription,
     });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update payment status' },
-      { status: 500 }
-    );
+    const status = error.message?.includes('not found') ? 404 : 500;
+    return apiError(error.message || 'Failed to update payment status', status);
   }
 }

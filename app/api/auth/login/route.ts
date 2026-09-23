@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { saveUserProfile } from '@/lib/services/db-service';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -67,12 +67,12 @@ export async function POST(request: NextRequest) {
     };
 
     // Keep persistent profile synced
-    mockDb.autoSaveUser({
+    await saveUserProfile({
       id: sanitizedUser.id,
       email: sanitizedUser.email,
       full_name: sanitizedUser.full_name,
       avatar_url: sanitizedUser.avatar_url,
-      role: sanitizedUser.role,
+      role: sanitizedUser.role as any,
     });
 
     // Log security audit event

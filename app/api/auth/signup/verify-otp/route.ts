@@ -1,29 +1,32 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { getProfileByEmail, saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
-import { sendWelcomeEmail } from '@/lib/email/welcome-email';
-import { checkRateLimit } from '@/lib/security/rate-limit';
-import { logAuditEvent } from '@/lib/security/audit';
-import { UserProfile } from '@/types/database';
 import { verifyPendingOtp } from '@/lib/auth/otp-store';
+import { sendWelcomeEmail } from '@/lib/email/welcome-email';
+import { logAuditEvent } from '@/lib/security/audit';
+import { checkRateLimit } from '@/lib/security/rate-limit';
+import { apiSuccess, apiError } from '@/lib/api/response';
+import type { UserProfile } from '@/types/database';
 
 const VerifyOtpSchema = z.object({
-  email: z.string().trim().email().toLowerCase(),
-  code: z.string().trim().min(4).max(10),
+  email: z.string().trim().email('Please provide a valid email address').toLowerCase(),
+  otp: z.string().trim().length(6, 'Verification code must be exactly 6 digits'),
 });
 
 export async function POST(request: NextRequest) {
   try {
     const ip = request.headers.get('x-forwarded-for') || 'anonymous';
-
-    // Rate limit OTP verification attempts (max 20 in 15 minutes)
-    const rl = checkRateLimit(`auth_verify_otp:${ip}`, { limit: 20, windowMs: 15 * 60 * 1000 });
+    
+    // Strict rate limit: max 10 verify attempts per 15 minutes per IP
+    const rl = checkRateLimit(`auth_verify_otp:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });
     if (!rl.success) {
-      return NextResponse.json(
-        { success: false, error: 'Too many verification attempts. Please wait a few minutes before trying again.' },
-        { status: 429 }
+      return apiError(
+        'Too many verification attempts. Please wait 15 minutes before trying again.',
+        429,
+        'RATE_LIMITED',
+        undefined,
+        { 'Retry-After': '900' }
       );
     }
 
@@ -31,38 +34,30 @@ export async function POST(request: NextRequest) {
     const parsed = VerifyOtpSchema.safeParse(body);
 
     if (!parsed.success) {
-      return NextResponse.json(
-        { success: false, error: 'Please enter the 6-digit verification code.' },
-        { status: 400 }
-      );
+      const errorMsg = parsed.error.issues[0]?.message || 'Invalid verification request';
+      return apiError(errorMsg, 400);
     }
 
-    const { email, code } = parsed.data;
+    const { email, otp } = parsed.data;
 
-    // 1. Validate the code from OTP Store (checks matching code, 15-min expiry, attempt limits)
-    const verification = verifyPendingOtp(email, code);
+    // 1. Verify OTP with timing-safe comparison and automatic single-use burn
+    const verification = verifyPendingOtp(email, otp);
 
     if (!verification.valid || !verification.registration) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: verification.error || 'Wrong verification code. Please check your email and try again.',
-          isExpired: verification.isExpired || false,
-        },
-        { status: 400 }
+      return apiError(
+        verification.error || 'Wrong verification code. Please check your email and try again.',
+        400,
+        'INVALID_OTP',
+        { isExpired: verification.isExpired || false }
       );
     }
 
-    const { fullName, passwordHash, targetDegree } = verification.registration;
+    const { fullName, targetDegree } = verification.registration;
 
     // 2. Double-check if account was created in parallel
-    mockDb.loadFromDisk();
-    const existing = mockDb.profiles.find((p) => p.email.toLowerCase() === email);
+    const existing = await getProfileByEmail(email);
     if (existing) {
-      return NextResponse.json(
-        { success: false, error: 'An account with this email is already registered.' },
-        { status: 409 }
-      );
+      return apiError('An account with this email is already registered.', 409);
     }
 
     let newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -73,16 +68,37 @@ export async function POST(request: NextRequest) {
     if (adminClient) {
       try {
         const { data: { users } } = await adminClient.auth.admin.listUsers();
-        const sbUser = users?.find((u: any) => u.email?.toLowerCase() === email);
-        if (sbUser) {
-          newUserId = sbUser.id;
-          await adminClient.auth.admin.updateUserById(sbUser.id, { email_confirm: true });
+        const matched = users?.find(u => u.email?.toLowerCase() === email);
+
+        if (matched) {
+          newUserId = matched.id;
+          await adminClient.auth.admin.updateUserById(matched.id, {
+            email_confirm: true,
+            user_metadata: {
+              ...matched.user_metadata,
+              full_name: fullName,
+              target_degree: targetDegree,
+            },
+          });
+        } else {
+          const { data: createdSbUser } = await adminClient.auth.admin.createUser({
+            email,
+            email_confirm: true,
+            user_metadata: {
+              full_name: fullName,
+              target_degree: targetDegree,
+            },
+          });
+          if (createdSbUser?.user?.id) {
+            newUserId = createdSbUser.user.id;
+          }
         }
-      } catch (err) {
-        // Continue with local ID if admin API is unconfigured
+      } catch (adminErr) {
+        console.warn('[SUPABASE ADMIN AUTO-CONFIRM NOTICE]', adminErr);
       }
     }
 
+    // 4. Save User Profile and Initial Free Subscription via DB service
     const newUser: UserProfile = {
       id: newUserId,
       email,
@@ -94,25 +110,12 @@ export async function POST(request: NextRequest) {
       updated_at: now,
     };
 
-    // 4. Save to PostgreSQL via db-service & mirror to resilient disk
-    await saveUserProfile({
-      id: newUser.id,
-      email: newUser.email,
-      full_name: newUser.full_name,
-      role: newUser.role,
-    });
+    await saveUserProfile(newUser);
 
     await saveUserSubscription({
       user_id: newUser.id,
       plan_type: 'FREE',
       status: 'active',
-    });
-
-    const savedUser = mockDb.autoSaveUser({
-      id: newUser.id,
-      email: newUser.email,
-      full_name: newUser.full_name,
-      target_degree: targetDegree,
     });
 
     // 5. Send Welcome Email
@@ -128,36 +131,26 @@ export async function POST(request: NextRequest) {
 
     // 6. Log audit event
     await logAuditEvent({
-      action: 'USER_VERIFIED_SIGNUP',
-      resourceType: 'USER',
+      userId: newUser.id,
+      userEmail: newUser.email,
+      action: 'USER_SIGNUP_VERIFIED',
+      resourceType: 'AUTH',
       resourceId: newUser.id,
-      metadata: { email: newUser.email, fullName: newUser.full_name },
+      metadata: { targetDegree, ipAddress: ip },
       ipAddress: ip,
     });
 
-    // 7. Establish authenticated session cookies
-    const sessionToken = `session_${savedUser.id}_${Date.now()}`;
-    const sanitizedUser = {
-      id: savedUser.id,
-      email: savedUser.email,
-      full_name: savedUser.full_name,
-      role: savedUser.role,
-      target_degree: targetDegree,
-    };
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: 'Account verified and created successfully. Please sign in.',
-        user: sanitizedUser,
+    return apiSuccess({
+      message: 'Account verified successfully. You can now log in.',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        full_name: newUser.full_name,
+        role: newUser.role,
       },
-      { status: 201 }
-    );
+    });
   } catch (err: any) {
     console.error('[VERIFY OTP API ERROR]', err);
-    return NextResponse.json(
-      { success: false, error: 'Failed to complete registration verification.' },
-      { status: 500 }
-    );
+    return apiError('Verification failed due to an unexpected server error.', 500);
   }
 }

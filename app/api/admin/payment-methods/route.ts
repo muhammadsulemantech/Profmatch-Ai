@@ -1,23 +1,48 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { NextRequest } from 'next/server';
+import { z } from 'zod';
+import {
+  getPaymentMethods,
+  savePaymentMethod,
+  deletePaymentMethod,
+} from '@/lib/services/payment-service';
+import { logAuditEvent } from '@/lib/security/audit';
 import { assertAdmin } from '@/lib/auth/server-auth';
+import { apiSuccess, apiError } from '@/lib/api/response';
+
+const CreatePaymentMethodSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+  type: z.any().optional().default('other'),
+  country: z.string().min(1, 'Country is required'),
+  currency: z.string().min(1, 'Currency is required'),
+  account_name: z.string().min(1, 'Account Name is required'),
+  account_number: z.string().min(1, 'Account Number is required'),
+  instructions: z.string().optional().default(''),
+  enabled: z.boolean().optional().default(true),
+  sort_order: z.number().optional(),
+});
+
+const UpdatePaymentMethodSchema = z.object({
+  id: z.string().min(1, 'Payment method ID is required'),
+  name: z.string().optional(),
+  type: z.any().optional(),
+  country: z.string().optional(),
+  currency: z.string().optional(),
+  account_name: z.string().optional(),
+  account_number: z.string().optional(),
+  instructions: z.string().optional(),
+  enabled: z.boolean().optional(),
+  sort_order: z.number().optional(),
+});
 
 export async function GET(request: NextRequest) {
   const auth = await assertAdmin(request);
   if (!auth.authorized) return auth.errorResponse;
 
   try {
-    mockDb.loadFromDisk();
-    return NextResponse.json({
-      success: true,
-      total: mockDb.paymentMethods.length,
-      methods: mockDb.paymentMethods,
-    });
+    const methods = await getPaymentMethods();
+    return apiSuccess({ methods }, { total: methods.length });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to fetch payment methods' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to fetch payment methods', 500);
   }
 }
 
@@ -27,51 +52,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { name, type, country, currency, account_name, account_number, instructions, enabled, sort_order } = body;
-
-    if (!name || !country || !currency || !account_name || !account_number) {
-      return NextResponse.json(
-        { success: false, error: 'Name, Country, Currency, Account Name, and Account Number are required.' },
-        { status: 400 }
-      );
+    const parsed = CreatePaymentMethodSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid payment method data', 400);
     }
 
-    const created = mockDb.savePaymentMethod({
-      name,
-      type: type || 'other',
-      country,
-      currency,
-      account_name,
-      account_number,
-      instructions: instructions || '',
-      enabled: enabled !== undefined ? enabled : true,
-      sort_order: sort_order || mockDb.paymentMethods.length + 1,
-    });
+    const created = await savePaymentMethod(parsed.data);
 
-    // Log admin audit
-    mockDb.auditLogs.unshift({
-      id: `log_${Date.now()}_pm`,
-      user_id: auth.session.user.id,
-      user_email: auth.session.user.email,
+    await logAuditEvent({
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
       action: 'PAYMENT_METHOD_CREATED',
-      resource_type: 'PAYMENT_METHOD',
-      resource_id: created.id,
+      resourceType: 'PAYMENT_METHOD',
+      resourceId: created.id,
       metadata: { name: created.name, country: created.country, account_name: created.account_name },
-      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-      created_at: new Date().toISOString(),
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
     });
-    mockDb.persist();
 
-    return NextResponse.json({
-      success: true,
-      message: 'Payment method created successfully.',
-      method: created,
-    });
+    return apiSuccess({ method: created, message: 'Payment method created successfully.' });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to create payment method' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to create payment method', 500);
   }
 }
 
@@ -81,41 +81,26 @@ export async function PUT(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { id, ...updates } = body;
-
-    if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Payment method id is required.' },
-        { status: 400 }
-      );
+    const parsed = UpdatePaymentMethodSchema.safeParse(body);
+    if (!parsed.success) {
+      return apiError(parsed.error.issues[0]?.message || 'Invalid payment method update', 400);
     }
 
-    const updated = mockDb.savePaymentMethod({ id, ...updates });
+    const updated = await savePaymentMethod(parsed.data);
 
-    // Log admin audit
-    mockDb.auditLogs.unshift({
-      id: `log_${Date.now()}_pm_upd`,
-      user_id: auth.session.user.id,
-      user_email: auth.session.user.email,
+    await logAuditEvent({
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
       action: 'PAYMENT_METHOD_UPDATED',
-      resource_type: 'PAYMENT_METHOD',
-      resource_id: updated.id,
-      metadata: updates,
-      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-      created_at: new Date().toISOString(),
+      resourceType: 'PAYMENT_METHOD',
+      resourceId: updated.id,
+      metadata: { name: updated.name },
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
     });
-    mockDb.persist();
 
-    return NextResponse.json({
-      success: true,
-      message: 'Payment method updated successfully.',
-      method: updated,
-    });
+    return apiSuccess({ method: updated, message: 'Payment method updated successfully.' });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to update payment method' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to update payment method', 500);
   }
 }
 
@@ -128,41 +113,26 @@ export async function DELETE(request: NextRequest) {
     const id = searchParams.get('id');
 
     if (!id) {
-      return NextResponse.json(
-        { success: false, error: 'Payment method id is required.' },
-        { status: 400 }
-      );
+      return apiError('Payment method id is required.', 400);
     }
 
-    const removed = mockDb.deletePaymentMethod(id);
+    const removed = await deletePaymentMethod(id);
     if (!removed) {
-      return NextResponse.json(
-        { success: false, error: 'Payment method not found.' },
-        { status: 404 }
-      );
+      return apiError('Payment method not found.', 404);
     }
 
-    mockDb.auditLogs.unshift({
-      id: `log_${Date.now()}_pm_del`,
-      user_id: auth.session.user.id,
-      user_email: auth.session.user.email,
+    await logAuditEvent({
+      userId: auth.session.user.id,
+      userEmail: auth.session.user.email,
       action: 'PAYMENT_METHOD_DELETED',
-      resource_type: 'PAYMENT_METHOD',
-      resource_id: id,
+      resourceType: 'PAYMENT_METHOD',
+      resourceId: id,
       metadata: { deleted_id: id },
-      ip_address: request.headers.get('x-forwarded-for') || '127.0.0.1',
-      created_at: new Date().toISOString(),
+      ipAddress: request.headers.get('x-forwarded-for') || '127.0.0.1',
     });
-    mockDb.persist();
 
-    return NextResponse.json({
-      success: true,
-      message: 'Payment method deleted successfully.',
-    });
+    return apiSuccess({ message: 'Payment method deleted successfully.' });
   } catch (error: any) {
-    return NextResponse.json(
-      { success: false, error: error.message || 'Failed to delete payment method' },
-      { status: 500 }
-    );
+    return apiError(error.message || 'Failed to delete payment method', 500);
   }
 }
