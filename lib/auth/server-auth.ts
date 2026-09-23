@@ -12,8 +12,10 @@ export type AuthResult =
   | { authorized: false; errorResponse: NextResponse };
 
 export class AuthError extends Error {
-  constructor(message: string, public status: number = 401) {
+  status: number;
+  constructor(message: string, status: number = 401) {
     super(message);
+    this.status = status;
     this.name = 'AuthError';
   }
 }

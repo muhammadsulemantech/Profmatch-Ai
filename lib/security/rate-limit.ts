@@ -51,7 +51,7 @@ export function checkRateLimit(
 
 // Clean up stale entries every 10 minutes
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
+  const timer = setInterval(() => {
     const now = Date.now();
     rateLimitStore.forEach((value, key) => {
       if (now > value.resetTime) {
@@ -59,4 +59,7 @@ if (typeof setInterval !== 'undefined') {
       }
     });
   }, 10 * 60 * 1000);
+  if (typeof timer === 'object' && timer !== null && 'unref' in timer) {
+    (timer as any).unref();
+  }
 }
