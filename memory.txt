@@ -1,100 +1,70 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-09-22
+Last Updated: 2026-09-24 (Post-Tier 2 Security & Architectural Remediation)
 Repository: suleman197/Profmatch-Ai (branch: main)
-Technology Stack: Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Tavily Search, OpenAlex API
+Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail OAuth 2.0, Tavily Search, OpenAlex API, Node.js Test Runner
 
 --------------------------------------------------------------------
-1. CORE CREDENTIALS & ADMIN AUTHENTICATION
+1. SYSTEM REMEDIATION MILESTONES (SECURITY & ARCHITECTURE AUDIT)
 --------------------------------------------------------------------
-• Support Email: support@profmatch.ai (configured via env)
+
+[TIER 0] Security & Pipeline Integrity (COMPLETED)
+• Elimination of Fake Verification: OpenAlex & Tavily search pipelines now categorize faculty truthfully. Only institutional proofs get VERIFIED; candidate web mentions are UNVERIFIED or PARTIALLY_VERIFIED.
+• Plaintext Password & OTP Security: Salting & hashing via scrypt KDF (crypto.scryptSync). 15-minute OTP lifecycle with timing-safe comparison (crypto.timingSafeEqual) and immediate burn. Redacted from logs.
+• Unauthenticated Access Elimination: All mutating endpoints enforce server-side session checks; unauthenticated requests return HTTP 401.
+• Build Integrity: Removed all ignoreDuringBuilds and ignoreBuildErrors from next.config.mjs.
+
+[TIER 1] Real Data Persistence & Truthfulness (COMPLETED)
+• Real Supabase Auth Email Confirmation: OTP verification marks user email_confirm: true in Supabase Auth.
+• Admin Plan Tiers: Aligned with ACADEMIC_PLANS (FREE, STARTER, PRO, ELITE); fake ELITE assignments for admins eliminated.
+• AES-256-GCM Token Encryption: Connected Gmail OAuth access and refresh tokens are encrypted at rest.
+• Schema Reconciliation: database/schema.sql updated with RLS policies, indexes, and SECURITY DEFINER functions with SET search_path = ''.
+
+[TIER 2] Architectural Maintainability & Clean Code (COMPLETED)
+• Service Layer (lib/services/):
+  - db-service.ts, auth-service.ts, user-service.ts, gmail-service.ts, outreach-service.ts, professor-service.ts, admin-service.ts, usage-service.ts.
+  - Zero calls to mockDb remain in any route handler under app/api/**.
+• Component Modularization:
+  - components/ui/ primitives (button, card, badge, modal, verification-badge).
+  - Admin Dashboard (app/admin/page.tsx): 2,736 lines -> 442 lines (8 modular tabs).
+  - Search Page (app/search/page.tsx): 1,153 lines -> 788 lines.
+  - Professor Detail (app/professors/[id]/page.tsx): 905 lines -> 590 lines.
+  - Inbox Page (app/inbox/page.tsx): 772 lines -> 353 lines.
+  - AutoPilot Page (app/autopilot/page.tsx): 817 lines -> 365 lines.
+  - Profile Page (app/profile/page.tsx): 951 lines -> 424 lines.
+• API Hygiene & Contract:
+  - Standardized JSON envelope { success, data, error } across all endpoints.
+  - Complete REST specification in docs/api-contract.md.
+• Observability & Security Headers:
+  - lib/config.ts: Strict Zod runtime environment validation.
+  - lib/logger.ts: Structured JSON logger with recursive credential redaction.
+  - Uniform HTTP security headers (HSTS, CSP, X-Frame-Options: DENY, X-Content-Type-Options: nosniff).
+  - 57 automated tests across 9 test suites passing (npm test).
+• Documentation Overhaul:
+  - README.md: Truthful overview and setup guide.
+  - ARCHITECTURE.md: Topology, service layer, data flow pipelines.
+  - SECURITY.md: Threat model, session validation, encryption at rest.
+
+--------------------------------------------------------------------
+2. CORE CREDENTIALS & ADMIN AUTHENTICATION
+--------------------------------------------------------------------
+• Support Email: profmatchsupport@gmail.com
 • Admin Accounts: Configured via Supabase Auth & ADMIN_EMAILS environment variable
-• Admin Auth Policy: Verified server-side session and role check (requireAdmin()) enforced on all admin endpoints.
+• Admin Security Guarantee: Server-side assertAdmin() enforced on all /api/admin/** routes. Forged headers (x-admin-role) and cookies (profmatch_role=ADMIN) strictly rejected with 401.
 
 --------------------------------------------------------------------
-2. LIVE ENVIRONMENT & API KEYS CONFIGURATION (.env.local)
+3. LIVE ENVIRONMENT CONFIGURATION (.env.local)
 --------------------------------------------------------------------
 • Base App URL: http://localhost:3000 / https://profmatch.ai
-• Supabase URL: https://yofbhdgabzuededvceyr.supabase.co (Configured in .env.local)
-• Supabase Keys: Anon Key & Service Role Key (SUPABASE_SERVICE_ROLE_KEY) configured in .env.local & Vercel
-• AI Engine: AI_PROVIDER=gemini | AI_API_KEY (Google Gemini Pro active)
-• Search Provider: SEARCH_PROVIDER=tavily | TAVILY_API_KEY (Tavily Search active)
-• Academic Provider: ACADEMIC_DATA_PROVIDER=openalex | OPENALEX_API_KEY (OpenAlex active)
-• Email Provider: EMAIL_PROVIDER=resend | RESEND_API_KEY / Gmail SMTP (SMTP_USER=profmatchsupport@gmail.com)
-• Payment Provider: Stripe (Mock fallback active for zero-break testing)
+• Supabase URL: https://yofbhdgabzuededvceyr.supabase.co
+• AI Provider: AI_PROVIDER=gemini (Google Gemini 1.5 Pro)
+• Academic Providers: SEARCH_PROVIDER=tavily (Tavily), ACADEMIC_DATA_PROVIDER=openalex (OpenAlex)
+• Email Provider: Connected Gmail API (OAuth 2.0) or SMTP (profmatchsupport@gmail.com) / Resend
 
 --------------------------------------------------------------------
-3. COMPLETE FEATURE MAP & PAGES IMPLEMENTED
+4. VERIFICATION STATUS
 --------------------------------------------------------------------
-[1] Homepage, Global Header & Footer (app/page.tsx, app/layout.tsx)
-    - Global acceptance ticker: "1,420+ MS & PhD Candidates Matched across 190+ Countries".
-    - Fixed Top Navbar (z-index adjusted so pages like signup/login start below navbar).
-    - Added "Tracker" navigation link to top menu.
-    - Global Footer Branding: Prominently displays "Powered by Tonovox technologies" in emerald accent styling.
-    - Client Hydration Safety: Direct mockDb imports removed from client components with safe server fallbacks preventing browser hydration exceptions.
-
-[2] Authentication & 6-Digit Email OTP Verification (app/login/page.tsx, app/signup/page.tsx, app/api/auth/signup/route.ts)
-    - Body scroll overflow locked on auth pages to prevent background website scrolling.
-    - Top logo & form padding responsive across all mobile & desktop screen sizes.
-    - Mandatory 6-Digit Email OTP Verification:
-      * Flow: When a candidate submits signup info, a 6-digit OTP is immediately generated and emailed first.
-      * Welcome email is only dispatched *after* the OTP code is successfully verified.
-      * 15-minute OTP expiration validity window.
-      * Multi-layer enforcement: Signup modal UI, auth-context.tsx signup handler, and /api/auth/signup backend endpoint.
-      * Server-side secure storage in database/pending_otps.json (git-ignored).
-      * Delivered via Gmail SMTP (profmatchsupport@gmail.com) and Resend fallback.
-
-[3] Candidate Profile & AI CV Auto-Parser (app/profile/page.tsx)
-    - 1-Click Resume/CV File Auto-Parser (extracts research keywords, updates bio, target degree, and displays success banner).
-
-[4] Professor Detail & Match Analysis (app/professors/[id]/page.tsx)
-    - AI Match Analysis Modal (calculates percentage match between candidate profile & faculty thesis/publications).
-    - DOI Badges & OpenAlex Live Links on publication cards.
-    - In-App Publication Inspector Modal (replaces external Scholar redirect for immediate paper viewing).
-    - Google Scholar targeted research fallback.
-    - Live University Directory Audit Badge.
-    - Clean contact row formatting (zero email truncations or double dots).
-
-[5] AI Outreach Email Generator (app/outreach/generate/page.tsx)
-    - Email Deliverability & Anti-Spam Health Meter.
-    - AI Email Quality & Tone Grader widget (Professional, Persuasive, Conciseness scores).
-    - Grounded Publication Citation Highlighting.
-    - 7-Day & 14-Day Automated Follow-Up Reminders scheduler.
-
-[6] MS/PhD Application Kanban Tracker (app/tracker/page.tsx)
-    - 5 Application Stages: Saved Faculty, Outreach Sent, Replied, Interview, Accepted.
-    - Drag & Move between stages, custom note modal, persistent state.
-
-[7] Real-Time Admin Panel, Permanent Supabase Cloud Persistence & CMS Engine (app/admin/page.tsx, lib/cms/settings-service.ts, lib/cms/content-service.ts)
-    - Full CRUD editability for plans, tier highlighting, features, and price tags with instant real-time sync across user pages.
-    - Permanent Supabase Cloud Persistence (Vercel Serverless Fix):
-      * Resolves serverless cold-start reset issue where ephemeral filesystems lost admin modifications.
-      * lib/cms/settings-service.ts and lib/cms/content-service.ts use createAdminClient() with SUPABASE_SERVICE_ROLE_KEY to write directly to live Supabase (site_settings & site_content tables) bypassing RLS.
-      * Reads prioritize live Supabase tables first with fallback to local mockDb.
-      * Seeded current settings and content to Supabase database.
-      * SUPABASE_SERVICE_ROLE_KEY configured in Vercel project environment.
-    - Auto User Registration: Every signup auto-saved to database store with Free vs Paid plan tracking in Admin Panel.
-    - Official Support Email: Standardized to profmatchsupport@gmail.com across all settings, layout, and emails.
-    - Floating WhatsApp Button: Linked directly to 03227342728 (https://wa.me/923227342728).
-    - Webpack Client Fallback: Webpack `fs: false` & `path: false` in `next.config.mjs` preventing client-side browser hydration exceptions.
-
-[8] Payment Status & Digital PDF Receipts (app/checkout/status/[reference]/page.tsx)
-    - 3-Step Live Payment Verification Progress Bar.
-    - Digital PDF Billing Receipt print/download functionality.
-
-[9] Direct Gmail Drafts Integration (gmail.compose)
-    - OAuth 2.0 authorization code flow using minimal scope https://www.googleapis.com/auth/gmail.compose.
-    - Offline token storage with automatic token refresh.
-    - In-App Email Review Modal (components/outreach/email-review-modal.tsx) for editing To, Subject, and Body text.
-    - Direct RFC 2822 Base64URL draft creation via Gmail API (app/api/outreach/create-draft/route.ts).
-    - 1-Click link (https://mail.google.com/mail/u/0/#drafts) for opening unsent drafts in Gmail.
-    - Dedicated Email Integration card in Settings (app/settings/page.tsx).
-
---------------------------------------------------------------------
-4. SYSTEM ARCHITECTURE & CODE CONVENTIONS
---------------------------------------------------------------------
-• State & Database: Live Supabase DB (Service Role Key writes) + lib/supabase/mock-db.ts (Fallback DB) + database/persistent_store.json.
-• Responsive Styling: Pure Tailwind CSS with dark theme (#030712 background, Emerald accents, Slate/Zinc cards).
-• Zero Build Errors: Strictly typed TypeScript & 60/60 static/dynamic Next.js routes compiled with 0 errors.
+• Automated Unit & Security Tests: npm test -> 57/57 tests passing (0 failures).
+• Production Build: npm run build -> Exit code 0 (63/63 dynamic & static routes compiled cleanly).
 ====================================================================
