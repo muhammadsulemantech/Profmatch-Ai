@@ -38,6 +38,9 @@ import {
   isCountryUnlockedForTier,
   getPlanConfig,
 } from '@/lib/services/usage-service';
+import { SearchFilters } from '@/components/search/search-filters';
+import { ProfessorCard } from '@/components/search/professor-card';
+import { PaywallBanner } from '@/components/search/paywall-banner';
 
 const DISCOVERY_STAGES = [
   'Discovering accredited universities in target region...',
@@ -169,6 +172,34 @@ export default function SearchPage() {
         const key = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
         localStorage.setItem(key, JSON.stringify(updated));
       }
+    });
+  };
+
+  const handleViewProfile = (prof: Professor) => {
+    requireAuth(`view profile for ${prof.name}`, () => {
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+        } catch {}
+      }
+      if (!mockDb.professors.some(p => p.id === prof.id)) {
+        mockDb.professors.push(prof);
+      }
+      router.push(`/professors/${prof.id}`);
+    });
+  };
+
+  const handleDraftEmail = (prof: Professor) => {
+    requireAuth(`draft outreach proposal for ${prof.name}`, () => {
+      if (typeof window !== 'undefined') {
+        try {
+          sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+        } catch {}
+      }
+      if (!mockDb.professors.some(p => p.id === prof.id)) {
+        mockDb.professors.push(prof);
+      }
+      router.push(`/outreach/generate?professorId=${prof.id}`);
     });
   };
 
@@ -490,185 +521,43 @@ export default function SearchPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         {/* Filter Panel */}
         <div className="lg:col-span-4 space-y-6">
-          <div className="p-5 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2">
-                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" /> Filters
-              </h2>
-              <button
-                type="button"
-                onClick={handleResetFilters}
-                className="text-xs text-slate-400 hover:text-white underline transition-colors"
-              >
-                Reset All
-              </button>
-            </div>
+          <SearchFilters
+            country={country}
+            onCountryChange={handleCountryChange}
+            countries={countries}
+            selectedCountryObj={selectedCountryObj}
+            region={region}
+            onRegionChange={setRegion}
+            availableRegions={availableRegions}
+            selectedDomain={selectedDomain}
+            onDomainChange={setSelectedDomain}
+            selectedDiscipline={selectedDiscipline}
+            onDisciplineChange={setSelectedDiscipline}
+            availableDisciplines={availableDisciplines}
+            customField={customField}
+            onCustomFieldChange={setCustomField}
+            interdisciplinary={interdisciplinary}
+            onInterdisciplinaryChange={setInterdisciplinary}
+            verifiedOnly={verifiedOnly}
+            onVerifiedOnlyChange={setVerifiedOnly}
+            emailVerifiedOnly={emailVerifiedOnly}
+            onEmailVerifiedOnlyChange={setEmailVerifiedOnly}
+            recruitingOnly={recruitingOnly}
+            onRecruitingOnlyChange={setRecruitingOnly}
+            savedOnly={savedOnly}
+            onSavedOnlyChange={setSavedOnly}
+            savedCount={savedProfIds.length}
+            userTier={usage.tier}
+            onResetFilters={handleResetFilters}
+          />
 
-            {/* 1. Country Selector */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">
-                Country / Territory
-              </label>
-              <select
-                value={country}
-                onChange={e => handleCountryChange(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="Global (All Countries)">
-                  Global (All 190+ Countries) {usage.tier === 'ELITE' ? '✅' : '🔒 Elite'}
-                </option>
-                {countries.map(c => {
-                  const isUnlocked = isCountryUnlockedForTier(usage.tier, c.name);
-                  return (
-                    <option key={c.code} value={c.name}>
-                      {c.name} {isUnlocked ? '✅' : '🔒 Pro'}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-
-            {/* 2. Region / Province Selector */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">
-                {selectedCountryObj ? selectedCountryObj.regionLabel : 'State / Province / Region'}
-              </label>
-              {availableRegions.length > 0 ? (
-                <select
-                  value={region}
-                  onChange={e => setRegion(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-                >
-                  <option value="">All {selectedCountryObj?.regionLabel || 'Regions'}</option>
-                  {availableRegions.map(r => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <input
-                  type="text"
-                  value={region}
-                  onChange={e => setRegion(e.target.value)}
-                  placeholder="e.g. Bavaria, Ontario, Tokyo"
-                  className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-              )}
-            </div>
-
-            {/* 3. Academic Domain Selector */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">Academic Domain</label>
-              <select
-                value={selectedDomain}
-                onChange={e => {
-                  setSelectedDomain(e.target.value);
-                  setSelectedDiscipline('All Disciplines');
-                }}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="All Domains">All Academic Domains</option>
-                {ACADEMIC_DOMAINS.map(d => (
-                  <option key={d.id} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 4. Discipline Selector */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">Primary Field / Discipline</label>
-              <select
-                value={selectedDiscipline}
-                onChange={e => setSelectedDiscipline(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-              >
-                <option value="All Disciplines">All Disciplines</option>
-                {availableDisciplines.map(disc => (
-                  <option key={disc} value={disc}>
-                    {disc}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* 5. Custom / Novel Field Input */}
-            <div className="space-y-1">
-              <label className="block text-xs font-medium text-slate-400">Research Area / Keyword</label>
-              <input
-                type="text"
-                value={customField}
-                onChange={e => setCustomField(e.target.value)}
-                placeholder="e.g. Energy Storage, Neural Interfaces"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-emerald-500"
-              />
-            </div>
-
-            {/* 6. Verification & Filter Toggles */}
-            <div className="space-y-2.5 pt-3 border-t border-slate-800">
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={savedOnly}
-                  onChange={e => setSavedOnly(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span className="flex items-center gap-1 font-medium text-emerald-400">
-                  <Bookmark className="w-3.5 h-3.5 fill-emerald-500/20" /> Saved Faculty Only ({savedProfIds.length})
-                </span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={interdisciplinary}
-                  onChange={e => setInterdisciplinary(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span>Interdisciplinary &amp; Cross-Department</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={recruitingOnly}
-                  onChange={e => setRecruitingOnly(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span>Actively Recruiting Only</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={verifiedOnly}
-                  onChange={e => setVerifiedOnly(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span>Official University Profiles Only</span>
-              </label>
-
-              <label className="flex items-center gap-2 text-xs text-slate-400 cursor-pointer hover:text-slate-200">
-                <input
-                  type="checkbox"
-                  checked={emailVerifiedOnly}
-                  onChange={e => setEmailVerifiedOnly(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-950 text-emerald-500 focus:ring-emerald-500"
-                />
-                <span>Public Academic Email Verified</span>
-              </label>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => executeSearch()}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
-            >
-              <Search className="w-3.5 h-3.5" /> Apply Filters
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => executeSearch()}
+            className="w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold text-xs shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-1.5"
+          >
+            <Search className="w-3.5 h-3.5" /> Apply Filters
+          </button>
         </div>
 
         {/* Results List */}
@@ -745,255 +634,31 @@ export default function SearchPage() {
                     </div>
 
                     {/* Floating Center Paywall Gate */}
-                    <div className="sticky top-28 z-20 my-6 flex items-center justify-center p-2 sm:p-4">
-                      <div className="max-w-xl w-full bg-slate-950/95 border-2 border-emerald-500/60 rounded-3xl p-6 sm:p-8 text-center shadow-2xl shadow-emerald-500/25 backdrop-blur-2xl space-y-6">
-                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/40 flex items-center justify-center mx-auto text-emerald-400 shadow-inner">
-                          <Lock className="w-7 h-7" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                            <Globe className="w-3.5 h-3.5" />
-                            <span>Worldwide Academic Access Restricted</span>
-                          </div>
-                          <h3 className="text-xl sm:text-2xl font-heading font-bold text-white tracking-tight">
-                            {isCountryLocked
-                              ? `${country} Faculty Records Are Locked in Free Tier`
-                              : isGlobalLocked
-                              ? 'Global 190+ Countries Discovery Requires Pro / Elite'
-                              : 'Free Search Quota Reached (3 / 3 Searches Used)'}
-                          </h3>
-                          <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto">
-                            {isCountryLocked
-                              ? `Free Explorer tier allows previewing Germany and Pakistan. To view verified faculty appointments, public .edu/.ac emails, and AI outreach drafts in ${country}, please upgrade to Scholar Starter, Pro, or Elite.`
-                              : 'Aapki Free Plan ki searches complete ho chuki hain. Full professor records, official institutional emails, aur autonomous email drafts unlock karne ke liye apna academic plan upgrade karein.'}
-                          </p>
-                        </div>
-
-                        {/* 3 Package Comparison Tiles */}
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
-                          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                            <span className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">Starter</span>
-                            <p className="text-xs font-bold text-white">Rs. 3,500 / mo</p>
-                            <p className="text-[10px] text-slate-400">10 Major Countries</p>
-                          </div>
-                          <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/50 space-y-1 relative shadow-sm">
-                            <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-wider">⭐ Pro (Popular)</span>
-                            <p className="text-xs font-bold text-white">Rs. 8,000 / mo</p>
-                            <p className="text-[10px] text-slate-300">45+ Destinations &bull; AutoPilot</p>
-                          </div>
-                          <div className="p-3 rounded-xl bg-slate-900 border border-slate-800 space-y-1">
-                            <span className="text-[10px] font-bold text-teal-400 uppercase tracking-wider">PhD Elite</span>
-                            <p className="text-xs font-bold text-white">Rs. 16,000 / mo</p>
-                            <p className="text-[10px] text-slate-400">100% Worldwide &bull; Unlimited</p>
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setShowUpgradeModal(true)}
-                            className="w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/25 transition-all flex items-center justify-center gap-2"
-                          >
-                            <Zap className="w-4 h-4 fill-slate-950" /> Unlock Worldwide Access Now
-                          </button>
-                          <Link
-                            href="/choose-plan"
-                            className="w-full sm:w-auto px-5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700 text-xs font-semibold transition-all text-center"
-                          >
-                            Compare All Packages →
-                          </Link>
-                        </div>
-                      </div>
-                    </div>
+                    <PaywallBanner
+                      isCountryLocked={isCountryLocked}
+                      isGlobalLocked={isGlobalLocked}
+                      country={country}
+                      onUnlock={() => setShowUpgradeModal(true)}
+                    />
                   </div>
                 ) : (
                   <>
-              {visibleProfessors.map(prof => {
-              const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
-              const isSaved = savedProfIds.includes(prof.id);
+                    {visibleProfessors.map(prof => {
+                      const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
+                      const isSaved = savedProfIds.includes(prof.id);
 
-              return (
-                <div
-                  key={prof.id}
-                  className="p-6 rounded-2xl bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-all space-y-4"
-                >
-                  {/* Top Profile Details & Match */}
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                    <div className="flex items-start gap-4">
-                      {/* Refined Academic Initials Crest */}
-                      <div className="w-11 h-11 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-heading font-bold text-emerald-400 text-sm shrink-0">
-                        {prof.name.split(' ').filter(p => !p.includes('.')).map(n => n[0]).slice(0, 2).join('')}
-                      </div>
-
-                      <div className="space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              requireAuth(`view profile for ${prof.name}`, () => {
-                                if (typeof window !== 'undefined') {
-                                  try {
-                                    sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
-                                  } catch {}
-                                }
-                                if (!mockDb.professors.some(p => p.id === prof.id)) {
-                                  mockDb.professors.push(prof);
-                                }
-                                router.push(`/professors/${prof.id}`);
-                              })
-                            }
-                            className="font-heading text-lg font-bold text-white hover:text-emerald-400 transition-colors text-left"
-                          >
-                            {prof.name}
-                          </button>
-                          <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-800 text-slate-300 border border-slate-700">
-                            {prof.title}
-                          </span>
-                          {prof.verification_status === 'VERIFIED' ? (
-                            <span className="badge-verified">
-                              <Check className="w-3 h-3 text-emerald-400" />
-                              Verified University Profile
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                              Unverified Web Record
-                            </span>
-                          )}
-                        </div>
-
-                        <p className="text-xs text-slate-400">
-                          {prof.department_name || prof.academic_unit_name || 'Academic Unit'}
-                        </p>
-                        <p className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
-                          <School className="w-3.5 h-3.5" />
-                          <span>{prof.university_name}</span>
-                          <span className="text-slate-400 font-normal">
-                            &bull; {prof.university_region ? `${prof.university_region}, ` : ''}{prof.university_country}
-                          </span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Restrained Match Score (Section 19) */}
-                    <div className="flex items-center sm:items-end sm:flex-col gap-2 shrink-0">
-                      {match && (
-                        <div className="bg-emerald-500/10 border border-emerald-500/25 px-3 py-1.5 rounded-lg text-right">
-                          <span className="font-heading text-lg font-bold text-emerald-400 block leading-none">
-                            {formatScore(match.overall_score)}
-                          </span>
-                          <span className="text-[10px] uppercase tracking-wider font-semibold text-emerald-500">
-                            Research Match
-                          </span>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        onClick={() => toggleSave(prof.id)}
-                        className={`p-2 rounded-lg border transition-colors ${
-                          isSaved ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30' : 'bg-slate-800/80 text-slate-400 border-slate-700 hover:text-white'
-                        }`}
-                        title="Save Professor"
-                      >
-                        <Bookmark className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Research Interests Tags */}
-                  <div className="flex flex-wrap gap-1.5">
-                    {prof.research_interests.map((interest, i) => (
-                      <span key={i} className="px-2.5 py-0.5 rounded text-xs bg-slate-800/80 text-slate-300 border border-slate-700/60 font-medium">
-                        {interest}
-                      </span>
-                    ))}
-                    {(prof.interdisciplinary_tags || []).map((tag, i) => (
-                      <span key={`tag-${i}`} className="px-2.5 py-0.5 rounded text-xs bg-teal-500/10 text-teal-400 border border-teal-500/20 font-medium">
-                        &bull; {tag}
-                      </span>
-                    ))}
-                  </div>
-
-                  {/* Why this match box (Requirement #15) */}
-                  {match && (
-                    <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-xs space-y-1">
-                      <span className="font-semibold text-emerald-400 block">Why this match:</span>
-                      <p className="text-slate-300 leading-relaxed">
-                        {match.explanation || `Research alignment in ${prof.primary_discipline} with shared methodology in recent publications.`}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Card Actions & Email Verification */}
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-800 text-xs">
-                    <div className="flex flex-wrap items-center gap-3 text-slate-400">
-                      <a href={prof.profile_url} target="_blank" rel="noreferrer" className="hover:text-emerald-400 flex items-center gap-1 underline">
-                        Official Faculty Webpage <ExternalLink className="w-3 h-3" />
-                      </a>
-                      
-                      {prof.email ? (
-                        <span className="flex items-center gap-1.5 text-xs text-emerald-400 font-medium">
-                          <Mail className="w-3.5 h-3.5" />
-                          <span className="font-mono text-xs">{prof.email}</span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded border font-medium ${
-                            prof.email_verification_status === 'VERIFIED'
-                              ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
-                              : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
-                          }`}>
-                            {prof.email_verification_status === 'VERIFIED' ? 'Verified Email' : 'Unverified Candidate'}
-                          </span>
-                        </span>
-                      ) : (
-                        <span className="text-xs text-slate-500">
-                          Email via Faculty Portal
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          requireAuth(`view profile for ${prof.name}`, () => {
-                            if (typeof window !== 'undefined') {
-                              try {
-                                sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
-                              } catch {}
-                            }
-                            if (!mockDb.professors.some(p => p.id === prof.id)) {
-                              mockDb.professors.push(prof);
-                            }
-                            router.push(`/professors/${prof.id}`);
-                          })
-                        }
-                        className="px-3.5 py-1.5 rounded-lg border border-slate-700 bg-slate-800/80 text-slate-200 hover:bg-slate-800 text-xs font-medium transition-colors"
-                      >
-                        View Profile
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          requireAuth(`draft outreach proposal for ${prof.name}`, () => {
-                            if (typeof window !== 'undefined') {
-                              try {
-                                sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
-                              } catch {}
-                            }
-                            if (!mockDb.professors.some(p => p.id === prof.id)) {
-                              mockDb.professors.push(prof);
-                            }
-                            router.push(`/outreach/generate?professorId=${prof.id}`);
-                          })
-                        }
-                        className="px-4 py-1.5 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all"
-                      >
-                        Draft Email <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+                      return (
+                        <ProfessorCard
+                          key={prof.id}
+                          prof={prof}
+                          match={match}
+                          isSaved={isSaved}
+                          onToggleSave={toggleSave}
+                          onViewProfile={handleViewProfile}
+                          onDraftEmail={handleDraftEmail}
+                        />
+                      );
+                    })}
 
             {/* Pagination & Show More Actions */}
             {displayedProfessors.length > 0 && (
