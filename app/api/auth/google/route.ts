@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { isAdminEmail } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     const cleanEmail = email.toLowerCase().trim();
-    const isSystemAdmin = cleanEmail === 'sulemanmunir6752@gmail.com' || cleanEmail === 'admin@profmatch.ai';
+    const isSystemAdmin = isAdminEmail(cleanEmail);
 
     const user = mockDb.autoSaveUser({
       id: sub ? `usr_google_${sub}` : undefined,
@@ -57,21 +58,7 @@ export async function POST(request: NextRequest) {
       target_degree: targetDegree || 'PhD',
     };
 
-    const res = NextResponse.json({ success: true, user: responseUser });
-
-    // Set auth cookies
-    const cookieOptions = {
-      path: '/',
-      maxAge: 30 * 86400,
-      httpOnly: false,
-      sameSite: 'lax' as const,
-    };
-
-    res.cookies.set('profmatch_session', `session_${user.id}_${Date.now()}`, cookieOptions);
-    res.cookies.set('profmatch_user', JSON.stringify(responseUser), cookieOptions);
-    res.cookies.set('profmatch_role', user.role, cookieOptions);
-
-    return res;
+    return NextResponse.json({ success: true, user: responseUser });
   } catch (err: any) {
     console.error('[GOOGLE AUTH POST ERROR]', err);
     return NextResponse.json({ success: false, error: err.message || 'Google authentication failed.' }, { status: 500 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -61,22 +62,13 @@ export async function GET(request: NextRequest) {
       return NextResponse.redirect(`${origin}${redirectTo}?error=Failed to fetch connected Gmail user profile.`);
     }
 
-    // 3. Identify user ID from cookie or fallback
+    // 3. Identify user ID from session or state
     let currentUserId = userIdFromState;
     if (!currentUserId) {
-      const userCookie = request.cookies.get('profmatch_user')?.value;
-      if (userCookie) {
-        try {
-          const parsed = JSON.parse(userCookie);
-          if (parsed && parsed.id) currentUserId = parsed.id;
-        } catch {
-          // fallback
-        }
+      const session = await verifyAuthSession(request);
+      if (session?.user?.id) {
+        currentUserId = session.user.id;
       }
-    }
-
-    if (!currentUserId) {
-      currentUserId = 'usr_student_001'; // Fallback to active student profile
     }
 
     // 4. Save connected email account to mockDb

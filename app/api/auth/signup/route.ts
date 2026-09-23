@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { createClient } from '@/lib/supabase/server';
 import { createPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
 import { checkRateLimit } from '@/lib/security/rate-limit';
@@ -51,15 +52,38 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 2. Generate 6-digit OTP with strict 15-minute expiration
+    // 2. Register user in Supabase Auth if configured
+    const supabase = createClient();
+    if (supabase) {
+      try {
+        const { data: sbData, error: sbErr } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: fullName,
+              target_degree: targetDegree,
+            },
+          },
+        });
+        if (sbErr && sbErr.message.toLowerCase().includes('already registered')) {
+          return NextResponse.json(
+            { success: false, error: 'An account with this email address already exists. Please sign in instead.' },
+            { status: 409 }
+          );
+        }
+      } catch (sbErr) {
+        console.warn('[SUPABASE SIGNUP ATTEMPT NOTICE]', sbErr);
+      }
+    }
+
+    // 3. Generate 6-digit OTP with strict 15-minute expiration (storing hashed password)
     const { code, expiresAt } = createPendingRegistration({
       email,
       fullName,
       password,
       targetDegree,
     });
-
-    console.log(`[SIGNUP ROUTE OTP] Dispatched code ${code} to ${email}`);
 
     // 3. Send high-deliverability email via Google SMTP
     const emailResult = await sendSignupOtpEmail({

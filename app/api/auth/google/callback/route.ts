@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { isAdminEmail } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
     }
 
     const cleanEmail = googleUser.email.toLowerCase().trim();
-    const isSystemAdmin = cleanEmail === 'sulemanmunir6752@gmail.com' || cleanEmail === 'admin@profmatch.ai';
+    const isSystemAdmin = isAdminEmail(cleanEmail);
 
     const user = mockDb.autoSaveUser({
       id: googleUser.id ? `usr_google_${googleUser.id}` : undefined,
@@ -80,21 +81,7 @@ export async function GET(request: NextRequest) {
     };
 
     const targetUrl = redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
-    const res = NextResponse.redirect(targetUrl);
-
-    // Set auth cookies
-    const cookieOptions = {
-      path: '/',
-      maxAge: 30 * 86400,
-      httpOnly: false,
-      sameSite: 'lax' as const,
-    };
-
-    res.cookies.set('profmatch_session', `session_${user.id}_${Date.now()}`, cookieOptions);
-    res.cookies.set('profmatch_user', JSON.stringify(responseUser), cookieOptions);
-    res.cookies.set('profmatch_role', user.role, cookieOptions);
-
-    return res;
+    return NextResponse.redirect(targetUrl);
   } catch (err: any) {
     console.error('[GOOGLE CALLBACK ERROR]', err);
     return NextResponse.redirect(`${origin}/login?error=Google authentication process failed.`);

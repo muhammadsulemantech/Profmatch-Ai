@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,17 +17,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Identify logged in user
-    let userId = 'usr_student_001';
-    const userCookie = request.cookies.get('profmatch_user')?.value;
-    if (userCookie) {
-      try {
-        const parsed = JSON.parse(userCookie);
-        if (parsed && parsed.id) userId = parsed.id;
-      } catch {
-        // fallback
-      }
+    // 1. Identify logged in user strictly from session
+    const session = await verifyAuthSession(request);
+    if (!session?.user?.id) {
+      return NextResponse.json(
+        { success: false, error: 'Unauthorized: Authentication required.' },
+        { status: 401 }
+      );
     }
+    const userId = session.user.id;
 
     // 2. Fetch connected email account (from mockDb or 1-year persistent cookie)
     let account = mockDb.getConnectedEmailAccount(userId);

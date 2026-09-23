@@ -1,18 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { mockDb } from '@/lib/supabase/mock-db';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   try {
     mockDb.loadFromDisk();
 
-    let userId = 'usr_student_001';
-    const userCookie = request.cookies.get('profmatch_user')?.value;
-    if (userCookie) {
-      try {
-        const parsed = JSON.parse(userCookie);
-        if (parsed && parsed.id) userId = parsed.id;
-      } catch {}
+    const session = await verifyAuthSession(request);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     // 1. Check in-memory / persistent mockDb
     let account = mockDb.getConnectedEmailAccount(userId);
@@ -113,14 +111,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 });
     }
 
-    let userId = 'usr_student_001';
-    const userCookie = request.cookies.get('profmatch_user')?.value;
-    if (userCookie) {
-      try {
-        const parsed = JSON.parse(userCookie);
-        if (parsed && parsed.id) userId = parsed.id;
-      } catch {}
+    const session = await verifyAuthSession(request);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     const saved = mockDb.saveConnectedEmailAccount({
       user_id: userId,
@@ -165,14 +160,11 @@ export async function DELETE(request: NextRequest) {
   try {
     mockDb.loadFromDisk();
 
-    let userId = 'usr_student_001';
-    const userCookie = request.cookies.get('profmatch_user')?.value;
-    if (userCookie) {
-      try {
-        const parsed = JSON.parse(userCookie);
-        if (parsed && parsed.id) userId = parsed.id;
-      } catch {}
+    const session = await verifyAuthSession(request);
+    if (!session?.user?.id) {
+      return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
+    const userId = session.user.id;
 
     const disconnected = mockDb.deleteConnectedEmailAccount(userId);
 

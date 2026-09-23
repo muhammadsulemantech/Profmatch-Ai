@@ -11,51 +11,26 @@ export async function middleware(request: NextRequest) {
   response.headers.set('X-XSS-Protection', '1; mode=block');
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
 
-  // Allow static assets and public APIs
+  // Allow static assets, next internals, and public health checks
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api/health') ||
-    pathname.includes('.')
+    /\.(png|jpg|jpeg|gif|svg|ico|css|js|woff|woff2|webp)$/i.test(pathname)
   ) {
     return response;
   }
 
-  // 2. Auth Cookie or Mock Session check
-  const authCookie = request.cookies.get('sb-access-token') || request.cookies.get('profmatch_session');
-  const userRole = request.cookies.get('profmatch_role')?.value || 'USER';
-  const userCookie = request.cookies.get('profmatch_user')?.value;
-  const sessionCookie = request.cookies.get('profmatch_session')?.value;
+  // 2. Check for Supabase session cookies or Bearer token (UX redirects only)
+  const allCookies = request.cookies.getAll();
+  const hasSupabaseCookie = allCookies.some(
+    (c) => c.name.startsWith('sb-') && c.value && c.value.length > 10
+  );
+  const hasAuthHeader = !!request.headers.get('authorization');
+  const hasAuth = hasSupabaseCookie || hasAuthHeader;
 
-  let userEmail = '';
-  if (userCookie) {
-    try {
-      const parsed = JSON.parse(decodeURIComponent(userCookie));
-      userEmail = parsed?.email?.toLowerCase() || '';
-    } catch {}
-  }
-
-  // 3. Admin Route Protection
-  if (pathname.startsWith('/admin') || pathname.startsWith('/api/admin')) {
-    if (pathname === '/admin/login') {
-      return response;
-    }
-    
-    const isAdmin =
-      userRole === 'ADMIN' ||
-      userRole === 'SUPER_ADMIN' ||
-      userEmail === 'sulemanmunir6752@gmail.com' ||
-      userEmail === 'admin@profmatch.ai' ||
-      sessionCookie?.startsWith('admin_elevated_') ||
-      request.headers.get('x-admin-role') === 'ADMIN' ||
-      request.cookies.get('profmatch_role')?.value === 'ADMIN';
-
-    if (!isAdmin) {
-      if (pathname.startsWith('/api/admin')) {
-        return NextResponse.json(
-          { success: false, error: 'Unauthorized: Admin privileges required.' },
-          { status: 401 }
-        );
-      }
+  // 3. Admin UX redirect for browser navigation
+  if (pathname.startsWith('/admin') && pathname !== '/admin/login' && !pathname.startsWith('/api/admin')) {
+    if (!hasAuth) {
       const url = request.nextUrl.clone();
       url.pathname = '/admin/login';
       url.searchParams.set('redirectTo', pathname);
@@ -63,21 +38,9 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // 4. Protected API Endpoints (Backend Server Protection - Requirement #4)
-  const protectedApis = ['/api/professors/search', '/api/email/send', '/api/checkout/submit'];
-  const isProtectedApi = protectedApis.some(p => pathname.startsWith(p));
-  const hasAuth = !!authCookie || !!request.headers.get('authorization');
-
-  if (isProtectedApi && !hasAuth) {
-    return NextResponse.json(
-      { success: false, error: 'Unauthorized: Authentication required to use this feature.' },
-      { status: 401 }
-    );
-  }
-
-  // 5. Protected User Workspaces (Note: /dashboard is kept accessible in preview mode per Requirement #1)
+  // 4. Protected User Workspaces UX redirect
   const strictlyProtectedPaths = ['/onboarding', '/profile'];
-  const isStrictlyProtected = strictlyProtectedPaths.some(p => pathname.startsWith(p));
+  const isStrictlyProtected = strictlyProtectedPaths.some((p) => pathname.startsWith(p));
 
   if (isStrictlyProtected && !hasAuth) {
     const url = request.nextUrl.clone();

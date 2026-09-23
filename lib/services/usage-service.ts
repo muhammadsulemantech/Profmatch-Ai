@@ -166,14 +166,7 @@ export function getEffectiveUserTier(userId?: string): PlanTier {
       return override as PlanTier;
     }
 
-    // Check user cookie or auth object
-    const cookieMatch = document.cookie.match(/profmatch_user=([^;]+)/);
-    if (cookieMatch && cookieMatch[1]) {
-      const parsed = JSON.parse(decodeURIComponent(cookieMatch[1]));
-      if (parsed.role === 'ADMIN') return 'ELITE'; // Admins get full worldwide access
-      if (parsed.plan_tier) return parsed.plan_tier;
-      if (parsed.plan_type) return parsed.plan_type;
-    }
+    // Check user cookie or auth object - removed client cookie trust
   } catch {}
 
   return 'FREE';

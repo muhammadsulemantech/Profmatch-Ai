@@ -35,41 +35,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [authModalReason, setAuthModalReason] = useState('Account required to access this feature');
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
-  // Re-hydrate session on mount
+  // Re-hydrate session on mount from server
   useEffect(() => {
     async function loadUserSession() {
       try {
-        const isAdminEmail = (e?: string) => e?.toLowerCase() === 'sulemanmunir6752@gmail.com' || e?.toLowerCase() === 'admin@profmatch.ai';
-
-        // First check cookie in browser
-        const userCookieMatch = document.cookie.match(/profmatch_user=([^;]+)/);
-        if (userCookieMatch && userCookieMatch[1]) {
-          try {
-            const parsed = JSON.parse(decodeURIComponent(userCookieMatch[1]));
-            if (parsed && parsed.email) {
-              if (isAdminEmail(parsed.email)) {
-                parsed.role = 'ADMIN';
-              }
-              setUser(parsed);
-              setIsLoading(false);
-              return;
-            }
-          } catch {
-            // Fallback to /api/auth/me
-          }
-        }
-
         const res = await fetch('/api/auth/me');
         if (res.ok) {
           const data = await res.json();
           if (data.authenticated && data.user) {
-            if (isAdminEmail(data.user.email)) {
-              data.user.role = 'ADMIN';
-            }
             setUser(data.user);
           } else {
             setUser(null);
           }
+        } else {
+          setUser(null);
         }
       } catch {
         setUser(null);
@@ -94,9 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Execute pending action after successful authentication
   const handleAuthSuccess = useCallback((authedUser: AuthUser) => {
-    if (authedUser.email.toLowerCase() === 'sulemanmunir6752@gmail.com' || authedUser.email.toLowerCase() === 'admin@profmatch.ai') {
-      authedUser.role = 'ADMIN';
-    }
     setUser(authedUser);
     setIsAuthModalOpen(false);
 
@@ -190,11 +166,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Continue client cleanup
     }
-
-    // Clear client cookies directly
-    document.cookie = 'profmatch_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'profmatch_user=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
-    document.cookie = 'profmatch_role=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT';
 
     setUser(null);
     setPendingAction(null);

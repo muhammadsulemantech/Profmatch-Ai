@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { fullName, password, targetDegree } = verification.registration;
+    const { fullName, passwordHash, targetDegree } = verification.registration;
 
     // 2. Double-check if account was created in parallel
     mockDb.loadFromDisk();
@@ -64,8 +64,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    let newUserId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const now = new Date().toISOString();
+
+    // 3. Confirm/link with Supabase user ID if available
+    const supabase = createClient();
+    if (supabase) {
+      try {
+        const { data: { users } } = await (await import('@/lib/supabase/admin')).createAdminClient()?.auth?.admin?.listUsers() || { data: { users: [] } };
+        const sbUser = users?.find((u: any) => u.email?.toLowerCase() === email);
+        if (sbUser) {
+          newUserId = sbUser.id;
+        }
+      } catch (err) {
+        // Continue with local ID if admin API is unconfigured
+      }
+    }
 
     const newUser: UserProfile = {
       id: newUserId,
@@ -77,31 +91,6 @@ export async function POST(request: NextRequest) {
       created_at: now,
       updated_at: now,
     };
-
-    // 3. Register in Supabase if configured
-    const supabase = createClient();
-    if (supabase) {
-      try {
-        const { data, error: sbErr } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName,
-              target_degree: targetDegree,
-            },
-          },
-        });
-
-        if (sbErr) {
-          console.warn('[SUPABASE SIGNUP NOTICE]', sbErr.message);
-        } else if (data.user) {
-          newUser.id = data.user.id;
-        }
-      } catch (err) {
-        console.warn('[SUPABASE CONNECTION NOTICE]', err);
-      }
-    }
 
     // 4. Save to persistent database store & create student profile + subscription
     const savedUser = mockDb.autoSaveUser({
@@ -141,42 +130,14 @@ export async function POST(request: NextRequest) {
       target_degree: targetDegree,
     };
 
-    const response = NextResponse.json(
+    return NextResponse.json(
       {
         success: true,
-        message: 'Account verified and created successfully.',
+        message: 'Account verified and created successfully. Please sign in.',
         user: sanitizedUser,
       },
       { status: 201 }
     );
-
-    const maxAge = 60 * 60 * 24 * 7; // 7 days
-
-    response.cookies.set('profmatch_session', sessionToken, {
-      path: '/',
-      maxAge,
-      sameSite: 'lax',
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-    });
-
-    response.cookies.set('profmatch_role', savedUser.role, {
-      path: '/',
-      maxAge,
-      sameSite: 'lax',
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-    });
-
-    response.cookies.set('profmatch_user', encodeURIComponent(JSON.stringify(sanitizedUser)), {
-      path: '/',
-      maxAge,
-      sameSite: 'lax',
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-    });
-
-    return response;
   } catch (err: any) {
     console.error('[VERIFY OTP API ERROR]', err);
     return NextResponse.json(

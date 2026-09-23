@@ -669,9 +669,10 @@ export default function AdminDashboardPage() {
     showNotice('success', 'Faculty profile and publication metadata verified with official university registry.');
   };
 
-  const handleAdminLogout = () => {
-    document.cookie = 'profmatch_session=; path=/; max-age=0';
-    document.cookie = 'profmatch_role=; path=/; max-age=0';
+  const handleAdminLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch {}
     router.push('/admin/login');
   };
 

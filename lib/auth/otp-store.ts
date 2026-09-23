@@ -5,7 +5,7 @@ import path from 'path';
 export interface PendingSignupRegistration {
   email: string;
   fullName: string;
-  password: string;
+  passwordHash: string;
   targetDegree: string;
   code: string;
   expiresAt: number; // Timestamp in ms
@@ -22,16 +22,47 @@ const pendingOtpMap = new Map<string, PendingSignupRegistration>();
 // Persistent file path for resilience across Next.js dev server restarts
 const OTP_STORE_FILE = path.join(process.cwd(), 'database', 'pending_otps.json');
 
+/**
+ * Strong password hashing using salted scrypt KDF.
+ */
+export function hashPassword(password: string): string {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+  return `${salt}:${hash}`;
+}
+
+/**
+ * Constant-time verification of password against stored scrypt hash.
+ */
+export function verifyPassword(password: string, combinedHash: string): boolean {
+  if (!password || !combinedHash || !combinedHash.includes(':')) return false;
+  const [salt, storedHash] = combinedHash.split(':');
+  const hashBuffer = crypto.scryptSync(password, salt, 64);
+  const storedHashBuffer = Buffer.from(storedHash, 'hex');
+  return crypto.timingSafeEqual(hashBuffer, storedHashBuffer);
+}
+
 function loadOtpsFromDisk() {
   try {
     if (fs.existsSync(OTP_STORE_FILE)) {
       const data = fs.readFileSync(OTP_STORE_FILE, 'utf-8');
       if (data) {
-        const parsed: Record<string, PendingSignupRegistration> = JSON.parse(data);
+        const parsed: Record<string, any> = JSON.parse(data);
         const now = Date.now();
         for (const [email, record] of Object.entries(parsed)) {
-          if (record.expiresAt > now) {
-            pendingOtpMap.set(email.toLowerCase(), record);
+          if (record && record.expiresAt > now) {
+            // Upgrade legacy plaintext password if present
+            const passwordHash = record.passwordHash || (record.password ? hashPassword(record.password) : '');
+            pendingOtpMap.set(email.toLowerCase(), {
+              email: record.email,
+              fullName: record.fullName,
+              passwordHash,
+              targetDegree: record.targetDegree || 'PhD',
+              code: record.code,
+              expiresAt: record.expiresAt,
+              attempts: record.attempts || 0,
+              createdAt: record.createdAt || now,
+            });
           }
         }
       }
@@ -51,7 +82,17 @@ function persistOtpsToDisk() {
     const now = Date.now();
     pendingOtpMap.forEach((record, email) => {
       if (record.expiresAt > now) {
-        obj[email] = record;
+        // Guarantee no plaintext password ever gets written
+        obj[email] = {
+          email: record.email,
+          fullName: record.fullName,
+          passwordHash: record.passwordHash,
+          targetDegree: record.targetDegree,
+          code: record.code,
+          expiresAt: record.expiresAt,
+          attempts: record.attempts,
+          createdAt: record.createdAt,
+        };
       }
     });
     fs.writeFileSync(OTP_STORE_FILE, JSON.stringify(obj, null, 2), 'utf-8');
@@ -71,7 +112,7 @@ export function generateUniqueOtpCode(): string {
 }
 
 /**
- * Stores or updates a pending user registration with a new 15-minute OTP.
+ * Stores or updates a pending user registration with a new 15-minute OTP and hashed password.
  */
 export function createPendingRegistration(params: {
   email: string;
@@ -88,7 +129,7 @@ export function createPendingRegistration(params: {
   const record: PendingSignupRegistration = {
     email: normalizedEmail,
     fullName: params.fullName.trim(),
-    password: params.password,
+    passwordHash: hashPassword(params.password),
     targetDegree: params.targetDegree || 'PhD',
     code,
     expiresAt,

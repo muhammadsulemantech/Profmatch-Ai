@@ -7,10 +7,15 @@ export async function GET(request: NextRequest) {
     const session = await verifyAuthSession(request);
 
     if (!session || !session.user || !session.user.email) {
-      return NextResponse.json({
-        authenticated: false,
-        user: null,
-      });
+      return NextResponse.json(
+        {
+          success: false,
+          authenticated: false,
+          user: null,
+          error: 'Unauthorized: No active verified session.',
+        },
+        { status: 401 }
+      );
     }
 
     // Auto-save user to persistent database if not yet stored
@@ -23,15 +28,20 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json({
+      success: true,
       authenticated: true,
       user: {
         id: savedUser.id,
         email: savedUser.email,
         full_name: savedUser.full_name,
         role: savedUser.role,
+        avatar_url: savedUser.avatar_url,
       },
     });
   } catch (err) {
-    return NextResponse.json({ authenticated: false, user: null });
+    return NextResponse.json(
+      { success: false, authenticated: false, user: null, error: 'Internal session error.' },
+      { status: 500 }
+    );
   }
 }
