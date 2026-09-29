@@ -20,6 +20,43 @@ export class GeminiProvider implements AIProvider {
     this.fallback = new MockAIProvider();
   }
 
+  private async callGeminiApi(promptText: string, temperature: number = 0.2): Promise<string | null> {
+    const candidateModels = [this.modelName, 'gemini-flash-lite-latest'];
+
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${this.apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [
+                {
+                  role: 'user',
+                  parts: [{ text: promptText }],
+                },
+              ],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature,
+              },
+            }),
+          }
+        );
+
+        if (response.ok) {
+          const data = await response.json();
+          const contentText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (contentText) return contentText;
+        }
+      } catch {
+        // Continue to fallback model
+      }
+    }
+    return null;
+  }
+
   async generateGroundedEmail(prompt: GroundedEmailPrompt): Promise<GroundedEmailOutput> {
     if (!this.apiKey || this.apiKey.includes('your-ai-api-key')) {
       return this.fallback.generateGroundedEmail(prompt);
@@ -35,39 +72,11 @@ Rules:
 - Keep tone professional, concise, and academic (no spam clichés or flattery).
 - Return valid JSON matching the GroundedEmailOutput interface with fields: subject, bodyText, personalizationNotes (array of strings), sourceReferences (array of {type, title, url, context}).`;
 
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    text: `${systemInstruction}\n\nStudent Profile:\n${JSON.stringify(prompt, null, 2)}\n\nGenerate outreach email JSON:`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.3,
-            },
-          }),
-        }
-      );
+      const promptText = `${systemInstruction}\n\nStudent Profile:\n${JSON.stringify(prompt, null, 2)}\n\nGenerate outreach email JSON:`;
+      const text = await this.callGeminiApi(promptText, 0.3);
 
-      if (!response.ok) {
-        return this.fallback.generateGroundedEmail(prompt);
-      }
-
-      const data = await response.json();
-      const contentText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!contentText) return this.fallback.generateGroundedEmail(prompt);
-
-      return JSON.parse(contentText);
+      if (!text) return this.fallback.generateGroundedEmail(prompt);
+      return JSON.parse(text);
     } catch {
       return this.fallback.generateGroundedEmail(prompt);
     }
@@ -79,39 +88,15 @@ Rules:
     }
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    text: `Analyze the research compatibility between this student profile and professor profile.
+      const promptText = `Analyze the research compatibility between this student profile and professor profile.
 Return a JSON object with:
 overallScore (0-100), researchScore (0-100), projectScore (0-100), skillsScore (0-100), publicationScore (0-100), explanation (string), breakdown ({ matchedTopics: string[], relevantStudentProjects: string[], relevantProfessorPapers: string[], suggestedAngle: string }).
 
 Data:
 Student: ${JSON.stringify(prompt.studentProfile)}
-Professor: ${JSON.stringify(prompt.professorProfile)}`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          }),
-        }
-      );
+Professor: ${JSON.stringify(prompt.professorProfile)}`;
 
-      if (!response.ok) return this.fallback.analyzeResearchMatch(prompt);
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = await this.callGeminiApi(promptText, 0.2);
       if (!text) return this.fallback.analyzeResearchMatch(prompt);
       return JSON.parse(text);
     } catch {
@@ -125,18 +110,7 @@ Professor: ${JSON.stringify(prompt.professorProfile)}`,
     }
 
     try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${this.modelName}:generateContent?key=${this.apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [
-              {
-                role: 'user',
-                parts: [
-                  {
-                    text: `Analyze this reply from professor ${context.professorName}.
+      const promptText = `Analyze this reply from professor ${context.professorName}.
 Original Email: ${context.originalEmail}
 Professor Reply: ${replyText}
 
@@ -144,22 +118,9 @@ Return JSON with:
 summary (string),
 sentiment ('POSITIVE' | 'NEUTRAL' | 'NEGATIVE' | 'MEETING_REQUESTED'),
 keyRequests (string[]),
-suggestedResponse (string).`,
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          }),
-        }
-      );
+suggestedResponse (string).`;
 
-      if (!response.ok) return this.fallback.analyzeProfessorReply(replyText, context);
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text;
+      const text = await this.callGeminiApi(promptText, 0.2);
       if (!text) return this.fallback.analyzeProfessorReply(replyText, context);
       return JSON.parse(text);
     } catch {
@@ -167,3 +128,4 @@ suggestedResponse (string).`,
     }
   }
 }
+
