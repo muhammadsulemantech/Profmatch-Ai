@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   try {
     const clientId = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
     const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
-    const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/gmail/callback`;
+    const redirectUri = process.env.GOOGLE_GMAIL_REDIRECT_URI || `${origin}/api/auth/google/gmail/callback`;
 
     // 2. Exchange authorization code for tokens
     const tokenRes = await fetch('https://oauth2.googleapis.com/token', {

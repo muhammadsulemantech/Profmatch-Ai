@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -27,7 +27,7 @@ export default function OrderStatusPage() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStatus = () => {
+  const fetchStatus = useCallback(() => {
     setLoading(true);
     // Fetch from mock database
     const ord = mockDb.orders.find((o: Order) => o.order_reference === reference);
@@ -36,11 +36,11 @@ export default function OrderStatusPage() {
     setOrder(ord ? { ...ord } : null);
     setPayment(pay ? { ...pay } : null);
     setLoading(false);
-  };
+  }, [reference]);
 
   useEffect(() => {
     fetchStatus();
-  }, [reference]);
+  }, [fetchStatus]);
 
   const status = payment?.status || order?.status || 'PENDING';
 

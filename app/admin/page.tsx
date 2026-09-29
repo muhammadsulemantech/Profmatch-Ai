@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Settings,
@@ -114,16 +114,12 @@ export default function AdminDashboardPage() {
   const [reviewNote, setReviewNote] = useState('');
   const [reviewAction, setReviewAction] = useState<'APPROVE' | 'REJECT' | null>(null);
 
-  useEffect(() => {
-    fetchAdminData(false);
-  }, [activeTab]);
-
-  const showNotice = (type: 'success' | 'error', message: string) => {
+  const showNotice = useCallback((type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
-  };
+  }, []);
 
-  const fetchAdminData = async (isSilent: boolean = false) => {
+  const fetchAdminData = useCallback(async (isSilent: boolean = false) => {
     if (!isSilent) setLoading(true);
     try {
       const sRes = await fetch('/api/admin/settings');
@@ -200,7 +196,11 @@ export default function AdminDashboardPage() {
     } finally {
       if (!isSilent) setLoading(false);
     }
-  };
+  }, [showNotice]);
+
+  useEffect(() => {
+    fetchAdminData(false);
+  }, [activeTab, fetchAdminData]);
 
   // Pricing Plan handlers
   const handleUpdatePlan = (planIdx: number, field: string, value: any) => {

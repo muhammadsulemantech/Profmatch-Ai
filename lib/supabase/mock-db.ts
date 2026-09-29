@@ -45,10 +45,14 @@ function getNodeModule(name: string): any {
     if (typeof process !== 'undefined' && typeof (process as any).getBuiltinModule === 'function') {
       return (process as any).getBuiltinModule(name);
     }
-    const req = typeof __non_webpack_require__ !== 'undefined'
-      ? __non_webpack_require__
-      : (typeof require !== 'undefined' ? require : null);
-    if (req) return req(name);
+    if (typeof __non_webpack_require__ !== 'undefined') {
+      return __non_webpack_require__(name);
+    }
+    // Avoid Webpack static analyzer by accessing through global context in pure Node environments
+    const nodeReq = typeof globalThis !== 'undefined' ? (globalThis as any).require : undefined;
+    if (typeof nodeReq === 'function') {
+      return nodeReq(name);
+    }
   } catch {
     return null;
   }

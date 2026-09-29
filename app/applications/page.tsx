@@ -481,7 +481,8 @@ export default function ApplicationsPage() {
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                aria-label="Close dialog"
+                className="text-slate-400 hover:text-white min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-slate-800 transition-colors"
               >
                 ✕
               </button>

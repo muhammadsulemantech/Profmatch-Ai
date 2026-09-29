@@ -12,8 +12,8 @@ export default function LoginPage() {
   const redirectTo = searchParams.get('redirectTo') || '/choose-plan';
 
   const { login, loginWithGoogle } = useAuth();
-  const [email, setEmail] = useState('student@example.com');
-  const [password, setPassword] = useState('student123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

@@ -7,6 +7,8 @@ import { GraduationCap, Search, ShieldCheck, Lock, BookOpen, Rocket } from 'luci
 import { AuthProvider } from '@/lib/auth/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
+import MobileNav from '@/components/navigation/mobile-nav';
+import CookieConsent from '@/components/ui/cookie-consent';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -19,15 +21,28 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai';
+
   return {
-    title: `${settings.siteName} — Academic Research Outreach & Faculty Discovery`,
+    metadataBase: new URL(baseUrl),
+    title: {
+      default: `${settings.siteName} — Academic Research Outreach & Faculty Discovery`,
+      template: `%s | ${settings.siteName}`,
+    },
     description: settings.tagline || 'Discover relevant faculty, understand their research, and send thoughtful outreach backed by verified academic sources.',
-    keywords: ['Professor Outreach', 'Graduate Research', 'PhD Outreach', 'Faculty Directory', 'Academic Verification'],
+    keywords: ['Professor Outreach', 'Graduate Research', 'PhD Outreach', 'Faculty Directory', 'Academic Verification', 'Academic Admissions', 'Research Matching'],
     openGraph: {
       title: `${settings.siteName} — Academic Research Outreach Platform`,
-      description: settings.tagline,
+      description: settings.tagline || 'Discover relevant faculty, understand their research, and send thoughtful outreach backed by verified academic sources.',
       type: 'website',
-      url: process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai',
+      url: baseUrl,
+      siteName: settings.siteName,
+      locale: 'en_US',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: `${settings.siteName} — Academic Research Outreach Platform`,
+      description: settings.tagline || 'Discover relevant faculty, understand their research, and send thoughtful outreach backed by verified academic sources.',
     },
     icons: {
       icon: [
@@ -73,7 +88,7 @@ export default async function RootLayout({
           <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#080B11]/85 backdrop-blur-md">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
               {/* Logo */}
-              <Link href="/" className="flex items-center gap-3 group">
+              <Link href="/" aria-label={`${settings.siteName} Home`} className="flex items-center gap-3 group">
                 <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-105">
                   <GraduationCap className="w-5 h-5 text-slate-950" />
                 </div>
@@ -88,7 +103,7 @@ export default async function RootLayout({
               </Link>
 
               {/* Nav Links */}
-              <nav className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
+              <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
                 <Link href="/search" className="hover:text-emerald-400 flex items-center gap-1.5 transition-colors">
                   <Search className="w-4 h-4 text-emerald-400" />
                   Find Professors
@@ -116,8 +131,11 @@ export default async function RootLayout({
                 </Link>
               </nav>
 
-              {/* Dynamic Auth Action Buttons */}
-              <NavbarAuthControls />
+              {/* Auth Controls & Mobile Nav Drawer */}
+              <div className="flex items-center gap-2">
+                <NavbarAuthControls />
+                <MobileNav siteName={settings.siteName} />
+              </div>
             </div>
           </header>
 
@@ -198,6 +216,9 @@ export default async function RootLayout({
             </div>
           </div>
         </footer>
+
+        {/* GDPR Cookie Notice */}
+        <CookieConsent />
       </body>
     </html>
   );

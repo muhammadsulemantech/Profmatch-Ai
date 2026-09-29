@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
@@ -240,9 +241,12 @@ export default function DashboardPage() {
                   <div className="relative group shrink-0">
                     <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-emerald-500/40 bg-slate-950 flex items-center justify-center shadow-lg relative">
                       {avatarUrl ? (
-                        <img
+                        <Image
                           src={avatarUrl}
                           alt={displayName}
+                          width={56}
+                          height={56}
+                          unoptimized
                           className="w-full h-full object-cover"
                         />
                       ) : (

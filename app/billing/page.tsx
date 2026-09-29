@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import {
   CreditCard,
@@ -32,7 +32,7 @@ export default function BillingPage() {
   );
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const refreshBillingData = () => {
+  const refreshBillingData = useCallback(() => {
     setIsRefreshing(true);
     const sub = mockDb.subscriptions.find(s => s.user_id === user.id) || mockDb.subscriptions[0];
     const ords = mockDb.orders.filter((o: Order) => o.user_id === user.id);
@@ -42,11 +42,11 @@ export default function BillingPage() {
     setOrders([...ords]);
     setPayments([...pays]);
     setTimeout(() => setIsRefreshing(false), 500);
-  };
+  }, [user.id]);
 
   useEffect(() => {
     refreshBillingData();
-  }, []);
+  }, [refreshBillingData]);
 
   const isProPlan = subscription.plan_type === 'PRO';
   const isStudentPlan = subscription.plan_type === 'STUDENT';

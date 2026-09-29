@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -69,7 +69,7 @@ export default function OutreachGeneratePage() {
   const [sendSuccess, setSendSuccess] = useState(false);
 
   // Generate initial email on load
-  const generateEmail = async (selectedTone = tone) => {
+  const generateEmail = useCallback(async (selectedTone: 'academic' | 'formal' | 'direct' | 'concise' = 'academic') => {
     setIsGenerating(true);
     try {
       const generated = await EmailPersonalizationAgent.generateEmail('usr_student_001', prof, { tone: selectedTone });
@@ -83,11 +83,11 @@ export default function OutreachGeneratePage() {
     } finally {
       setIsGenerating(false);
     }
-  };
+  }, [prof]);
 
   useEffect(() => {
-    generateEmail();
-  }, [professorId]);
+    generateEmail(tone);
+  }, [generateEmail, tone]);
 
   const handleToneChange = (newTone: 'academic' | 'formal' | 'direct' | 'concise') => {
     setTone(newTone);

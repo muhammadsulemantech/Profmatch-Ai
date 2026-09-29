@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `${origin}/api/auth/google/gmail/callback`;
+  const redirectUri = process.env.GOOGLE_GMAIL_REDIRECT_URI || `${origin}/api/auth/google/gmail/callback`;
 
   // 2. Cryptographically bind user ID and nonce into HMAC-signed state
   const signedState = createSignedOAuthState({
