@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useAuth } from '@/lib/auth/auth-context';
 import { LogOut, User } from 'lucide-react';
 import { getSavedAvatar } from '@/lib/utils/avatar';
@@ -50,9 +51,12 @@ export default function NavbarAuthControls() {
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-emerald-500/30 text-xs font-medium text-slate-200 transition-colors"
           >
             {avatarUrl ? (
-              <img
+              <Image
                 src={avatarUrl}
                 alt={user.full_name || 'Profile'}
+                width={20}
+                height={20}
+                unoptimized
                 className="w-5 h-5 rounded-full object-cover border border-emerald-400/50 shrink-0"
               />
             ) : (

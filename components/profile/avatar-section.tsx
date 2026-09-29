@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { User, Camera, Loader2 } from 'lucide-react';
 
 interface AvatarSectionProps {
@@ -31,9 +32,12 @@ export function AvatarSection({
         <div className="relative group shrink-0">
           <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/40 bg-slate-950 flex items-center justify-center shadow-xl relative">
             {avatarUrl ? (
-              <img
+              <Image
                 src={avatarUrl}
                 alt={userName || 'Researcher'}
+                width={80}
+                height={80}
+                unoptimized
                 className="w-full h-full object-cover"
               />
             ) : (

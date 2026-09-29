@@ -269,7 +269,7 @@ export default function ProfilePage() {
       window.removeEventListener('profmatch_avatar_updated', handleAvatarUpdate);
       window.removeEventListener('storage', handleAvatarUpdate);
     };
-  }, [user]);
+  }, [user, research.research_interests]);
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

@@ -1,8 +1,9 @@
 # PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
-> **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Tavily Search, OpenAlex API  
-> **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)
+> **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
+> **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
+> **Last Updated:** 2026-09-29 (Pre-Launch Audit, SEO & Live Provider Verification)
 
 ---
 
@@ -45,6 +46,28 @@
   - Created `ARCHITECTURE.md` detailing system topology, service layer, and data flows.
   - Created `SECURITY.md` detailing threat model, encryption, and authentication invariants.
 
+### 🚀 Tier 3: Pre-Launch Production Audit, Technical SEO, Mobile UX & Live Handshake Verification (COMPLETED)
+- **Technical SEO, Meta & Social Cards:**
+  - Added global `metadataBase` (`https://profmatch.ai`), dynamic title template, OpenGraph, and Twitter `summary_large_image` cards in `app/layout.tsx`.
+  - Created dedicated metadata layouts for `/search`, `/pricing`, `/professors/[id]`, `/(auth)/login`, `/(auth)/signup`, `/(auth)/forgot-password`, `/dashboard`, `/checkout`, `/admin`, `/campaigns`, `/tracker`, `/billing`, and `/autopilot`.
+  - Updated `app/robots.ts` with strict disallow directives for private workspaces (`/dashboard/`, `/campaigns/`, `/autopilot/`, `/tracker/`, `/checkout/`, `/billing/`, `/admin/`, etc.) while ensuring public indexability of marketing, search, and pricing pages.
+- **System UX & Resiliency Pages:**
+  - Root 404 Page: Created `app/not-found.tsx` with animated visual feedback and direct return CTAs.
+  - Error Boundaries: Built `app/error.tsx` (client route error recovery boundary with reset) and `app/global-error.tsx` (root error boundary catching fatal layout failures).
+  - Loading State: Added `app/loading.tsx` with clean branded skeleton pulse states.
+  - Mobile Responsiveness: Created `components/navigation/mobile-nav.tsx` drawer menu with touch-optimized targets (>=44px) for all primary navigation links.
+  - Legal & Privacy: Created `components/ui/cookie-consent.tsx` banner with local storage persistence.
+- **Linter & Runtime Hygiene (0 Errors / 0 Warnings):**
+  - Resolved all 8 React hooks missing-dependency warnings across admin, billing, checkout status, outreach generator, and profile pages via `useCallback`.
+  - Replaced unoptimized `<img>` tags with `next/image` in dashboard, navigation auth controls, and profile avatar components.
+  - Resolved Webpack dynamic dependency warning in `lib/supabase/mock-db.ts` using safe runtime require isolation.
+  - Purged hardcoded demo credentials from `app/(auth)/login/page.tsx`.
+- **Live Provider Handshake & Email Deliverability (`scripts/verify-email-and-oauth.mjs`):**
+  - **Google SMTP Handshake:** Verified direct TLS connection (`smtp.gmail.com:465`) with live candidate verification OTP delivery and professor outreach email dispatch (`250 2.0.0 OK`).
+  - **Resend API:** Verified API key authorization and domain configuration readiness.
+  - **Google OAuth & Consent Screen:** Separated `GOOGLE_GMAIL_REDIRECT_URI` (`/api/auth/google/gmail/callback`) from Google Login to eliminate callback collisions. Confirmed Google Cloud Console OAuth consent screen status promoted to "In Production".
+- **Audit Documentation:** Recorded comprehensive 14-category findings in `WEBSITE_AUDIT.md`.
+
 ---
 
 ## 2. Core Credentials & Admin Auth
@@ -60,30 +83,43 @@
 - **AI Engine:** `AI_PROVIDER=gemini` (Google Gemini 1.5 Pro)
 - **Search Provider:** `SEARCH_PROVIDER=tavily` (Tavily Search)
 - **Academic Provider:** `ACADEMIC_DATA_PROVIDER=openalex` (OpenAlex)
-- **Email Provider:** `EMAIL_PROVIDER=resend` / Gmail SMTP (`SMTP_USER=profmatchsupport@gmail.com`)
-- **OAuth Provider:** Google OAuth 2.0 (Gmail Drafts & Messages Compose)
+- **Email Provider:** `EMAIL_PROVIDER=resend` / Gmail SMTP (`smtp.gmail.com:465`, `SMTP_USER=profmatchsupport@gmail.com`)
+- **OAuth Provider:** Google OAuth 2.0 (`/api/auth/google/gmail/callback` for Gmail Drafts & Outreach)
 
 ---
 
 ## 4. Key Directories & Architecture Map
 ```text
 profmatch-ai/
-├── app/                  # Next.js 14 App Router Pages & API Routes
+├── app/                  # Next.js 14 App Router Pages, Layouts & API Routes
+│   ├── (auth)/           # Login, Signup, Forgot Password with metadata layouts
 │   ├── admin/            # Role-gated admin control panel (modularized)
 │   ├── api/              # Standardized API routes ({ success, data, error })
 │   ├── autopilot/        # Autonomous bulk discovery & drafting engine
+│   ├── billing/          # Subscription & payment management
+│   ├── campaigns/        # Outreach campaign management
+│   ├── checkout/         # Stripe checkout & status callbacks
+│   ├── dashboard/        # Candidate activity overview & metrics
+│   ├── error.tsx         # Client error recovery boundary
+│   ├── global-error.tsx  # Root fatal error boundary
 │   ├── inbox/            # Faculty reply analysis & suggested responses
+│   ├── loading.tsx       # Root suspense loading UI
+│   ├── not-found.tsx     # Custom branded 404 page
 │   ├── outreach/         # Citation-grounded cold email generator
+│   ├── pricing/          # Academic plans & pricing layout
 │   ├── professors/       # Faculty profile & publication analysis
 │   ├── profile/          # Researcher profile & academic documents
-│   └── search/           # Global faculty discovery search engine
+│   ├── robots.ts         # Technical SEO crawl directives
+│   ├── search/           # Global faculty discovery search engine
+│   └── tracker/          # Application & outreach status tracking
 ├── components/           # Modular UI components & design system
 │   ├── admin/            # 8 modular admin tab components
 │   ├── autopilot/        # Campaign panel, terminal, and drafts list
 │   ├── inbox/            # Reply threads, modal, and sent view
+│   ├── navigation/       # Navbar, mobile drawer (mobile-nav.tsx), auth controls
 │   ├── profile/          # Modular profile sections (avatar, destination, cv)
 │   ├── search/           # Search filters, cards, and paywall banner
-│   └── ui/               # Reusable UI primitives
+│   └── ui/               # Reusable UI primitives & cookie consent
 ├── database/             # PostgreSQL schema, seed data, and RLS definitions
 ├── docs/                 # API contract specification (docs/api-contract.md)
 ├── lib/                  # Application core libraries & services
@@ -93,5 +129,17 @@ profmatch-ai/
 │   ├── services/         # Modular service layer (DB, Gmail, Outreach, Users)
 │   ├── config.ts         # Runtime environment configuration & validation
 │   └── logger.ts         # Structured JSON logger with credential redaction
-└── tests/                # 57 automated unit, security, and integrity tests
+├── scripts/              # Live verification scripts (verify-email-and-oauth.mjs)
+├── tests/                # 57 automated unit, security, and integrity tests
+└── WEBSITE_AUDIT.md      # Comprehensive 14-category pre-launch audit report
 ```
+
+---
+
+## 5. Verification Status
+- **Automated Unit & Security Tests:** `npm test` -> 57/57 tests passing (0 failures).
+- **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
+- **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
+- **Production Build:** `npm run build` -> Exit code 0 (63/63 dynamic & static routes compiled cleanly with 0 build warnings).
+- **Email Dispatch Handshake:** Verified live Google SMTP TLS handshake & delivery (`250 2.0.0 OK`).
+- **OAuth Production Status:** Google Cloud Console OAuth consent screen promoted to "In Production".
