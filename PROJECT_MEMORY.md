@@ -136,10 +136,13 @@ profmatch-ai/
 
 ---
 
-## 5. Verification Status
 - **Automated Unit & Security Tests:** `npm test` -> 57/57 tests passing (0 failures).
 - **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
 - **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
 - **Production Build:** `npm run build` -> Exit code 0 (63/63 dynamic & static routes compiled cleanly with 0 build warnings).
 - **Email Dispatch Handshake:** Verified live Google SMTP TLS handshake & delivery (`250 2.0.0 OK`).
 - **OAuth Production Status:** Google Cloud Console OAuth consent screen promoted to "In Production".
+- **Live User Experience & Journey Verification (`scripts/verify-user-experience.mjs`):**
+  - **Signup & OTP:** Salted scrypt password hashing verified, 6-digit OTP generated with 15-minute expiry, and live OTP email successfully delivered to inbox via Google SMTP.
+  - **Field Search Relevance:** Live OpenAlex graph verified across multiple fields (Machine Learning, Bioinformatics Genomics, Quantum Computing) with real institution/concept mappings.
+  - **AI Outreach Quality:** Real-time generation verified with Google Gemini, resilient fallback to `gemini-flash-lite-latest` implemented, achieving a 100/100 score on EmailQualityAgent audit (exact publication citation, zero spam flattery, proper word count, and CV reference).
