@@ -33,6 +33,14 @@ export default function AutoPilotPage() {
   const [cooldownSec, setCooldownSec] = useState<number>(60);
   const [tone, setTone] = useState<'academic' | 'concise' | 'inquisitive'>('academic');
 
+  // Document / CV Attachment State
+  const [attachedDocument, setAttachedDocument] = useState<{
+    name: string;
+    size: number;
+    type: string;
+    uploadedAt: string;
+  } | null>(null);
+
   // Safeguard Consent State
   const [hasAuthorized, setHasAuthorized] = useState(false);
 
@@ -54,7 +62,7 @@ export default function AutoPilotPage() {
     }
   }, [logs]);
 
-  // Load profile defaults from localStorage
+  // Load profile defaults & saved CV from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
@@ -73,8 +81,49 @@ export default function AutoPilotPage() {
         if (parsed.targetDegree) setTargetDegree(parsed.targetDegree);
         if (parsed.desiredField) setDiscipline(parsed.desiredField);
       }
+
+      // Check for previously saved AutoPilot document or Profile CV
+      const savedAutopilotDoc = localStorage.getItem(`profmatch_autopilot_doc_${userId}`);
+      if (savedAutopilotDoc) {
+        setAttachedDocument(JSON.parse(savedAutopilotDoc));
+      } else {
+        const savedProfileCv = localStorage.getItem(`profmatch_user_cv_${userId}`);
+        if (savedProfileCv) {
+          const parsedCv = JSON.parse(savedProfileCv);
+          if (parsedCv.file_name) {
+            setAttachedDocument({
+              name: parsedCv.file_name,
+              size: parsedCv.file_size || 154000,
+              type: 'application/pdf',
+              uploadedAt: parsedCv.uploaded_at || new Date().toISOString(),
+            });
+          }
+        }
+      }
     } catch {}
   }, [userId]);
+
+  const handleDocumentUpload = (file: File) => {
+    const docData = {
+      name: file.name,
+      size: file.size,
+      type: file.type || 'application/pdf',
+      uploadedAt: new Date().toISOString(),
+    };
+    setAttachedDocument(docData);
+    try {
+      localStorage.setItem(`profmatch_autopilot_doc_${userId}`, JSON.stringify(docData));
+    } catch {}
+    appendLog('INFO', `📎 Attached document: "${file.name}" (${Math.round(file.size / 1024)} KB) for faculty review.`);
+  };
+
+  const handleRemoveDocument = () => {
+    setAttachedDocument(null);
+    try {
+      localStorage.removeItem(`profmatch_autopilot_doc_${userId}`);
+    } catch {}
+    appendLog('INFO', '🗑️ Attached document removed.');
+  };
 
   const appendLog = useCallback((type: TerminalLog['type'], message: string) => {
     const time = new Date().toLocaleTimeString();
@@ -276,6 +325,7 @@ export default function AutoPilotPage() {
           sentAt: new Date().toLocaleTimeString(),
           sentVia: 'Gmail Drafts',
           draftUrl,
+          attachmentName: attachedDocument?.name,
         };
 
         setContactedHistory((prev) => [newRecord, ...prev]);
@@ -420,6 +470,9 @@ export default function AutoPilotPage() {
               setCooldownSec={setCooldownSec}
               tone={tone}
               setTone={setTone}
+              attachedDocument={attachedDocument}
+              onDocumentUpload={handleDocumentUpload}
+              onRemoveDocument={handleRemoveDocument}
               hasAuthorized={hasAuthorized}
               setHasAuthorized={setHasAuthorized}
               engineStatus={engineStatus}

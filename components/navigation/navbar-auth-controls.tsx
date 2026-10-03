@@ -85,14 +85,14 @@ export default function NavbarAuthControls() {
           <button
             type="button"
             onClick={() => openAuthModal('Sign in to access your researcher workspace')}
-            className="text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5 transition-colors"
+            className="hidden sm:inline-flex text-sm font-medium text-slate-300 hover:text-white px-3 py-1.5 transition-colors whitespace-nowrap"
           >
             Sign In
           </button>
           <button
             type="button"
             onClick={() => openAuthModal('Create your researcher account')}
-            className="inline-flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all"
+            className="inline-flex items-center gap-1 text-xs sm:text-sm font-semibold px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-md shadow-emerald-500/20 transition-all whitespace-nowrap"
           >
             Get Started
           </button>

@@ -96,7 +96,7 @@ export default function DashboardPage() {
     const userSavedProfs = mockDb.professors.filter(p => savedIds.includes(p.id));
     setSavedProfessors(userSavedProfs);
 
-    // 2. Sent Emails Count & List
+    // 2. Sent Emails Count & List (with Cross-Device Cloud Sync)
     const sentKey = `profmatch_sent_emails_${user.id}`;
     let localSent: any[] = [];
     try {
@@ -107,10 +107,55 @@ export default function DashboardPage() {
     const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
     const combinedEmailsMap = new Map();
     [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
-    const userEmails = Array.from(combinedEmailsMap.values());
+    let userEmails = Array.from(combinedEmailsMap.values());
 
-    setSentCount(userEmails.length);
+    // Initial local render
+    const initialSentCount = Math.max(userEmails.length, user.usage?.emails_sent_count || 0);
+    setSentCount(initialSentCount);
     setSentEmailsList(userEmails);
+
+    // Cross-Device Server Sync (Synchronizes Laptop & Mobile)
+    fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((syncRes) => {
+        if (syncRes?.success && syncRes.data) {
+          const serverEmails = syncRes.data.sentEmails || [];
+          const serverAvatar = syncRes.data.avatarUrl;
+
+          // Merge server & local emails
+          const mergedMap = new Map();
+          [...userEmails, ...serverEmails].forEach((e) => {
+            const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
+            mergedMap.set(key, e);
+          });
+          const allMerged = Array.from(mergedMap.values());
+          const trueSentCount = Math.max(allMerged.length, syncRes.data.sentCount || 0, user.usage?.emails_sent_count || 0);
+
+          setSentCount(trueSentCount);
+          setSentEmailsList(allMerged);
+          try {
+            localStorage.setItem(sentKey, JSON.stringify(allMerged));
+          } catch {}
+
+          // If local has emails not on server (e.g. sent from laptop before sync), push to server
+          if (localSent.length > 0 && allMerged.length > serverEmails.length) {
+            fetch('/api/user/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId: user.id, sentEmails: allMerged }),
+            }).catch(() => {});
+          }
+
+          // Sync Avatar if available on server
+          if (serverAvatar) {
+            setAvatarUrl(serverAvatar);
+            try {
+              localStorage.setItem(`profmatch_user_avatar_${user.id}`, serverAvatar);
+            } catch {}
+          }
+        }
+      })
+      .catch(() => {});
 
     // 3. Real-Time Replies & Messages
     const replyKey = `profmatch_replies_${user.id}`;
@@ -167,6 +212,15 @@ export default function DashboardPage() {
     try {
       const dataUrl = await compressAndSaveAvatar(file, user?.id || 'guest');
       setAvatarUrl(dataUrl);
+
+      // Persist avatar to server for cross-device sync
+      if (user?.id) {
+        fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, avatarUrl: dataUrl }),
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error('Failed to upload avatar:', err);
       alert('Failed to process image. Please try another image file.');
@@ -239,18 +293,22 @@ export default function DashboardPage() {
                 <div className="flex items-center gap-3.5">
                   {/* Interactive Profile Photo Upload */}
                   <div className="relative group shrink-0">
-                    <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 border-emerald-500/40 bg-slate-950 flex items-center justify-center shadow-lg relative">
+                    <div
+                      onClick={() => avatarFileInputRef.current?.click()}
+                      className="w-16 h-16 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-emerald-500/50 hover:border-emerald-400 bg-slate-950 flex items-center justify-center shadow-lg relative cursor-pointer transition-all hover:scale-105"
+                      title="Upload or change profile photo"
+                    >
                       {avatarUrl ? (
                         <Image
                           src={avatarUrl}
                           alt={displayName}
-                          width={56}
-                          height={56}
+                          width={64}
+                          height={64}
                           unoptimized
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-extrabold text-xl">
+                        <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-extrabold text-2xl select-none">
                           {displayName.charAt(0).toUpperCase() || 'K'}
                         </div>
                       )}
@@ -267,7 +325,7 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => avatarFileInputRef.current?.click()}
                       title="Upload or change profile picture (PC or mobile)"
-                      className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer"
+                      className="absolute inset-0 rounded-full bg-black/60 opacity-0 group-hover:opacity-100 flex flex-col items-center justify-center text-white transition-opacity cursor-pointer pointer-events-none"
                     >
                       <Camera className="w-4 h-4 text-emerald-400" />
                       <span className="text-[8px] font-bold text-slate-200 mt-0.5">Upload</span>
@@ -278,9 +336,9 @@ export default function DashboardPage() {
                       type="button"
                       onClick={() => avatarFileInputRef.current?.click()}
                       title="Upload profile picture"
-                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer"
+                      className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 flex items-center justify-center shadow-md transition-transform hover:scale-110 cursor-pointer border-2 border-slate-900"
                     >
-                      <Camera className="w-2.5 h-2.5" />
+                      <Camera className="w-3 h-3 text-slate-950" />
                     </button>
 
                     <input
@@ -303,8 +361,9 @@ export default function DashboardPage() {
                       <button
                         type="button"
                         onClick={() => avatarFileInputRef.current?.click()}
-                        className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1"
+                        className="text-[11px] font-semibold text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
                       >
+                        <Camera className="w-3 h-3" />
                         {avatarUrl ? 'Change Photo' : '+ Add Photo'}
                       </button>
                       {avatarUrl && (

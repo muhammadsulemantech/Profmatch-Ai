@@ -629,3 +629,157 @@ export function syncIncrementUsage(
   return syncGetUsageRecord(userId);
 }
 
+// --- CROSS-DEVICE USER ACTIVITY SYNC ---
+
+export interface UserSyncedActivity {
+  sentEmails: any[];
+  savedProfessors: any[];
+  kanbanCards: any[];
+  replies: any[];
+  avatarUrl?: string | null;
+  sentCount: number;
+}
+
+export async function getUserSyncedData(userId: string): Promise<UserSyncedActivity> {
+  mockDb.loadFromDisk();
+
+  if (!mockDb.userActivities) {
+    mockDb.userActivities = {};
+  }
+
+  const userAct = mockDb.userActivities[userId] || {
+    sentEmails: [],
+    savedProfessors: [],
+    kanbanCards: [],
+    replies: [],
+    avatarUrl: null,
+  };
+
+  const dbEmails = (mockDb.emails || []).filter((e) => e.user_id === userId);
+
+  const emailMap = new Map();
+  [...(userAct.sentEmails || []), ...dbEmails].forEach((e) => {
+    const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
+    emailMap.set(key, e);
+  });
+  const allSentEmails = Array.from(emailMap.values());
+
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const usage = mockDb.usageRecords.find((u) => u.user_id === userId && u.month_year === currentMonth);
+  const sentCount = Math.max(allSentEmails.length, usage?.emails_sent_count || 0);
+
+  const profile = mockDb.profiles.find((p) => p.id === userId);
+  const avatarUrl = userAct.avatarUrl || profile?.avatar_url || null;
+
+  return {
+    sentEmails: allSentEmails,
+    savedProfessors: userAct.savedProfessors || [],
+    kanbanCards: userAct.kanbanCards || [],
+    replies: userAct.replies || [],
+    avatarUrl,
+    sentCount,
+  };
+}
+
+export async function saveUserSyncedData(
+  userId: string,
+  payload: {
+    newSentEmail?: any;
+    sentEmails?: any[];
+    savedProfessors?: any[];
+    kanbanCards?: any[];
+    replies?: any[];
+    avatarUrl?: string;
+  }
+): Promise<UserSyncedActivity> {
+  mockDb.loadFromDisk();
+
+  if (!mockDb.userActivities) {
+    mockDb.userActivities = {};
+  }
+
+  const existing = mockDb.userActivities[userId] || {
+    sentEmails: [],
+    savedProfessors: [],
+    kanbanCards: [],
+    replies: [],
+    avatarUrl: null,
+  };
+
+  const emailMap = new Map();
+  (existing.sentEmails || []).forEach((e: any) => {
+    const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
+    emailMap.set(key, e);
+  });
+
+  if (payload.newSentEmail) {
+    const key =
+      payload.newSentEmail.id ||
+      `${payload.newSentEmail.recipientEmail || payload.newSentEmail.to_email}_${payload.newSentEmail.subject}`;
+    emailMap.set(key, payload.newSentEmail);
+  }
+
+  if (Array.isArray(payload.sentEmails)) {
+    payload.sentEmails.forEach((e: any) => {
+      const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
+      emailMap.set(key, e);
+    });
+  }
+
+  existing.sentEmails = Array.from(emailMap.values());
+
+  if (Array.isArray(payload.savedProfessors)) {
+    existing.savedProfessors = payload.savedProfessors;
+  }
+
+  if (Array.isArray(payload.kanbanCards)) {
+    existing.kanbanCards = payload.kanbanCards;
+  }
+
+  if (Array.isArray(payload.replies)) {
+    existing.replies = payload.replies;
+  }
+
+  if (payload.avatarUrl) {
+    existing.avatarUrl = payload.avatarUrl;
+    const profile = mockDb.profiles.find((p) => p.id === userId);
+    if (profile) {
+      profile.avatar_url = payload.avatarUrl;
+      profile.updated_at = new Date().toISOString();
+    }
+  }
+
+  mockDb.userActivities[userId] = existing;
+
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const usageIdx = mockDb.usageRecords.findIndex((u) => u.user_id === userId && u.month_year === currentMonth);
+  if (usageIdx >= 0) {
+    mockDb.usageRecords[usageIdx].emails_sent_count = Math.max(
+      mockDb.usageRecords[usageIdx].emails_sent_count,
+      existing.sentEmails.length
+    );
+  } else {
+    mockDb.usageRecords.push({
+      id: `usage_${Date.now()}`,
+      user_id: userId,
+      month_year: currentMonth,
+      searches_count: 0,
+      ai_generations_count: 0,
+      emails_sent_count: existing.sentEmails.length,
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  mockDb.persist();
+
+  return {
+    sentEmails: existing.sentEmails,
+    savedProfessors: existing.savedProfessors,
+    kanbanCards: existing.kanbanCards,
+    replies: existing.replies,
+    avatarUrl: existing.avatarUrl,
+    sentCount: Math.max(existing.sentEmails.length, mockDb.usageRecords[usageIdx]?.emails_sent_count || existing.sentEmails.length),
+  };
+}
+
+

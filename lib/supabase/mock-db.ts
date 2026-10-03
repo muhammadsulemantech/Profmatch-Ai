@@ -94,6 +94,8 @@ class MockDatabase {
           if (parsed.professors) this.professors = parsed.professors;
           if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = parsed.connectedEmailAccounts;
           if (parsed.usageRecords) this.usageRecords = parsed.usageRecords;
+          if (parsed.emails) this.emails = parsed.emails;
+          if (parsed.userActivities) this.userActivities = parsed.userActivities;
         }
       } else {
         this.saveToDisk();
@@ -125,6 +127,8 @@ class MockDatabase {
         professors: this.professors,
         connectedEmailAccounts: this.connectedEmailAccounts,
         usageRecords: this.usageRecords,
+        emails: this.emails,
+        userActivities: this.userActivities,
       };
       const dir = path.dirname(dbPath);
       if (!fs.existsSync(dir)) {
@@ -242,6 +246,7 @@ class MockDatabase {
   }
 
   public connectedEmailAccounts: ConnectedEmailAccount[] = [];
+  public userActivities: Record<string, any> = {};
 
   public profiles: UserProfile[] = [
     {
