@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-09-29 (Pre-Launch Audit, SEO & Live Provider Verification)
+> **Last Updated:** 2026-10-03 (Mobile Layout, AutoPilot CV Attachment, Admin Login Gate, Cross-Device Sync)
 
 ---
 
@@ -67,6 +67,26 @@
   - **Resend API:** Verified API key authorization and domain configuration readiness.
   - **Google OAuth & Consent Screen:** Separated `GOOGLE_GMAIL_REDIRECT_URI` (`/api/auth/google/gmail/callback`) from Google Login to eliminate callback collisions. Confirmed Google Cloud Console OAuth consent screen status promoted to "In Production".
 - **Audit Documentation:** Recorded comprehensive 14-category findings in `WEBSITE_AUDIT.md`.
+
+### 📱 Tier 4: Mobile UX Overhaul, AutoPilot CV Attachment, Admin Login Gate, & Cross-Device Activity Sync (COMPLETED 2026-10-03)
+- **Mobile Navbar & Responsive Drawer:**
+  - `app/layout.tsx`: Fixed logo container with `shrink-0` and `whitespace-nowrap` on branding text to prevent multi-line wrapping and broken layouts on small viewport displays.
+  - `components/navigation/navbar-auth-controls.tsx`: Made CTA buttons compact and hid "Sign In" on mobile widths `< sm` (relocated neatly inside the mobile drawer) to prevent navbar crowding.
+  - `components/navigation/mobile-nav.tsx`: Solved CSS containing-block stacking context issue (caused by sticky header `backdrop-blur`) by mounting mobile drawer via `createPortal(..., document.body)`. The menu now slides smoothly downwards below the 64px header, presenting all navigation links, auth actions, and admin portal without clipping.
+- **AutoPilot Document & CV Attachment:**
+  - `components/autopilot/campaign-config-panel.tsx`: Added interactive document upload zone for candidate CV, Research Proposal, or Portfolio (supporting PDF, DOC, DOCX, TXT up to 15MB) with drag-and-drop, real-time file size preview, and removal.
+  - `components/autopilot/prepared-drafts-list.tsx`: Integrated visual attachment badges (`paperclip` icon with file name) on prepared outreach drafts.
+  - `app/autopilot/page.tsx`: Wired `attachedDocument` state with `localStorage` persistence and campaign execution payload.
+- **Mobile Dashboard Profile Picture Optimization:**
+  - `app/dashboard/page.tsx`: Fixed mobile avatar sizing by replacing invalid Tailwind class `w-13 h-13` with full `w-16 h-16` (64px) dimensions, crisp ring styling, and positioned tap-to-upload camera badge for mobile touch screens.
+- **Strict Admin Access Gate:**
+  - `app/admin/page.tsx`: Implemented strict client-side role verification gate (`user.role === 'ADMIN'`). Unauthenticated users or users with student/standard accounts are redirected to `/admin/login` without exposing admin tabs or administrative metrics.
+  - `app/layout.tsx`: Updated footer direct admin link to point to `/admin/login`.
+- **Cross-Device Activity & Outreach Synchronization:**
+  - `app/api/user/sync/route.ts`: Built dedicated GET/POST synchronization endpoint for cross-device activity tracking (sent emails, custom avatar URLs, outreach events).
+  - `lib/services/db-service.ts`: Implemented `getUserSyncedData` and `saveUserSyncedData` with fallback to `mockDb` and filesystem disk persistence (`persistent_store.json`).
+  - `app/dashboard/page.tsx`: Integrated real-time sync on mount to ensure metrics (such as sent emails count) stay consistent across laptop, mobile, and any other logged-in device.
+  - `app/outreach/generate/page.tsx` & `lib/utils/avatar.ts`: Dispatched background sync updates upon email transmission and avatar updates.
 
 ---
 

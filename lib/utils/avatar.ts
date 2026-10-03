@@ -51,6 +51,15 @@ export async function compressAndSaveAvatar(file: File, userId: string = 'guest'
             } catch {}
 
             window.dispatchEvent(new CustomEvent('profmatch_avatar_updated', { detail: dataUrl }));
+
+            // Sync to server so avatar is instantly available on mobile and laptop
+            if (userId && userId !== 'guest') {
+              fetch('/api/user/sync', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId, avatarUrl: dataUrl }),
+              }).catch(() => {});
+            }
           }
         } catch (err) {
           console.error('Failed to save avatar to localStorage:', err);

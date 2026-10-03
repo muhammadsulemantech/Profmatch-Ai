@@ -85,18 +85,18 @@ export default async function RootLayout({
           )}
 
           {/* Global Navigation Bar */}
-          <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#080B11]/85 backdrop-blur-md">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+          <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#080B11]/95 backdrop-blur-md">
+            <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
               {/* Logo */}
-              <Link href="/" aria-label={`${settings.siteName} Home`} className="flex items-center gap-3 group">
-                <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-emerald-500/20 transition-transform group-hover:scale-105">
-                  <GraduationCap className="w-5 h-5 text-slate-950" />
+              <Link href="/" aria-label={`${settings.siteName} Home`} className="flex items-center gap-2.5 sm:gap-3 group shrink-0 min-w-0">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-slate-950 font-bold shadow-md shadow-emerald-500/20 transition-transform group-hover:scale-105 shrink-0">
+                  <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-slate-950" />
                 </div>
-                <div className="flex flex-col">
-                  <span className="font-heading font-bold text-lg tracking-tight text-white leading-none">
+                <div className="flex flex-col min-w-0 shrink-0 justify-center">
+                  <span className="font-heading font-bold text-base sm:text-lg tracking-tight text-white leading-tight whitespace-nowrap">
                     {settings.siteName}
                   </span>
-                  <span className="text-[10px] text-emerald-400 font-medium tracking-wider uppercase mt-0.5">
+                  <span className="text-[9px] sm:text-[10px] text-emerald-400 font-semibold tracking-wider uppercase mt-0.5 whitespace-nowrap leading-tight">
                     Academic Research Platform
                   </span>
                 </div>
@@ -132,7 +132,7 @@ export default async function RootLayout({
               </nav>
 
               {/* Auth Controls & Mobile Nav Drawer */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 shrink-0">
                 <NavbarAuthControls />
                 <MobileNav siteName={settings.siteName} />
               </div>
@@ -183,7 +183,7 @@ export default async function RootLayout({
                   <li><Link href="/privacy" className="hover:text-emerald-400 transition-colors">Privacy Policy</Link></li>
                   <li><Link href="/terms" className="hover:text-emerald-400 transition-colors">Terms of Service</Link></li>
                   <li><Link href="/faq" className="hover:text-emerald-400 transition-colors">Verification FAQs</Link></li>
-                  <li><Link href="/admin" className="text-amber-400 hover:underline transition-colors">Admin Console</Link></li>
+                  <li><Link href="/admin/login" className="text-amber-400 hover:underline transition-colors">Admin Console</Link></li>
                 </ul>
               </div>
 

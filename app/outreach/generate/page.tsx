@@ -136,6 +136,13 @@ export default function OutreachGeneratePage() {
         } catch {}
         localStorage.setItem(key, JSON.stringify([sentRecord, ...existing]));
 
+        // Sync to server so all devices (mobile, laptop) see the sent email
+        fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, newSentEmail: sentRecord }),
+        }).catch(() => {});
+
         // Also add to Kanban Tracker as OUTREACH_SENT
         const kanbanKey = `profmatch_kanban_cards_${userId}`;
         try {

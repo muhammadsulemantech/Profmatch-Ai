@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-09-29 (Pre-Launch Audit, SEO, UX, & Live Provider Verification)
+Last Updated: 2026-10-03 (Mobile Layout, AutoPilot CV Upload, Admin Login Gate, Cross-Device Sync)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -71,6 +71,26 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Google OAuth: Separated GOOGLE_GMAIL_REDIRECT_URI to prevent callback collision. OAuth consent screen set to "In Production".
 • Full Audit Record:
   - Recorded detailed 14-category review in WEBSITE_AUDIT.md.
+
+[TIER 4] Mobile UI & Navigation Overhaul, AutoPilot Document Upload, Admin Security Gate, & Cross-Device Data Sync (COMPLETED 2026-10-03)
+• Mobile Navbar & Responsive Drawer:
+  - app/layout.tsx: Logo container stabilized with shrink-0 and whitespace-nowrap to prevent wrapping onto 2-3 lines on narrow mobile viewports.
+  - components/navigation/navbar-auth-controls.tsx: Compact CTAs, tucked "Sign In" into mobile drawer for screens < sm.
+  - components/navigation/mobile-nav.tsx: Resolved backdrop-blur containing-block clipping issue using createPortal(..., document.body). Drawer smoothly opens downwards below 64px header, presenting all navigation links, auth actions, and admin portal.
+• AutoPilot Document & CV Upload:
+  - components/autopilot/campaign-config-panel.tsx: Added drag-and-drop file upload zone for CV, Research Proposal, or Portfolio (PDF/DOC/DOCX/TXT up to 15MB) with file size preview and removal.
+  - components/autopilot/prepared-drafts-list.tsx: Added attachment badges with paperclip icon for prepared outreach drafts.
+  - app/autopilot/page.tsx: Wired attachedDocument state with localStorage and campaign execution payload.
+• Mobile Dashboard Profile Picture:
+  - app/dashboard/page.tsx: Replaced broken w-13 h-13 with w-16 h-16 (64px) avatar, crisp ring styling, and tap-to-upload camera badge for mobile touch displays.
+• Strict Admin Access Gate:
+  - app/admin/page.tsx: Enforced client-side role check (user.role === 'ADMIN'). Non-admins and unauthenticated users are redirected to /admin/login without viewing admin dashboard metrics.
+  - app/layout.tsx: Direct footer link updated to /admin/login.
+• Cross-Device Activity Synchronization:
+  - app/api/user/sync/route.ts: New GET/POST route for cross-device activity and metric synchronization.
+  - lib/services/db-service.ts & lib/supabase/mock-db.ts: Added getUserSyncedData and saveUserSyncedData with disk persistence in persistent_store.json.
+  - app/dashboard/page.tsx: On-mount synchronization keeps sent email counts and profile details identical between laptop and mobile devices.
+  - app/outreach/generate/page.tsx & lib/utils/avatar.ts: Real-time background sync triggered upon email dispatch and avatar upload.
 
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION

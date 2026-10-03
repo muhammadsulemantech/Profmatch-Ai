@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { FileText, ExternalLink } from 'lucide-react';
+import { FileText, ExternalLink, Paperclip } from 'lucide-react';
 
 export interface ContactedProfRecord {
   id: string;
@@ -14,6 +14,7 @@ export interface ContactedProfRecord {
   sentAt: string;
   sentVia: string;
   draftUrl?: string;
+  attachmentName?: string;
 }
 
 interface PreparedDraftsListProps {
@@ -60,11 +61,16 @@ export function PreparedDraftsList({ contactedHistory }: PreparedDraftsListProps
               className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-3"
             >
               <div className="min-w-0 space-y-0.5">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-bold text-white truncate">{item.name}</span>
                   <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 bg-cyan-500/15 text-cyan-400 border-cyan-500/30">
                     <FileText className="w-2.5 h-2.5" /> Draft in {item.sentVia}
                   </span>
+                  {item.attachmentName && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 bg-purple-500/15 text-purple-300 border-purple-500/30 truncate max-w-[150px]">
+                      <Paperclip className="w-2.5 h-2.5 shrink-0" /> {item.attachmentName}
+                    </span>
+                  )}
                 </div>
                 <p className="text-[11px] text-slate-400 truncate">
                   {item.university} &bull; {item.email}

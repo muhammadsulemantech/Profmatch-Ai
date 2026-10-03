@@ -35,6 +35,33 @@ import { AuditTab } from '@/components/admin/audit-tab';
 
 export default function AdminDashboardPage() {
   const router = useRouter();
+  const [isAdminAuthorized, setIsAdminAuthorized] = useState(false);
+  const [isVerifyingAdmin, setIsVerifyingAdmin] = useState(true);
+
+  // Strict Admin Authentication & Role Verification Gate
+  useEffect(() => {
+    async function verifyAdminAuth() {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (!res.ok) {
+          router.replace('/admin/login?redirectTo=/admin');
+          return;
+        }
+        const data = await res.json();
+        if (!data.authenticated || data.user?.role !== 'ADMIN') {
+          router.replace('/admin/login?redirectTo=/admin');
+          return;
+        }
+        setIsAdminAuthorized(true);
+      } catch {
+        router.replace('/admin/login?redirectTo=/admin');
+      } finally {
+        setIsVerifyingAdmin(false);
+      }
+    }
+    verifyAdminAuth();
+  }, [router]);
+
   const [activeTab, setActiveTab] = useState<
     'settings' | 'globalData' | 'paymentMethods' | 'orders' | 'content' | 'pricing' | 'flags' | 'users' | 'audit'
   >('settings');
@@ -574,6 +601,22 @@ export default function AdminDashboardPage() {
       return true;
     });
   }, [professors, selectedCountryFilter, adminSearchQuery]);
+
+  if (isVerifyingAdmin || !isAdminAuthorized) {
+    return (
+      <div className="min-h-screen bg-[#080B11] flex items-center justify-center p-4">
+        <div className="text-center space-y-4 max-w-sm">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400">
+            <Lock className="w-6 h-6 animate-pulse" />
+          </div>
+          <h2 className="text-base font-bold text-white">Verifying Administrator Access...</h2>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Strict security policy: only verified platform administrators with staff credentials can access this console.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-8">
