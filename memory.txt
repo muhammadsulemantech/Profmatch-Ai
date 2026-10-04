@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-10-03 (Mobile Layout, AutoPilot CV Upload, Admin Login Gate, Cross-Device Sync)
+Last Updated: 2026-10-04 (AutoPilot CV Decoupling from Account Default, Clean Upload Zone, Mobile & Sync Updates)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -78,9 +78,9 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - components/navigation/navbar-auth-controls.tsx: Compact CTAs, tucked "Sign In" into mobile drawer for screens < sm.
   - components/navigation/mobile-nav.tsx: Resolved backdrop-blur containing-block clipping issue using createPortal(..., document.body). Drawer smoothly opens downwards below 64px header, presenting all navigation links, auth actions, and admin portal.
 • AutoPilot Document & CV Upload:
-  - components/autopilot/campaign-config-panel.tsx: Added drag-and-drop file upload zone for CV, Research Proposal, or Portfolio (PDF/DOC/DOCX/TXT up to 15MB) with file size preview and removal.
+  - components/autopilot/campaign-config-panel.tsx: Added drag-and-drop file upload zone for CV, Research Proposal, or Portfolio (PDF/DOC/DOCX/TXT up to 15MB) with file size preview and removal. Shows clean upload zone by default without pre-attaching account CV; added optional "Attach from Account" button.
   - components/autopilot/prepared-drafts-list.tsx: Added attachment badges with paperclip icon for prepared outreach drafts.
-  - app/autopilot/page.tsx: Wired attachedDocument state with localStorage and campaign execution payload.
+  - app/autopilot/page.tsx: Decoupled default state so account CV is never pre-attached automatically.
 • Mobile Dashboard Profile Picture:
   - app/dashboard/page.tsx: Replaced broken w-13 h-13 with w-16 h-16 (64px) avatar, crisp ring styling, and tap-to-upload camera badge for mobile touch displays.
 • Strict Admin Access Gate:

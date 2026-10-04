@@ -54,6 +54,11 @@ interface CampaignConfigPanelProps {
     type: string;
     uploadedAt: string;
   } | null;
+  profileCv?: {
+    name: string;
+    size: number;
+  } | null;
+  onAttachProfileCv?: () => void;
   onDocumentUpload: (file: File) => void;
   onRemoveDocument: () => void;
   hasAuthorized: boolean;
@@ -83,6 +88,8 @@ export function CampaignConfigPanel({
   tone,
   setTone,
   attachedDocument,
+  profileCv,
+  onAttachProfileCv,
   onDocumentUpload,
   onRemoveDocument,
   hasAuthorized,
@@ -282,40 +289,59 @@ export function CampaignConfigPanel({
                 </div>
               </div>
             ) : (
-              <label
-                htmlFor="autopilot-cv-upload-input"
-                onDragOver={(e) => {
-                  e.preventDefault();
-                  if (!isRunning) setIsDragging(true);
-                }}
-                onDragLeave={() => setIsDragging(false)}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  setIsDragging(false);
-                  if (isRunning) return;
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) onDocumentUpload(file);
-                }}
-                className={`border-2 border-dashed rounded-xl p-4 text-center transition-all flex flex-col items-center justify-center gap-1.5 ${
-                  isRunning
-                    ? 'border-slate-800 bg-slate-950/30 opacity-50 cursor-not-allowed'
-                    : isDragging
-                    ? 'border-emerald-400 bg-emerald-500/10 cursor-pointer'
-                    : 'border-slate-800 hover:border-emerald-500/50 bg-slate-950/50 hover:bg-slate-950/80 cursor-pointer'
-                }`}
-              >
-                <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
-                  <UploadCloud className="w-4 h-4" />
-                </div>
-                <div>
-                  <p className="text-xs font-semibold text-slate-200">
-                    Click to upload or drag &amp; drop your CV / Resume / Document
-                  </p>
-                  <p className="text-[10px] text-slate-500 mt-0.5">
-                    Supports PDF, DOC, DOCX, TXT up to 15MB &bull; Added as reviewable attachment in drafts
-                  </p>
-                </div>
-              </label>
+              <div className="space-y-2">
+                <label
+                  htmlFor="autopilot-cv-upload-input"
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    if (!isRunning) setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setIsDragging(false);
+                    if (isRunning) return;
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) onDocumentUpload(file);
+                  }}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center transition-all flex flex-col items-center justify-center gap-1.5 ${
+                    isRunning
+                      ? 'border-slate-800 bg-slate-950/30 opacity-50 cursor-not-allowed'
+                      : isDragging
+                      ? 'border-emerald-400 bg-emerald-500/10 cursor-pointer'
+                      : 'border-slate-800 hover:border-emerald-500/50 bg-slate-950/50 hover:bg-slate-950/80 cursor-pointer'
+                  }`}
+                >
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                    <UploadCloud className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-slate-200">
+                      Click to upload or drag &amp; drop your CV / Resume / Document
+                    </p>
+                    <p className="text-[10px] text-slate-500 mt-0.5">
+                      Supports PDF, DOC, DOCX, TXT up to 15MB &bull; Added as reviewable attachment in drafts
+                    </p>
+                  </div>
+                </label>
+
+                {profileCv && onAttachProfileCv && (
+                  <div className="flex items-center justify-between px-3 py-2 bg-slate-950/70 border border-slate-800/80 rounded-xl text-xs">
+                    <div className="flex items-center gap-2 text-slate-400 min-w-0">
+                      <FileText className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                      <span className="truncate">Saved Account CV: <strong className="text-slate-300 font-medium">{profileCv.name}</strong></span>
+                    </div>
+                    <button
+                      type="button"
+                      disabled={isRunning}
+                      onClick={onAttachProfileCv}
+                      className="text-emerald-400 hover:text-emerald-300 text-[11px] font-semibold hover:underline shrink-0 ml-2 disabled:opacity-50"
+                    >
+                      Attach from Account
+                    </button>
+                  </div>
+                )}
+              </div>
             )}
 
             <input

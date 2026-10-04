@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-03 (Mobile Layout, AutoPilot CV Attachment, Admin Login Gate, Cross-Device Sync)
+> **Last Updated:** 2026-10-04 (AutoPilot CV Decoupling from Account Default, Clean Upload Zone, Mobile & Sync Updates)
 
 ---
 
@@ -74,9 +74,9 @@
   - `components/navigation/navbar-auth-controls.tsx`: Made CTA buttons compact and hid "Sign In" on mobile widths `< sm` (relocated neatly inside the mobile drawer) to prevent navbar crowding.
   - `components/navigation/mobile-nav.tsx`: Solved CSS containing-block stacking context issue (caused by sticky header `backdrop-blur`) by mounting mobile drawer via `createPortal(..., document.body)`. The menu now slides smoothly downwards below the 64px header, presenting all navigation links, auth actions, and admin portal without clipping.
 - **AutoPilot Document & CV Attachment:**
-  - `components/autopilot/campaign-config-panel.tsx`: Added interactive document upload zone for candidate CV, Research Proposal, or Portfolio (supporting PDF, DOC, DOCX, TXT up to 15MB) with drag-and-drop, real-time file size preview, and removal.
+  - `components/autopilot/campaign-config-panel.tsx`: Added interactive document upload zone for candidate CV, Research Proposal, or Portfolio (supporting PDF, DOC, DOCX, TXT up to 15MB) with drag-and-drop, real-time file size preview, and removal. Shows clean upload dropzone by default without automatically pre-attaching account profile CV. Includes an optional one-click "Attach from Account" button if an account CV exists.
   - `components/autopilot/prepared-drafts-list.tsx`: Integrated visual attachment badges (`paperclip` icon with file name) on prepared outreach drafts.
-  - `app/autopilot/page.tsx`: Wired `attachedDocument` state with `localStorage` persistence and campaign execution payload.
+  - `app/autopilot/page.tsx`: Decoupled default state so account CV is never pre-attached automatically. Wired `attachedDocument` state with `localStorage` persistence and campaign execution payload.
 - **Mobile Dashboard Profile Picture Optimization:**
   - `app/dashboard/page.tsx`: Fixed mobile avatar sizing by replacing invalid Tailwind class `w-13 h-13` with full `w-16 h-16` (64px) dimensions, crisp ring styling, and positioned tap-to-upload camera badge for mobile touch screens.
 - **Strict Admin Access Gate:**
