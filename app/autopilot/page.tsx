@@ -41,6 +41,12 @@ export default function AutoPilotPage() {
     uploadedAt: string;
   } | null>(null);
 
+  // Profile CV reference (available for optional attachment, never attached by default)
+  const [profileCv, setProfileCv] = useState<{
+    name: string;
+    size: number;
+  } | null>(null);
+
   // Safeguard Consent State
   const [hasAuthorized, setHasAuthorized] = useState(false);
 
@@ -82,23 +88,26 @@ export default function AutoPilotPage() {
         if (parsed.desiredField) setDiscipline(parsed.desiredField);
       }
 
-      // Check for previously saved AutoPilot document or Profile CV
-      const savedAutopilotDoc = localStorage.getItem(`profmatch_autopilot_doc_${userId}`);
-      if (savedAutopilotDoc) {
-        setAttachedDocument(JSON.parse(savedAutopilotDoc));
-      } else {
-        const savedProfileCv = localStorage.getItem(`profmatch_user_cv_${userId}`);
-        if (savedProfileCv) {
+      // Retrieve profile CV for optional quick attachment (never attached by default)
+      const savedProfileCv = localStorage.getItem(`profmatch_user_cv_${userId}`);
+      if (savedProfileCv) {
+        try {
           const parsedCv = JSON.parse(savedProfileCv);
           if (parsedCv.file_name) {
-            setAttachedDocument({
+            setProfileCv({
               name: parsedCv.file_name,
               size: parsedCv.file_size || 154000,
-              type: 'application/pdf',
-              uploadedAt: parsedCv.uploaded_at || new Date().toISOString(),
             });
           }
-        }
+        } catch {}
+      }
+
+      // Check for previously saved AutoPilot document (only if explicitly uploaded in AutoPilot)
+      const savedAutopilotDoc = localStorage.getItem(`profmatch_autopilot_doc_${userId}`);
+      if (savedAutopilotDoc) {
+        try {
+          setAttachedDocument(JSON.parse(savedAutopilotDoc));
+        } catch {}
       }
     } catch {}
   }, [userId]);
@@ -115,6 +124,21 @@ export default function AutoPilotPage() {
       localStorage.setItem(`profmatch_autopilot_doc_${userId}`, JSON.stringify(docData));
     } catch {}
     appendLog('INFO', `📎 Attached document: "${file.name}" (${Math.round(file.size / 1024)} KB) for faculty review.`);
+  };
+
+  const handleAttachProfileCv = () => {
+    if (!profileCv) return;
+    const docData = {
+      name: profileCv.name,
+      size: profileCv.size,
+      type: 'application/pdf',
+      uploadedAt: new Date().toISOString(),
+    };
+    setAttachedDocument(docData);
+    try {
+      localStorage.setItem(`profmatch_autopilot_doc_${userId}`, JSON.stringify(docData));
+    } catch {}
+    appendLog('INFO', `📎 Attached account CV: "${profileCv.name}" (${Math.round(profileCv.size / 1024)} KB) for faculty review.`);
   };
 
   const handleRemoveDocument = () => {
@@ -471,6 +495,8 @@ export default function AutoPilotPage() {
               tone={tone}
               setTone={setTone}
               attachedDocument={attachedDocument}
+              profileCv={profileCv}
+              onAttachProfileCv={handleAttachProfileCv}
               onDocumentUpload={handleDocumentUpload}
               onRemoveDocument={handleRemoveDocument}
               hasAuthorized={hasAuthorized}
