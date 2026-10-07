@@ -1,7 +1,7 @@
-import { mockDb } from '@/lib/supabase/mock-db';
-import { createAdminClient } from '@/lib/supabase/admin';
-import { saveUserProfile, saveUserSubscription } from './db-service';
-import { ACADEMIC_PLANS } from './usage-service';
+import { mockDb } from '../supabase/mock-db.ts';
+import { createAdminClient } from '../supabase/admin.ts';
+import { getUserProfile, saveUserProfile, saveUserSubscription } from './db-service.ts';
+import { ACADEMIC_PLANS } from './usage-service.ts';
 import type {
   UserProfile,
   StudentProfile,
@@ -11,7 +11,8 @@ import type {
   StudentSkill,
   PlanTier,
   UserRole,
-} from '@/types/database';
+} from '../../types/database.ts';
+
 
 export interface EnrichedUser extends UserProfile {
   plan_tier: PlanTier;
@@ -39,22 +40,81 @@ export async function getEnrichedUsers(options: GetUsersOptions = {}): Promise<{
   totalPages: number;
 }> {
   const { page = 1, pageSize = 20, search = '', role, planTier } = options;
-  mockDb.loadFromDisk();
 
-  let enriched: EnrichedUser[] = mockDb.profiles.map((u) => {
-    const sub = mockDb.subscriptions
+  let dbProfiles: UserProfile[] = [];
+  let dbSubs: any[] = [];
+  let dbPayments: any[] = [];
+  let dbOrders: any[] = [];
+
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      let query = supabase.from('profiles').select('*').order('created_at', { ascending: false });
+
+      if (search) {
+        const term = `%${search.toLowerCase().trim()}%`;
+        query = query.or(`email.ilike.${term},full_name.ilike.${term}`);
+      }
+
+      if (role) {
+        query = query.eq('role', role);
+      }
+
+      const { data: pData, error: pErr } = await query;
+      if (!pErr && pData) {
+        dbProfiles = pData as UserProfile[];
+
+        const [subsRes, payRes, ordRes] = await Promise.all([
+          supabase.from('subscriptions').select('*'),
+          supabase.from('payments').select('*'),
+          supabase.from('orders').select('*'),
+        ]);
+
+        dbSubs = subsRes.data || [];
+        dbPayments = payRes.data || [];
+        dbOrders = ordRes.data || [];
+      }
+    } catch {
+      // fallback to mockDb
+    }
+  }
+
+  // Fallback to disk if Supabase profiles are empty
+  if (dbProfiles.length === 0) {
+    mockDb.loadFromDisk();
+    dbProfiles = [...mockDb.profiles];
+    dbSubs = [...mockDb.subscriptions];
+    dbPayments = [...mockDb.payments];
+    dbOrders = [...mockDb.orders];
+
+    if (search) {
+      const term = search.toLowerCase().trim();
+      dbProfiles = dbProfiles.filter(
+        (u) =>
+          u.email.toLowerCase().includes(term) ||
+          (u.full_name && u.full_name.toLowerCase().includes(term))
+      );
+    }
+
+    if (role) {
+      dbProfiles = dbProfiles.filter((u) => u.role === role);
+    }
+  }
+
+  let enriched: EnrichedUser[] = dbProfiles.map((u) => {
+    const sub = dbSubs
       .filter((s) => s.user_id === u.id)
       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
 
-    const hasActiveSub = sub && sub.status === 'active';
-    const currentPlan: PlanTier = hasActiveSub ? sub.plan_type : 'FREE';
+    const hasActiveSub = sub && (sub.status === 'active' || sub.status === 'trialing');
+    const currentPlan: PlanTier = hasActiveSub ? (sub.plan_type as PlanTier) : 'FREE';
     const isPaid = currentPlan !== 'FREE' && hasActiveSub;
 
-    const userPayments = mockDb.payments.filter(
-      (p) => p.user_id === u.id || p.user_email?.toLowerCase() === u.email.toLowerCase()
+    const userPayments = dbPayments.filter(
+      (p) => p.user_id === u.id || (p.user_email && p.user_email.toLowerCase() === u.email.toLowerCase())
     );
-    const userOrders = mockDb.orders.filter(
-      (o) => o.user_id === u.id || o.user_email?.toLowerCase() === u.email.toLowerCase()
+    const userOrders = dbOrders.filter(
+      (o) => o.user_id === u.id || (o.user_email && o.user_email.toLowerCase() === u.email.toLowerCase())
     );
 
     return {
@@ -68,19 +128,6 @@ export async function getEnrichedUsers(options: GetUsersOptions = {}): Promise<{
       last_order_date: userOrders[0]?.created_at || null,
     };
   });
-
-  if (search) {
-    const term = search.toLowerCase().trim();
-    enriched = enriched.filter(
-      (u) =>
-        u.email.toLowerCase().includes(term) ||
-        (u.full_name && u.full_name.toLowerCase().includes(term))
-    );
-  }
-
-  if (role) {
-    enriched = enriched.filter((u) => u.role === role);
-  }
 
   if (planTier) {
     enriched = enriched.filter((u) => u.plan_tier === planTier);
@@ -112,9 +159,8 @@ export interface UpdateUserParams {
 
 export async function updateUser(params: UpdateUserParams): Promise<UserProfile> {
   const { userId, role, isSuspended, suspensionReason, planTier } = params;
-  mockDb.loadFromDisk();
 
-  const profile = mockDb.profiles.find((p) => p.id === userId);
+  let profile = await getUserProfile(userId);
   if (!profile) {
     throw new Error('User not found.');
   }
@@ -126,12 +172,17 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
     }
   }
 
-  if (role) profile.role = role;
-  if (isSuspended !== undefined) {
-    profile.is_suspended = Boolean(isSuspended);
-    profile.suspension_reason = suspensionReason || null;
-  }
-  profile.updated_at = new Date().toISOString();
+  const updatedProfileData: Partial<UserProfile> & { id: string; email: string } = {
+    id: userId,
+    email: profile.email,
+    full_name: profile.full_name,
+    avatar_url: profile.avatar_url,
+    role: role || profile.role,
+    is_suspended: isSuspended !== undefined ? Boolean(isSuspended) : profile.is_suspended,
+    suspension_reason: suspensionReason !== undefined ? suspensionReason : profile.suspension_reason,
+  };
+
+  const saved = await saveUserProfile(updatedProfileData);
 
   if (planTier) {
     await saveUserSubscription({
@@ -142,20 +193,16 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
     });
   }
 
-  if (role || isSuspended !== undefined) {
-    await saveUserProfile({
-      id: userId,
-      email: profile.email,
-      full_name: profile.full_name,
-      role: profile.role,
-      is_suspended: profile.is_suspended,
-      suspension_reason: profile.suspension_reason,
-    });
+  mockDb.loadFromDisk();
+  const idx = mockDb.profiles.findIndex((p) => p.id === userId);
+  if (idx >= 0) {
+    mockDb.profiles[idx] = saved;
+    mockDb.persist();
   }
 
-  mockDb.persist();
-  return profile;
+  return saved;
 }
+
 
 export async function getStudentProfileByUserId(userId: string): Promise<{
   student: StudentProfile | null;

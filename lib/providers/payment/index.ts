@@ -1,5 +1,7 @@
-import { Order, Payment, PaymentMethod, PlanTier } from '@/types/database';
-import { createOrder, createPayment, getOrderByReference } from '@/lib/services/db-service';
+import type { Order, Payment, PaymentMethod, PlanTier } from '../../../types/database.ts';
+
+import { createOrder, createPayment, getOrderByReference } from '../../services/db-service.ts';
+
 
 export interface CreateCheckoutSessionParams {
   userId: string;

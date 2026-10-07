@@ -1,5 +1,6 @@
-import { mockDb } from '@/lib/supabase/mock-db';
-import { createAdminClient } from '@/lib/supabase/admin';
+import { mockDb } from '../supabase/mock-db.ts';
+import { createAdminClient } from '../supabase/admin.ts';
+
 
 export interface LogAuditEventParams {
   userId?: string;
