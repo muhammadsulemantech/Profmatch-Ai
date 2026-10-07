@@ -103,6 +103,10 @@
   - `app/api/inbox/analyze-reply/route.ts`: Fixed P0 auth bypass and token draining by requiring valid user session and per-user rate limiting (`checkRateLimit`).
   - `app/api/auth/google/route.ts`: Removed insecure unverified POST endpoint (returns 405 Method Not Allowed), strictly enforcing authentic OAuth 2.0 PKCE / Authorization Code grant flow.
   - `app/api/outreach/send-email/route.ts`: Added 15-second debounce window (`email_dedup:${userId}:${toEmail}`) to prevent accidental duplicate transmissions.
+- **Admin Packages & Pricing ⟷ Content CMS Synchronization:**
+  - Modularized `PricingPlansGrid` component from `components/admin/pricing-tab.tsx` and reused it identically in `components/admin/content-tab.tsx`.
+  - Unified all tier attributes (dual PKR/USD currencies, searches limit, drafts limit, autopilot cap, badges, taglines, highlighted status, and dynamic features lists) across both tabs.
+  - Aligned CMS content saving in `app/admin/page.tsx` (`handleSaveContent`) to trigger complete tier quota synchronization (`saveCustomPlans`), `/api/pricing` sync, and runtime event dispatching.
 - **Automated Verification & Zero-Warning Production Build:**
   - Created `tests/seo-technical-audit.test.mjs` verifying sitemap hygiene, robots directives, schema generators, and noindex headers.
   - Automated test suite passes 63/63 tests across 6 test suites with 0 failures (`npm run test`).

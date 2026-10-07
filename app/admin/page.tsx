@@ -486,14 +486,48 @@ export default function AdminDashboardPage() {
         }),
       });
 
+      try {
+        await fetch('/api/pricing', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plans: pricingPlans }),
+        });
+      } catch (e) {
+        console.warn('API pricing direct sync warning:', e);
+      }
+
       const pData = await pRes.json();
       if (pRes.ok && pData.section?.content?.plans) {
         setPricingPlans(pData.section.content.plans);
-        showNotice('success', 'Global editorial copy & pricing plans published live!');
-        fetchAdminData(true);
-      } else {
-        showNotice('error', pData.error || 'Failed to publish content updates.');
       }
+
+      const planMap: Record<string, any> = {};
+      pricingPlans.forEach(p => {
+        const tierKey = p.tier.toUpperCase();
+        planMap[tierKey] = {
+          tier: tierKey,
+          name: p.name,
+          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (p.price?.includes('3,500') ? 3500 : p.price?.includes('8,000') ? 8000 : p.price?.includes('16,000') ? 16000 : 0),
+          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (p.price?.includes('12') ? 12 : p.price?.includes('29') ? 29 : p.price?.includes('59') ? 59 : 0),
+          searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
+          draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
+          autopilotBatchLimit: p.autopilotLimit !== undefined ? Number(p.autopilotLimit) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500),
+          features: p.features,
+          tagline: p.description,
+          badge: p.badge,
+          highlighted: Boolean(p.highlighted),
+          ctaText: p.cta || p.ctaText || 'Get Started',
+        };
+      });
+      saveCustomPlans(planMap);
+
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: pricingPlans, planMap } }));
+        localStorage.setItem('profmatch_pricing_last_sync', String(Date.now()));
+      }
+
+      showNotice('success', 'Global editorial copy & pricing packages published live across all pages!');
+      fetchAdminData(true);
     } catch {
       showNotice('error', 'Error publishing content.');
     } finally {
