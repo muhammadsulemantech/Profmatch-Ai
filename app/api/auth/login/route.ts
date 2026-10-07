@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { saveUserProfile } from '@/lib/services/db-service';
+import { getUserProfile, saveUserProfile } from '@/lib/services/db-service';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -56,24 +56,40 @@ export async function POST(request: NextRequest) {
     }
 
     const user = data.user;
-    const isAdmin = isAdminEmail(user.email) || user.user_metadata?.role === 'ADMIN';
+    const existingProfile = await getUserProfile(user.id);
+
+    if (existingProfile?.is_suspended) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: existingProfile.suspension_reason || 'Your account has been suspended by an administrator.',
+        },
+        { status: 403 }
+      );
+    }
+
+    const isAdmin = isAdminEmail(user.email) || user.user_metadata?.role === 'ADMIN' || existingProfile?.role === 'ADMIN';
+    const effectiveRole = isAdmin ? 'ADMIN' : (existingProfile?.role || (user.user_metadata?.role as any) || 'USER');
 
     const sanitizedUser = {
       id: user.id,
       email: user.email || email,
-      full_name: user.user_metadata?.full_name || (isAdmin ? 'Administrator' : email.split('@')[0]),
-      avatar_url: user.user_metadata?.avatar_url || null,
-      role: isAdmin ? 'ADMIN' : ((user.user_metadata?.role as any) || 'USER'),
+      full_name: existingProfile?.full_name || user.user_metadata?.full_name || (isAdmin ? 'Administrator' : email.split('@')[0]),
+      avatar_url: existingProfile?.avatar_url || user.user_metadata?.avatar_url || null,
+      role: effectiveRole,
     };
 
-    // Keep persistent profile synced
+    // Keep persistent profile synced without losing existing role or suspension
     await saveUserProfile({
       id: sanitizedUser.id,
       email: sanitizedUser.email,
       full_name: sanitizedUser.full_name,
       avatar_url: sanitizedUser.avatar_url,
-      role: sanitizedUser.role as any,
+      role: effectiveRole as any,
+      is_suspended: existingProfile?.is_suspended ?? false,
+      suspension_reason: existingProfile?.suspension_reason ?? null,
     });
+
 
     // Log security audit event
     await logAuditEvent({

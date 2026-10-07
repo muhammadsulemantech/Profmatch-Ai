@@ -20,7 +20,6 @@ import {
   Sparkles,
   Check,
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
 import { Professor, University, DataQualityMetrics, PaymentMethod, Payment, Order } from '@/types/database';
 import { saveCustomPlans } from '@/lib/services/usage-service';
 import { SettingsTab, SiteSettings } from '@/components/admin/settings-tab';
@@ -93,9 +92,7 @@ export default function AdminDashboardPage() {
   });
 
   // Pricing plans state
-  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>(
-    mockDb.siteContent.pricing?.content?.plans || []
-  );
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
 
   // User management states
   const [users, setUsers] = useState<any[]>([]);
@@ -107,18 +104,31 @@ export default function AdminDashboardPage() {
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
 
   // Global Data Governance States
-  const [universities, setUniversities] = useState<University[]>(mockDb.universities);
-  const [professors, setProfessors] = useState<Professor[]>(mockDb.professors);
-  const [dataQuality, setDataQuality] = useState<DataQualityMetrics>(mockDb.dataQualityMetrics);
+  const [universities, setUniversities] = useState<University[]>([]);
+  const [professors, setProfessors] = useState<Professor[]>([]);
+  const [dataQuality, setDataQuality] = useState<DataQualityMetrics>({
+    totalUniversities: 0,
+    totalProfessors: 0,
+    verifiedProfessors: 0,
+    partiallyVerifiedProfessors: 0,
+    unverifiedProfessors: 0,
+    missingEmailsCount: 0,
+    staleRecordsCount: 0,
+    brokenSourcesCount: 0,
+    duplicateProfessorsCount: 0,
+    duplicateUniversitiesCount: 0,
+    failedSearchesCount: 0,
+  });
   const [selectedCountryFilter, setSelectedCountryFilter] = useState('All');
   const [adminSearchQuery, setAdminSearchQuery] = useState('');
 
   // Payment Methods & Orders States
-  const [adminPaymentMethods, setAdminPaymentMethods] = useState<PaymentMethod[]>(mockDb.paymentMethods);
-  const [adminPayments, setAdminPayments] = useState<Payment[]>(mockDb.payments);
-  const [adminOrders, setAdminOrders] = useState<Order[]>(mockDb.orders);
+  const [adminPaymentMethods, setAdminPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [adminPayments, setAdminPayments] = useState<Payment[]>([]);
+  const [adminOrders, setAdminOrders] = useState<Order[]>([]);
   const [selectedPaymentStatus, setSelectedPaymentStatus] = useState<string>('ALL');
   const [paymentSearch, setPaymentSearch] = useState('');
+
 
   // Payment Method Modal States
   const [editingMethod, setEditingMethod] = useState<PaymentMethod | null>(null);
@@ -190,21 +200,14 @@ export default function AdminDashboardPage() {
       }
 
       // Sync Global Data & Quality
-      setUniversities([...mockDb.universities]);
-      setProfessors([...mockDb.professors]);
-      setDataQuality({
-        totalUniversities: mockDb.universities.length,
-        totalProfessors: mockDb.professors.length,
-        verifiedProfessors: mockDb.professors.filter(p => p.verification_status === 'VERIFIED').length,
-        partiallyVerifiedProfessors: mockDb.professors.filter(p => p.verification_status === 'PARTIALLY_VERIFIED').length,
-        unverifiedProfessors: mockDb.professors.filter(p => p.verification_status === 'UNVERIFIED').length,
-        missingEmailsCount: mockDb.professors.filter(p => !p.email || p.email_verification_status === 'NOT_FOUND').length,
-        staleRecordsCount: mockDb.professors.filter(p => p.freshness_status === 'STALE').length,
-        brokenSourcesCount: 0,
-        duplicateProfessorsCount: 0,
-        duplicateUniversitiesCount: 0,
-        failedSearchesCount: 0,
-      });
+      const gRes = await fetch('/api/admin/global-data');
+      if (gRes.ok) {
+        const gData = await gRes.json();
+        if (gData.universities) setUniversities(gData.universities);
+        if (gData.professors) setProfessors(gData.professors);
+        if (gData.dataQuality) setDataQuality(gData.dataQuality);
+      }
+
 
       // Sync Payment Methods & Orders
       const pmRes = await fetch('/api/admin/payment-methods');

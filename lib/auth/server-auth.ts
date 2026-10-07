@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { getUserProfile } from '@/lib/services/db-service';
 import { UserProfile } from '@/types/database';
 
 export interface AuthSession {
@@ -56,7 +57,7 @@ export async function verifyAuthSession(request?: NextRequest): Promise<AuthSess
       if (error || !data.user) {
         return null;
       }
-      return mapSupabaseUserToSession(data.user, token);
+      return await mapSupabaseUserToSession(data.user, token);
     }
 
     // 2. Otherwise verify via Supabase session cookies managed by @supabase/ssr
@@ -65,36 +66,41 @@ export async function verifyAuthSession(request?: NextRequest): Promise<AuthSess
       return null;
     }
 
-    return mapSupabaseUserToSession(data.user, data.user.id);
+    return await mapSupabaseUserToSession(data.user, data.user.id);
   } catch (err) {
     return null;
   }
 }
 
 /**
- * Maps a verified Supabase Auth user into an internal AuthSession object.
+ * Maps a verified Supabase Auth user into an internal AuthSession object,
+ * enriching it with the latest persistent database profile so that
+ * administrative role updates and suspensions take immediate effect.
  */
-function mapSupabaseUserToSession(user: any, token: string): AuthSession {
+async function mapSupabaseUserToSession(user: any, token: string): Promise<AuthSession> {
   const email = (user.email || '').toLowerCase().trim();
-  const isAdmin = isAdminEmail(email) || user.user_metadata?.role === 'ADMIN';
+  const dbProfile = await getUserProfile(user.id);
+  const isAdmin = isAdminEmail(email) || user.user_metadata?.role === 'ADMIN' || dbProfile?.role === 'ADMIN';
 
   return {
     user: {
       id: user.id,
       email: user.email || '',
       full_name:
+        dbProfile?.full_name ||
         user.user_metadata?.full_name ||
         user.user_metadata?.name ||
         (isAdmin ? 'Administrator' : email.split('@')[0] || 'Researcher'),
-      avatar_url: user.user_metadata?.avatar_url || null,
-      role: isAdmin ? 'ADMIN' : ((user.user_metadata?.role as any) || 'USER'),
-      is_suspended: false,
-      created_at: user.created_at,
-      updated_at: new Date().toISOString(),
+      avatar_url: dbProfile?.avatar_url || user.user_metadata?.avatar_url || null,
+      role: isAdmin ? 'ADMIN' : (dbProfile?.role || (user.user_metadata?.role as any) || 'USER'),
+      is_suspended: dbProfile?.is_suspended ?? false,
+      created_at: dbProfile?.created_at || user.created_at,
+      updated_at: dbProfile?.updated_at || new Date().toISOString(),
     },
     token,
   };
 }
+
 
 /**
  * Server-side guard to verify administrative privileges strictly from verified session.

@@ -322,9 +322,51 @@ export async function incrementUsage(
 
 export async function createOrder(orderData: Partial<Order>): Promise<Order> {
   const now = new Date().toISOString();
-  const order: Order = {
+  const orderRef = orderData.order_reference || `PM-${Date.now().toString().slice(-6)}`;
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const supabasePayload: Record<string, any> = {
+    order_reference: orderRef,
+    user_id: orderData.user_id,
+    plan_tier: orderData.plan_tier || 'PRO',
+    plan_name: orderData.plan_name || 'Pro Academic Plan',
+    amount: orderData.amount || 0,
+    currency: orderData.currency || 'USD',
+    billing_interval: orderData.billing_interval || 'monthly',
+    status: orderData.status || 'PENDING',
+    payment_method_name: orderData.payment_method_name || 'Direct Transfer',
+  };
+
+  if (orderData.payment_method_id && uuidRegex.test(orderData.payment_method_id)) {
+    supabasePayload.payment_method_id = orderData.payment_method_id;
+  }
+  if (orderData.id && uuidRegex.test(orderData.id)) {
+    supabasePayload.id = orderData.id;
+  }
+
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('orders').insert(supabasePayload).select().single();
+      if (!error && data) {
+        const fullOrder: Order = {
+          ...data,
+          user_email: orderData.user_email || '',
+          user_name: orderData.user_name || '',
+        };
+        mockDb.loadFromDisk();
+        mockDb.orders.unshift(fullOrder);
+        mockDb.persist();
+        return fullOrder;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  const localOrder: Order = {
     id: orderData.id || `ord_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
-    order_reference: orderData.order_reference || `PM-${Date.now().toString().slice(-6)}`,
+    order_reference: orderRef,
     user_id: orderData.user_id || '',
     user_email: orderData.user_email || '',
     user_name: orderData.user_name || '',
@@ -340,25 +382,10 @@ export async function createOrder(orderData: Partial<Order>): Promise<Order> {
     updated_at: now,
   };
 
-  const supabase = createAdminClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('orders').insert(order).select().single();
-      if (!error && data) {
-        mockDb.loadFromDisk();
-        mockDb.orders.unshift(data as Order);
-        mockDb.persist();
-        return data as Order;
-      }
-    } catch (err) {
-      // Fallback
-    }
-  }
-
   mockDb.loadFromDisk();
-  mockDb.orders.unshift(order);
+  mockDb.orders.unshift(localOrder);
   mockDb.persist();
-  return order;
+  return localOrder;
 }
 
 export async function getOrderByReference(reference: string): Promise<Order | null> {
@@ -386,7 +413,54 @@ export async function getOrderByReference(reference: string): Promise<Order | nu
 
 export async function createPayment(paymentData: Partial<Payment>): Promise<Payment> {
   const now = new Date().toISOString();
-  const payment: Payment = {
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  const supabasePayload: Record<string, any> = {
+    order_reference: paymentData.order_reference || '',
+    transaction_id: paymentData.transaction_id || '',
+    payment_method_name: paymentData.payment_method_name || '',
+    amount: paymentData.amount || 0,
+    currency: paymentData.currency || 'USD',
+    status: paymentData.status || 'PENDING',
+  };
+
+  if (paymentData.order_id && uuidRegex.test(paymentData.order_id)) {
+    supabasePayload.order_id = paymentData.order_id;
+  }
+  if (paymentData.user_id && uuidRegex.test(paymentData.user_id)) {
+    supabasePayload.user_id = paymentData.user_id;
+  }
+  if (paymentData.payment_method_id && uuidRegex.test(paymentData.payment_method_id)) {
+    supabasePayload.payment_method_id = paymentData.payment_method_id;
+  }
+  if (paymentData.proof_file_name) supabasePayload.proof_file_name = paymentData.proof_file_name;
+  if (paymentData.proof_file_url) supabasePayload.proof_file_url = paymentData.proof_file_url;
+  if (paymentData.payment_note) supabasePayload.payment_note = paymentData.payment_note;
+  if (paymentData.id && uuidRegex.test(paymentData.id)) supabasePayload.id = paymentData.id;
+
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase.from('payments').insert(supabasePayload).select().single();
+      if (!error && data) {
+        const fullPayment: Payment = {
+          ...data,
+          user_email: paymentData.user_email || '',
+          user_name: paymentData.user_name || '',
+          plan_tier: paymentData.plan_tier || 'PRO',
+          plan_name: paymentData.plan_name || 'Academic Plan',
+        };
+        mockDb.loadFromDisk();
+        mockDb.payments.unshift(fullPayment);
+        mockDb.persist();
+        return fullPayment;
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  const localPayment: Payment = {
     id: paymentData.id || `pay_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     order_id: paymentData.order_id || '',
     order_reference: paymentData.order_reference || '',
@@ -411,25 +485,10 @@ export async function createPayment(paymentData: Partial<Payment>): Promise<Paym
     updated_at: now,
   };
 
-  const supabase = createAdminClient();
-  if (supabase) {
-    try {
-      const { data, error } = await supabase.from('payments').insert(payment).select().single();
-      if (!error && data) {
-        mockDb.loadFromDisk();
-        mockDb.payments.unshift(data as Payment);
-        mockDb.persist();
-        return data as Payment;
-      }
-    } catch (err) {
-      // Fallback
-    }
-  }
-
   mockDb.loadFromDisk();
-  mockDb.payments.unshift(payment);
+  mockDb.payments.unshift(localPayment);
   mockDb.persist();
-  return payment;
+  return localPayment;
 }
 
 export async function getPaymentsByUserId(userId: string): Promise<Payment[]> {

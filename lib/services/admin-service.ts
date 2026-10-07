@@ -1,8 +1,27 @@
-import { mockDb } from '@/lib/supabase/mock-db';
-import { logAuditEvent, LogAuditEventParams } from '@/lib/security/audit';
-import type { FeatureFlag, AuditLogItem } from '@/types/database';
+import { mockDb } from '../supabase/mock-db.ts';
+import { createAdminClient } from '../supabase/admin.ts';
+import { logAuditEvent } from '../security/audit.ts';
+import type { LogAuditEventParams } from '../security/audit.ts';
+
+import type { FeatureFlag, AuditLogItem } from '../../types/database.ts';
+
 
 export async function getFeatureFlags(): Promise<FeatureFlag[]> {
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('feature_flags')
+        .select('*')
+        .order('created_at', { ascending: true });
+      if (!error && data && data.length > 0) {
+        mockDb.featureFlags = data;
+        return data as FeatureFlag[];
+      }
+    } catch {
+      // fallback to mockDb
+    }
+  }
   mockDb.loadFromDisk();
   return mockDb.featureFlags;
 }
@@ -12,15 +31,33 @@ export async function updateFeatureFlag(
   isEnabled: boolean,
   adminUser?: { id: string; email: string }
 ): Promise<FeatureFlag> {
-  mockDb.loadFromDisk();
-  const flag = mockDb.featureFlags.find((f) => f.flag_key === flagKey);
-  if (!flag) {
-    throw new Error(`Feature flag "${flagKey}" not found.`);
+  const supabase = createAdminClient();
+  let updatedFlag: FeatureFlag | null = null;
+  const now = new Date().toISOString();
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('feature_flags')
+        .update({ is_enabled: isEnabled, updated_at: now })
+        .eq('flag_key', flagKey)
+        .select()
+        .single();
+      if (!error && data) {
+        updatedFlag = data as FeatureFlag;
+      }
+    } catch {
+      // fallback
+    }
   }
 
-  flag.is_enabled = isEnabled;
-  flag.updated_at = new Date().toISOString();
-  mockDb.persist();
+  mockDb.loadFromDisk();
+  const flag = mockDb.featureFlags.find((f) => f.flag_key === flagKey);
+  if (flag) {
+    flag.is_enabled = isEnabled;
+    flag.updated_at = now;
+    mockDb.persist();
+  }
 
   if (adminUser) {
     await logAuditEvent({
@@ -33,7 +70,9 @@ export async function updateFeatureFlag(
     });
   }
 
-  return flag;
+  if (updatedFlag) return updatedFlag;
+  if (flag) return flag;
+  throw new Error(`Feature flag "${flagKey}" not found.`);
 }
 
 export async function getAuditLogs(
@@ -46,13 +85,40 @@ export async function getAuditLogs(
   pageSize: number;
   totalPages: number;
 }> {
+  const validPage = Math.max(1, page);
+  const validSize = Math.max(1, Math.min(100, pageSize));
+  const start = (validPage - 1) * validSize;
+  const end = start + validSize - 1;
+
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      const { data, count, error } = await supabase
+        .from('audit_logs')
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false })
+        .range(start, end);
+
+      if (!error && data) {
+        const total = count ?? data.length;
+        const totalPages = Math.ceil(total / validSize) || 1;
+        return {
+          logs: data as AuditLogItem[],
+          total,
+          page: validPage,
+          pageSize: validSize,
+          totalPages,
+        };
+      }
+    } catch {
+      // fallback
+    }
+  }
+
   mockDb.loadFromDisk();
   const allLogs = mockDb.auditLogs;
   const total = allLogs.length;
-  const validPage = Math.max(1, page);
-  const validSize = Math.max(1, Math.min(100, pageSize));
   const totalPages = Math.ceil(total / validSize) || 1;
-  const start = (validPage - 1) * validSize;
   const paginated = allLogs.slice(start, start + validSize);
 
   return {
@@ -63,3 +129,4 @@ export async function getAuditLogs(
     totalPages,
   };
 }
+

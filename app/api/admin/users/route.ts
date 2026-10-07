@@ -132,3 +132,6 @@ export async function PUT(request: NextRequest) {
     return apiError(error.message || 'Failed to update user', status);
   }
 }
+
+export const PATCH = PUT;
+
