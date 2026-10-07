@@ -22,7 +22,7 @@ interface AuthContextType {
   authModalReason: string;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   signup: (fullName: string, email: string, password: string, targetDegree?: string) => Promise<{ success: boolean; error?: string; otpRequired?: boolean; expiresAt?: number }>;
-  loginWithGoogle: (googlePayload?: any) => Promise<{ success: boolean; error?: string }>;
+  loginWithGoogle: () => Promise<{ success: boolean; error?: string }>;
   logout: () => Promise<void>;
   setAuthenticatedUser: (user: AuthUser) => void;
   openAuthModal: (reason?: string, onAuthenticated?: () => void) => void;
@@ -141,24 +141,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const loginWithGoogle = async (googlePayload?: any) => {
+  const loginWithGoogle = async () => {
     try {
-      if (googlePayload && googlePayload.email) {
-        const res = await fetch('/api/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(googlePayload),
-        });
-        const data = await res.json();
-        if (!res.ok || !data.success) {
-          return { success: false, error: data.error || 'Google Login failed.' };
-        }
-        handleAuthSuccess(data.user);
-        return { success: true };
-      } else {
-        window.location.href = '/api/auth/google';
-        return { success: true };
-      }
+      window.location.href = '/api/auth/google';
+      return { success: true };
     } catch {
       return { success: false, error: 'Failed to initiate Google authentication.' };
     }

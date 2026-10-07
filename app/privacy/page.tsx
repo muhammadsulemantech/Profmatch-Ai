@@ -1,13 +1,41 @@
 import { ShieldCheck, Lock, EyeOff, Database } from 'lucide-react';
+import type { Metadata } from 'next';
+import { SITE_URL, getBreadcrumbJsonLd } from '@/lib/seo/site-config';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Privacy Policy — ProfMatch AI',
-  description: 'How ProfMatch AI protects student research data, uploaded CVs, and authentication records.',
+  description:
+    'How ProfMatch AI protects student research data, uploaded CVs, and authentication records.',
+  alternates: {
+    canonical: '/privacy',
+  },
+  openGraph: {
+    title: 'Privacy Policy — ProfMatch AI',
+    description:
+      'How ProfMatch AI protects student research data, uploaded CVs, and authentication records.',
+    url: `${SITE_URL}/privacy`,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Privacy Policy — ProfMatch AI',
+    description:
+      'How ProfMatch AI protects student research data, uploaded CVs, and authentication records.',
+  },
 };
+
+const breadcrumbSchema = getBreadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Privacy Policy', path: '/privacy' },
+]);
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-16 selection:bg-emerald-500/25 selection:text-emerald-300">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10 text-sm leading-relaxed">
         <div className="space-y-4 border-b border-slate-800 pb-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -54,4 +82,3 @@ export default function PrivacyPage() {
     </div>
   );
 }
-

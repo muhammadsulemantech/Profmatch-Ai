@@ -17,6 +17,14 @@ export async function middleware(request: NextRequest) {
     "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'none';"
   );
 
+  // 1b. Enforce HTTPS in production behind reverse proxies terminating TLS (HTTP -> HTTPS 301)
+  const proto = request.headers.get('x-forwarded-proto');
+  const host = request.headers.get('host') || '';
+  if (process.env.NODE_ENV === 'production' && proto === 'http') {
+    const httpsUrl = `https://${host}${pathname}${request.nextUrl.search}`;
+    return NextResponse.redirect(httpsUrl, 301);
+  }
+
   // Allow static assets, next internals, and public health checks
   if (
     pathname.startsWith('/_next') ||

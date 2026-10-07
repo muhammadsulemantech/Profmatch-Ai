@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test tests/tier2-observability-critical-paths.test.mjs tests/admin-plan-tiers.test.mjs tests/build-integrity.test.mjs tests/db-service.test.mjs tests/otp-security.test.mjs tests/schema-reconciliation.test.mjs tests/verified-pipeline.test.mjs tests/email-delivery-failure.test.mjs tests/auth-confirmation.test.mjs",
+    "test": "node --test tests/seo-technical-audit.test.mjs tests/tier2-observability-critical-paths.test.mjs tests/admin-plan-tiers.test.mjs tests/build-integrity.test.mjs tests/db-service.test.mjs tests/otp-security.test.mjs tests/schema-reconciliation.test.mjs tests/verified-pipeline.test.mjs tests/email-delivery-failure.test.mjs tests/auth-confirmation.test.mjs",
     "test:all": "node --test tests/*.test.mjs"
   },
   "dependencies": {

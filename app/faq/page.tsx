@@ -1,18 +1,51 @@
 import { getAllSiteContent } from '@/lib/cms/content-service';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { HelpCircle } from 'lucide-react';
+import type { Metadata } from 'next';
+import { SITE_URL, getFaqJsonLd, getBreadcrumbJsonLd } from '@/lib/seo/site-config';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Frequently Asked Questions — ProfMatch AI',
   description: 'Verification standards, faculty data sources, and email safety FAQs.',
+  alternates: {
+    canonical: '/faq',
+  },
+  openGraph: {
+    title: 'Frequently Asked Questions — ProfMatch AI',
+    description: 'Verification standards, faculty data sources, and email safety FAQs.',
+    url: `${SITE_URL}/faq`,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Frequently Asked Questions — ProfMatch AI',
+    description: 'Verification standards, faculty data sources, and email safety FAQs.',
+  },
 };
+
+const breadcrumbSchema = getBreadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'FAQ', path: '/faq' },
+]);
 
 export default async function FaqPage() {
   const content = await getAllSiteContent();
   const faq = content.faq || mockDb.siteContent.faq;
+  const faqItems = faq.content?.items || [];
+  const faqSchema = getFaqJsonLd(faqItems);
 
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-16 selection:bg-emerald-500/25 selection:text-emerald-300">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      {faqItems.length > 0 && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+        />
+      )}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="text-center max-w-2xl mx-auto space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
@@ -27,7 +60,7 @@ export default async function FaqPage() {
         </div>
 
         <div className="space-y-4 pt-4">
-          {faq.content.items?.map((item: any, idx: number) => (
+          {faqItems.map((item: any, idx: number) => (
             <div key={idx} className="glass-panel bg-slate-900/60 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-3">
               <h2 className="text-base font-bold text-white flex items-start gap-3">
                 <HelpCircle className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
@@ -43,4 +76,3 @@ export default async function FaqPage() {
     </div>
   );
 }
-

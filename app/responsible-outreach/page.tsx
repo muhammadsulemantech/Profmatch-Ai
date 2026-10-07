@@ -1,14 +1,42 @@
-import { ShieldCheck, Mail, CheckCircle2, AlertTriangle, FileCheck, Award, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Mail, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import type { Metadata } from 'next';
+import { SITE_URL, getBreadcrumbJsonLd } from '@/lib/seo/site-config';
 
-export const metadata = {
+export const metadata: Metadata = {
   title: 'Responsible Academic Outreach Policy — ProfMatch AI',
-  description: 'Ethical outreach guidelines, anti-spam standards, and compliance policies for prospective graduate and PhD students.',
+  description:
+    'Ethical outreach guidelines, anti-spam standards, and compliance policies for prospective graduate and PhD students.',
+  alternates: {
+    canonical: '/responsible-outreach',
+  },
+  openGraph: {
+    title: 'Responsible Academic Outreach Policy — ProfMatch AI',
+    description:
+      'Ethical outreach guidelines, anti-spam standards, and compliance policies for prospective graduate and PhD students.',
+    url: `${SITE_URL}/responsible-outreach`,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Responsible Academic Outreach Policy — ProfMatch AI',
+    description:
+      'Ethical outreach guidelines, anti-spam standards, and compliance policies for prospective graduate and PhD students.',
+  },
 };
+
+const breadcrumbSchema = getBreadcrumbJsonLd([
+  { name: 'Home', path: '/' },
+  { name: 'Responsible Outreach', path: '/responsible-outreach' },
+]);
 
 export default function ResponsibleOutreachPage() {
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
         <div className="space-y-4 border-b border-slate-800 pb-8">
           <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">

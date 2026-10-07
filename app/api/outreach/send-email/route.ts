@@ -1,7 +1,8 @@
-import { NextRequest } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendOutreachEmail } from '@/lib/services/outreach-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 const SendEmailSchema = z.object({
@@ -28,6 +29,19 @@ export async function POST(request: NextRequest) {
 
     const { toEmail, subject, bodyText, professorName, universityName } = parsed.data;
 
+    // 2. Duplicate dispatch guard: prevent accidental double-click / rapid retry blasting
+    const dedup = checkRateLimit(
+      `email_dedup:${session.user.id}:${toEmail.toLowerCase().trim()}`,
+      { limit: 1, windowMs: 15 * 1000 }
+    );
+    if (!dedup.success) {
+      return apiError(
+        'Duplicate send prevented. Please wait 15 seconds before emailing this professor again.',
+        429,
+        'DUPLICATE_SEND_PREVENTED'
+      );
+    }
+
     const result = await sendOutreachEmail({
       userId: session.user.id,
       senderName: session.user.full_name || undefined,
@@ -39,7 +53,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (!result.success) {
-      return apiError('Failed to dispatch email via delivery provider', 503); // status: 503
+      return NextResponse.json(
+        { success: false, error: 'Failed to dispatch email via delivery provider' },
+        { status: 503 }
+      );
     }
 
     return apiSuccess({

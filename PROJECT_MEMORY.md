@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-04 (AutoPilot CV Decoupling from Account Default, Clean Upload Zone, Mobile & Sync Updates)
+> **Last Updated:** 2026-10-07 (Technical SEO, Security Hardening, Manifest, and Full Production-Readiness Audit)
 
 ---
 
@@ -88,6 +88,26 @@
   - `app/dashboard/page.tsx`: Integrated real-time sync on mount to ensure metrics (such as sent emails count) stay consistent across laptop, mobile, and any other logged-in device.
   - `app/outreach/generate/page.tsx` & `lib/utils/avatar.ts`: Dispatched background sync updates upon email transmission and avatar updates.
 
+### 🌐 Tier 5: Technical SEO, Security Hardening & Complete Production-Readiness Audit (COMPLETED 2026-10-07)
+- **Technical SEO, Canonical Integrity & Structured Data:**
+  - Standardized canonical domain to `https://profmatch.ai` with HTTPS enforcement in `middleware.ts`.
+  - Created `lib/seo/site-config.ts` providing JSON-LD Schema.org structured data generators (`Organization`, `WebSite`, `SoftwareApplication`, `FAQPage`, `Person`, `BreadcrumbList`).
+  - Injected Schema.org microdata into `app/layout.tsx`, `app/faq/page.tsx`, `app/responsible-outreach/page.tsx`, `app/pricing/layout.tsx`, and `app/professors/[id]/layout.tsx`.
+  - Upgraded `app/sitemap.ts` with dynamic verified faculty profile indexation, HTTPS canonical URLs, and clean exclusion of private workspaces.
+  - Upgraded `app/robots.ts` with comprehensive crawler disallow directives for private paths (`/dashboard`, `/profile`, `/inbox`, `/campaigns`, `/autopilot`, `/tracker`, `/applications`, `/billing`, `/checkout`, `/settings`, `/admin`, `/login`, `/signup`, `/forgot-password`).
+  - Implemented `robots: { index: false, follow: false }` across 8 protected layout wrappers (`/profile`, `/inbox`, `/applications`, `/settings`, `/onboarding`, `/choose-plan`, `/connectors`, `/outreach`).
+  - Enhanced `app/professors/[id]/page.tsx` with synchronous server-side database lookups for instant crawler readability and internal keyword links targeting `/search`.
+  - Created `app/manifest.ts` providing standard Next.js Web App Manifest (`/manifest.webmanifest`) for PWA readiness.
+- **Security & Authorization Hardening:**
+  - `app/api/user/sync/route.ts`: Fixed P0 IDOR/BOLA vulnerability by strictly enforcing `verifyAuthSession(request)` and verifying session user ID matches requested sync user ID.
+  - `app/api/inbox/analyze-reply/route.ts`: Fixed P0 auth bypass and token draining by requiring valid user session and per-user rate limiting (`checkRateLimit`).
+  - `app/api/auth/google/route.ts`: Removed insecure unverified POST endpoint (returns 405 Method Not Allowed), strictly enforcing authentic OAuth 2.0 PKCE / Authorization Code grant flow.
+  - `app/api/outreach/send-email/route.ts`: Added 15-second debounce window (`email_dedup:${userId}:${toEmail}`) to prevent accidental duplicate transmissions.
+- **Automated Verification & Zero-Warning Production Build:**
+  - Created `tests/seo-technical-audit.test.mjs` verifying sitemap hygiene, robots directives, schema generators, and noindex headers.
+  - Automated test suite passes 63/63 tests across 6 test suites with 0 failures (`npm run test`).
+  - Production build (`npm run build`) compiles cleanly across 65/65 dynamic and static routes with 0 errors.
+
 ---
 
 ## 2. Core Credentials & Admin Auth
@@ -124,6 +144,7 @@ profmatch-ai/
 │   ├── global-error.tsx  # Root fatal error boundary
 │   ├── inbox/            # Faculty reply analysis & suggested responses
 │   ├── loading.tsx       # Root suspense loading UI
+│   ├── manifest.ts       # Web App Manifest route
 │   ├── not-found.tsx     # Custom branded 404 page
 │   ├── outreach/         # Citation-grounded cold email generator
 │   ├── pricing/          # Academic plans & pricing layout
@@ -131,6 +152,7 @@ profmatch-ai/
 │   ├── profile/          # Researcher profile & academic documents
 │   ├── robots.ts         # Technical SEO crawl directives
 │   ├── search/           # Global faculty discovery search engine
+│   ├── sitemap.ts        # Dynamic verified faculty sitemap
 │   └── tracker/          # Application & outreach status tracking
 ├── components/           # Modular UI components & design system
 │   ├── admin/            # 8 modular admin tab components
@@ -146,20 +168,21 @@ profmatch-ai/
 │   ├── api/              # Standard response helpers (apiSuccess, apiError)
 │   ├── auth/             # OTP store, scrypt hashing, server session guards
 │   ├── providers/        # AI, Search, and Email provider adapters
+│   ├── seo/              # Site config & Schema.org JSON-LD generators
 │   ├── services/         # Modular service layer (DB, Gmail, Outreach, Users)
 │   ├── config.ts         # Runtime environment configuration & validation
 │   └── logger.ts         # Structured JSON logger with credential redaction
 ├── scripts/              # Live verification scripts (verify-email-and-oauth.mjs)
-├── tests/                # 57 automated unit, security, and integrity tests
-└── WEBSITE_AUDIT.md      # Comprehensive 14-category pre-launch audit report
+├── tests/                # 63 automated unit, security, SEO, and integrity tests
+└── WEBSITE_AUDIT.md      # Comprehensive pre-launch audit report
 ```
 
 ---
 
-- **Automated Unit & Security Tests:** `npm test` -> 57/57 tests passing (0 failures).
+- **Automated Unit, Security & SEO Tests:** `npm test` -> 63/63 tests passing (0 failures).
 - **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
 - **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
-- **Production Build:** `npm run build` -> Exit code 0 (63/63 dynamic & static routes compiled cleanly with 0 build warnings).
+- **Production Build:** `npm run build` -> Exit code 0 (65/65 dynamic & static routes compiled cleanly with 0 build warnings).
 - **Email Dispatch Handshake:** Verified live Google SMTP TLS handshake & delivery (`250 2.0.0 OK`).
 - **OAuth Production Status:** Google Cloud Console OAuth consent screen promoted to "In Production".
 - **Live User Experience & Journey Verification (`scripts/verify-user-experience.mjs`):**
