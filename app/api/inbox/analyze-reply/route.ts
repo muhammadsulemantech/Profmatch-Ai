@@ -1,9 +1,23 @@
 import { NextRequest } from 'next/server';
 import { ReplyAnalysisAgent } from '@/lib/agents';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 export async function POST(request: NextRequest) {
   try {
+    // 1. Enforce verified user session
+    const session = await verifyAuthSession(request);
+    if (!session || !session.user || !session.user.id) {
+      return apiError('Unauthorized: Authentication required.', 401);
+    }
+
+    // 2. Rate limit reply analysis per user to prevent AI quota exhaustion
+    const rl = checkRateLimit(`inbox_analyze:${session.user.id}`, { limit: 20, windowMs: 60 * 1000 });
+    if (!rl.success) {
+      return apiError('Too many analysis requests. Please wait a minute before analyzing more replies.', 429);
+    }
+
     const body = await request.json();
     const { professorName, senderEmail, subject, bodyText, originalEmail } = body;
 

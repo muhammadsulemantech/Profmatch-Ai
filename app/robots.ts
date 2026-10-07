@@ -1,27 +1,58 @@
-import { MetadataRoute } from 'next';
+import type { MetadataRoute } from 'next';
+import { SITE_URL } from '../lib/seo/site-config.ts';
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai';
   return {
     rules: {
       userAgent: '*',
-      allow: '/',
+      allow: [
+        '/',
+        '/search',
+        '/pricing',
+        '/faq',
+        '/responsible-outreach',
+        '/privacy',
+        '/terms',
+        '/professors/',
+        '/_next/static/',
+        '/_next/image/',
+        '/icon.svg',
+      ],
       disallow: [
+        '/admin',
         '/admin/',
         '/api/',
-        '/inbox/',
-        '/profile/',
+        '/dashboard',
         '/dashboard/',
+        '/profile',
+        '/profile/',
+        '/campaigns',
         '/campaigns/',
+        '/autopilot',
         '/autopilot/',
+        '/tracker',
         '/tracker/',
+        '/applications',
         '/applications/',
-        '/checkout/',
+        '/inbox',
+        '/inbox/',
+        '/outreach',
+        '/outreach/',
+        '/onboarding',
+        '/onboarding/',
+        '/billing',
         '/billing/',
+        '/checkout',
+        '/checkout/',
+        '/choose-plan',
+        '/connectors',
+        '/settings',
         '/settings/',
-        '/connectors/',
+        '/login',
+        '/signup',
+        '/forgot-password',
       ],
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

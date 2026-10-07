@@ -9,6 +9,7 @@ import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
 import MobileNav from '@/components/navigation/mobile-nav';
 import CookieConsent from '@/components/ui/cookie-consent';
+import { SITE_URL, getOrganizationJsonLd, getWebSiteJsonLd, getSoftwareApplicationJsonLd } from '@/lib/seo/site-config';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -21,10 +22,12 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const settings = await getSiteSettings();
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai';
 
   return {
-    metadataBase: new URL(baseUrl),
+    metadataBase: new URL(SITE_URL),
+    alternates: {
+      canonical: '/',
+    },
     title: {
       default: `${settings.siteName} — Academic Research Outreach & Faculty Discovery`,
       template: `%s | ${settings.siteName}`,
@@ -35,14 +38,23 @@ export async function generateMetadata(): Promise<Metadata> {
       title: `${settings.siteName} — Academic Research Outreach Platform`,
       description: settings.tagline || 'Discover relevant faculty, understand their research, and send thoughtful outreach backed by verified academic sources.',
       type: 'website',
-      url: baseUrl,
+      url: SITE_URL,
       siteName: settings.siteName,
       locale: 'en_US',
+      images: [
+        {
+          url: '/icon.svg',
+          width: 512,
+          height: 512,
+          alt: `${settings.siteName} Logo`,
+        },
+      ],
     },
     twitter: {
       card: 'summary_large_image',
       title: `${settings.siteName} — Academic Research Outreach Platform`,
       description: settings.tagline || 'Discover relevant faculty, understand their research, and send thoughtful outreach backed by verified academic sources.',
+      images: ['/icon.svg'],
     },
     icons: {
       icon: [
@@ -67,6 +79,26 @@ export default async function RootLayout({
 
   return (
     <html lang="en" className="scroll-smooth dark">
+      <head>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(getOrganizationJsonLd(settings.siteName)),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(getWebSiteJsonLd(settings.siteName)),
+          }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(getSoftwareApplicationJsonLd(settings.siteName)),
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${plusJakartaSans.variable} ${inter.className} min-h-screen flex flex-col bg-[#080B11] text-slate-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-300`}>
         <AuthProvider>
           <AuthModal />

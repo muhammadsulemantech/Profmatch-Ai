@@ -1,0 +1,17 @@
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'Graduate Applications Pipeline',
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
+
+export default function ApplicationsLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
+}
