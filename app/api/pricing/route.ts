@@ -99,7 +99,8 @@ const DEFAULT_PLANS = [
 export async function GET() {
   try {
     const pricingSection = await getSiteContentSection('pricing');
-    const plans = pricingSection?.content?.plans || DEFAULT_PLANS;
+    const rawPlans = pricingSection?.content?.plans;
+    const plans = Array.isArray(rawPlans) && rawPlans.length > 0 ? rawPlans : DEFAULT_PLANS;
 
     const plansMap: Record<string, any> = {};
     plans.forEach((p: any) => {

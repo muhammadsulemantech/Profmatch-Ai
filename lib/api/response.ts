@@ -32,6 +32,7 @@ export function apiSuccess<T>(
     success: true,
     data,
     error: null,
+    ...(typeof data === 'object' && data !== null && !Array.isArray(data) ? data : {}),
   };
 
   if (meta) {

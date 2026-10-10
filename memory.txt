@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-10-04 (AutoPilot CV Decoupling from Account Default, Clean Upload Zone, Mobile & Sync Updates)
+Last Updated: 2026-10-11 (Database Authority, 30-Day Subscriptions, Feature Entitlements & Mock Elimination)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -92,6 +92,18 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - app/dashboard/page.tsx: On-mount synchronization keeps sent email counts and profile details identical between laptop and mobile devices.
   - app/outreach/generate/page.tsx & lib/utils/avatar.ts: Real-time background sync triggered upon email dispatch and avatar upload.
 
+[TIER 5] Technical SEO, Security Hardening & Pre-Launch Audit (COMPLETED 2026-10-07)
+• JSON-LD Schema.org structured data, sitemap hygiene, robots disallow directives, and PWA manifest.
+• Hardened auth security (IDOR mitigation in /api/user/sync, rate limiting, anti-spam debounce).
+• Admin packages & pricing unified with Content CMS.
+
+[TIER 6] Production Database Authority, 30-Day Subscriptions & Mock Elimination (COMPLETED 2026-10-11)
+• Real User Registration: New accounts written directly to Supabase public.profiles and public.subscriptions with FREE default. Admin Panel reflects real database rows immediately without synthetic fallbacks.
+• 30-Day Authoritative Subscriptions: Paid tiers granted exactly 30 days (Date.now() + 30 * 86400000). Expired subscriptions immediately downgrade to FREE at read-time and mark status: 'expired' in PostgreSQL.
+• Feature Entitlements & Country Gating: FREE tier restricted to US; STUDENT tier 5 countries; PRO/ELITE global. Quotas enforced on server routes.
+• Truthful Search Provenance & AI Integrity: Removed synthetic template generators in search pipeline; removed silent MockAI fallbacks in Gemini provider.
+• Cross-Device Activity Sync: Avatar updates sync to public.profiles; emails sent increment public.usage_records in Supabase.
+
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
@@ -111,10 +123,10 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 --------------------------------------------------------------------
 4. VERIFICATION STATUS
 --------------------------------------------------------------------
-• Automated Unit & Security Tests: npm test -> 57/57 tests passing (0 failures).
+• Automated Unit & Security Tests: npm test -> 71/71 tests passing (0 failures); node --test tests/subscription-entitlements-e2e.test.mjs -> 8/8 tests passing.
 • ESLint Quality Check: npx eslint . -> 0 errors, 0 warnings.
 • TypeScript Verification: npx tsc --noEmit -> 0 errors.
-• Production Build: npm run build -> Exit code 0 (63/63 dynamic & static routes compiled cleanly).
+• Production Build: npm run build -> Exit code 0 (66/66 dynamic & static routes compiled cleanly).
 • Live Handshake: Google SMTP TLS delivery & Resend confirmed.
 • Live User Experience Verified (scripts/verify-user-experience.mjs):
   - Signup & OTP: Scrypt hashing verified, 6-digit OTP delivered live via Google SMTP (250 2.0.0 OK).

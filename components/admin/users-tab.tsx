@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Users, Sparkles, Globe, ShieldAlert, Search, X, Zap, Check } from 'lucide-react';
+import { Users, Sparkles, Globe, ShieldAlert, Search, X, Zap, Check, RefreshCw } from 'lucide-react';
 import { UserProfile } from '@/types/database';
 
 export type UserPlanFilterType = 'ALL' | 'PAID' | 'FREE' | 'ADMIN';
@@ -10,7 +10,14 @@ export interface AdminUserItem extends UserProfile {
   plan_tier?: string;
   is_paid?: boolean;
   subscription_status?: string;
+  subscription_start?: string | null;
   subscription_end?: string | null;
+  is_expired?: boolean;
+  usage?: {
+    searches_count?: number;
+    ai_generations_count?: number;
+    emails_sent_count?: number;
+  };
   orders_count?: number;
   payments_count?: number;
 }
@@ -23,6 +30,8 @@ export interface UsersTabProps {
   setUserPlanFilter: (f: UserPlanFilterType) => void;
   onUpdateUserPlan: (userId: string, planTier: string) => void;
   onToggleSuspendUser: (userId: string, isSuspended?: boolean) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
 export function UsersTab({
@@ -33,6 +42,8 @@ export function UsersTab({
   setUserPlanFilter,
   onUpdateUserPlan,
   onToggleSuspendUser,
+  onRefresh,
+  isRefreshing = false,
 }: UsersTabProps) {
   const filteredUsers = users.filter(u => {
     if (userSearchTerm.trim()) {
@@ -174,6 +185,19 @@ export function UsersTab({
                 Admins ({users.filter(u => u.role === 'ADMIN').length})
               </button>
             </div>
+
+            {onRefresh && (
+              <button
+                type="button"
+                onClick={onRefresh}
+                disabled={isRefreshing}
+                className="p-1.5 rounded-xl border border-slate-800 bg-slate-950 text-slate-300 hover:text-white hover:border-slate-700 transition-all flex items-center gap-1.5 text-[11px] px-2.5 disabled:opacity-50 cursor-pointer shrink-0"
+                title="Sync & refresh registered accounts"
+              >
+                <RefreshCw className={`w-3 h-3 text-emerald-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -196,7 +220,14 @@ export function UsersTab({
                   <tr key={u.id} className="border-b border-slate-800/60 hover:bg-slate-900/40 transition-colors">
                     <td className="px-5 py-4">
                       <div>
-                        <p className="font-semibold text-white">{u.full_name || 'Academic User'}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-semibold text-white">{u.full_name || 'Academic User'}</p>
+                          {u.is_suspended && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                              Suspended
+                            </span>
+                          )}
+                        </div>
                         <p className="text-slate-400 text-[11px] font-mono">{u.email}</p>
                         <span className="text-[10px] text-slate-500 font-mono">ID: {u.id}</span>
                       </div>
@@ -226,17 +257,34 @@ export function UsersTab({
                     {/* Subscription Status */}
                     <td className="px-5 py-4">
                       <div className="space-y-1">
-                        {u.is_paid ? (
+                        {u.is_paid && !u.is_expired ? (
                           <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 inline-flex items-center gap-1">
                             <Check className="w-3 h-3" /> Paid Subscriber
+                          </span>
+                        ) : u.is_expired ? (
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 inline-flex items-center gap-1">
+                            Expired (Free)
                           </span>
                         ) : (
                           <span className="px-2 py-0.5 rounded text-[10px] font-medium bg-slate-800/80 text-slate-400">
                             Free User
                           </span>
                         )}
-                        {(u.orders_count || 0) > 0 && (
+
+                        {u.subscription_end && (
+                          <p className={`text-[10px] font-mono ${u.is_expired ? 'text-slate-500' : 'text-emerald-400/90'}`}>
+                            {u.is_expired ? 'Expired on:' : 'Valid until:'} {new Date(u.subscription_end).toLocaleDateString()}
+                          </p>
+                        )}
+
+                        {u.usage && (
                           <p className="text-[10px] text-slate-400">
+                            Used: {u.usage.searches_count || 0} searches • {u.usage.ai_generations_count || 0} drafts
+                          </p>
+                        )}
+
+                        {(u.orders_count || 0) > 0 && (
+                          <p className="text-[10px] text-slate-500">
                             {u.orders_count} orders • {u.payments_count || 0} payments
                           </p>
                         )}
@@ -264,12 +312,23 @@ export function UsersTab({
                     {/* Plan Assignment & Actions */}
                     <td className="px-5 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        {/* Quick Plan Switch Dropdown */}
+                        {/* Quick Plan Switch Dropdown with Confirmation */}
                         <select
                           value={u.plan_tier || 'FREE'}
-                          onChange={e => onUpdateUserPlan(u.id, e.target.value)}
+                          onChange={e => {
+                            const newPlan = e.target.value;
+                            const currentPlan = u.plan_tier || 'FREE';
+                            if (currentPlan === newPlan) return;
+                            const isPaid = newPlan !== 'FREE';
+                            const confirmMsg = isPaid
+                              ? `Assign 30-day ${newPlan} subscription to ${u.full_name || u.email}?\n\nThis administrative grant takes effect immediately and sets a 30-day billing cycle.`
+                              : `Downgrade ${u.full_name || u.email} to Free Explorer?\n\nThis will remove paid entitlements and restore Free limits. Historical records and usage will remain preserved.`;
+                            if (typeof window !== 'undefined' && window.confirm(confirmMsg)) {
+                              onUpdateUserPlan(u.id, newPlan);
+                            }
+                          }}
                           className="bg-slate-950 border border-slate-800 text-slate-200 text-[11px] rounded-lg px-2.5 py-1 focus:outline-none focus:border-emerald-500 cursor-pointer"
-                          title="Change user package plan directly"
+                          title="Change user package plan directly (authoritative 30-day period applied for paid plans)"
                         >
                           <option value="FREE">Free Explorer</option>
                           <option value="STARTER">Scholar Starter</option>

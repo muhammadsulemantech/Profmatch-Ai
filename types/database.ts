@@ -431,9 +431,9 @@ export interface SubscriptionRecord {
   id: string;
   user_id: string;
   plan_type: PlanTier;
-  status: 'active' | 'canceled' | 'past_due' | 'trialing';
+  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'expired';
   current_period_start: string;
-  current_period_end: string;
+  current_period_end: string | null;
   cancel_at_period_end: boolean;
   created_at: string;
   updated_at: string;

@@ -148,27 +148,13 @@ CRITICAL RULES:
       }
     }
 
-    // 2. High-diversity dynamic fallback (used only if live AI is completely unreachable)
+    // 2. Truthful error handling if live AI was unreachable
     if (!generatedBody || generatedBody.length < 100) {
-      const randomSeed = Math.floor(Math.random() * 4);
-      const focusKeyword = researchKeywords[0] || 'applied research';
-      const secondaryKeyword = researchKeywords[1] || researchKeywords[0] || 'methodological design';
-
-      const rendered = renderGroundedEmailTemplate(randomSeed, {
-        studentName,
-        salutation,
-        profUni,
-        profDept,
-        profPaper,
-        profInterests,
-        targetDegree,
-        focusKeyword,
-        secondaryKeyword,
-        studentUni,
-      });
-
-      generatedSubject = rendered.subject;
-      generatedBody = rendered.bodyText;
+      return apiError(
+        'AI generation failed: The AI provider was unable to generate a response. Please check your AI provider credentials or retry in a moment.',
+        502,
+        'AI_PROVIDER_ERROR'
+      );
     }
 
     // Quality check

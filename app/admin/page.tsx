@@ -162,50 +162,56 @@ export default function AdminDashboardPage() {
       const sRes = await fetch('/api/admin/settings');
       if (sRes.ok) {
         const sData = await sRes.json();
-        if (sData.settings) setSettings(sData.settings);
+        const sObj = sData.settings || sData.data?.settings;
+        if (sObj) setSettings(sObj);
       }
 
       const cRes = await fetch('/api/admin/content');
       if (cRes.ok) {
         const cData = await cRes.json();
-        if (cData.content?.hero) {
+        const cObj = cData.content || cData.data?.content;
+        if (cObj?.hero) {
           setHeroContent({
-            title: cData.content.hero.title || '',
-            subtitle: cData.content.hero.subtitle || '',
-            badge: cData.content.hero.content?.badge || '',
-            primaryCta: cData.content.hero.content?.primaryCta || '',
+            title: cObj.hero.title || '',
+            subtitle: cObj.hero.subtitle || '',
+            badge: cObj.hero.content?.badge || '',
+            primaryCta: cObj.hero.content?.primaryCta || '',
           });
         }
-        if (cData.content?.pricing?.content?.plans) {
-          setPricingPlans(cData.content.pricing.content.plans);
+        if (cObj?.pricing?.content?.plans) {
+          setPricingPlans(cObj.pricing.content.plans);
         }
       }
 
-      const uRes = await fetch('/api/admin/users');
+      const uRes = await fetch('/api/admin/users?pageSize=100');
       if (uRes.ok) {
         const uData = await uRes.json();
-        if (uData.users) setUsers(uData.users);
+        const userList = uData.users || uData.data?.users;
+        if (Array.isArray(userList)) setUsers(userList);
       }
 
       const fRes = await fetch('/api/admin/feature-flags');
       if (fRes.ok) {
         const fData = await fRes.json();
-        if (fData.flags) setFlags(fData.flags);
+        const flagList = fData.flags || fData.data?.flags;
+        if (Array.isArray(flagList)) setFlags(flagList);
       }
 
       const aRes = await fetch('/api/admin/audit-logs');
       if (aRes.ok) {
         const aData = await aRes.json();
-        if (aData.logs) setAuditLogs(aData.logs);
+        const logList = aData.logs || aData.data?.logs;
+        if (Array.isArray(logList)) setAuditLogs(logList);
       }
 
       // Sync Global Data & Quality
       const gRes = await fetch('/api/admin/global-data');
       if (gRes.ok) {
         const gData = await gRes.json();
-        if (gData.universities) setUniversities(gData.universities);
-        if (gData.professors) setProfessors(gData.professors);
-        if (gData.dataQuality) setDataQuality(gData.dataQuality);
+        const gObj = gData.data || gData;
+        if (gObj.universities) setUniversities(gObj.universities);
+        if (gObj.professors) setProfessors(gObj.professors);
+        if (gObj.dataQuality) setDataQuality(gObj.dataQuality);
       }
 
 
@@ -213,13 +219,16 @@ export default function AdminDashboardPage() {
       const pmRes = await fetch('/api/admin/payment-methods');
       if (pmRes.ok) {
         const pmData = await pmRes.json();
-        if (pmData.methods) setAdminPaymentMethods(pmData.methods);
+        const pmList = pmData.methods || pmData.data?.methods;
+        if (Array.isArray(pmList)) setAdminPaymentMethods(pmList);
       }
       const payRes = await fetch('/api/admin/payments');
       if (payRes.ok) {
         const payData = await payRes.json();
-        if (payData.payments) setAdminPayments(payData.payments);
-        if (payData.orders) setAdminOrders(payData.orders);
+        const pList = payData.payments || payData.data?.payments;
+        const oList = payData.orders || payData.data?.orders;
+        if (Array.isArray(pList)) setAdminPayments(pList);
+        if (Array.isArray(oList)) setAdminOrders(oList);
       }
     } catch {
       if (!isSilent) showNotice('error', 'Error syncing admin telemetry from server.');
@@ -231,6 +240,21 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     fetchAdminData(false);
   }, [activeTab, fetchAdminData]);
+
+  // Automatic background synchronization for live registered accounts
+  useEffect(() => {
+    const handleFocus = () => {
+      fetchAdminData(true);
+    };
+    window.addEventListener('focus', handleFocus);
+    const interval = setInterval(() => {
+      fetchAdminData(true);
+    }, 25000);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
+  }, [fetchAdminData]);
 
   // Pricing Plan handlers
   const handleUpdatePlan = (planIdx: number, field: string, value: any) => {
@@ -940,6 +964,8 @@ export default function AdminDashboardPage() {
             setUserPlanFilter={setUserPlanFilter}
             onUpdateUserPlan={handleUpdateUserPlan}
             onToggleSuspendUser={handleToggleSuspendUser}
+            onRefresh={() => fetchAdminData(true)}
+            isRefreshing={loading}
           />
         )}
 

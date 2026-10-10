@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
     const role = searchParams.get('role') || undefined;
     const planTier = searchParams.get('planTier') || undefined;
     const page = parseInt(searchParams.get('page') || '1', 10);
-    const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
+    const pageSize = parseInt(searchParams.get('pageSize') || '100', 10);
 
     const result = await getEnrichedUsers({
       search,

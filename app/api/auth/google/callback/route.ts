@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveUserProfile } from '@/lib/services/db-service';
+import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
 
@@ -72,6 +72,16 @@ export async function GET(request: NextRequest) {
       avatar_url: googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       role: isSystemAdmin ? 'ADMIN' : 'USER',
     });
+
+    try {
+      await saveUserSubscription({
+        user_id: user.id,
+        plan_type: 'FREE',
+        status: 'active',
+      });
+    } catch {
+      // Non-blocking subscription initialization
+    }
 
     const responseUser = {
       id: user.id,
