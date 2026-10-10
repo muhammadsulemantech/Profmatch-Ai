@@ -265,8 +265,23 @@ export async function getAdminPayments(filter: GetPaymentsFilter = {}): Promise<
           totalPages,
         };
       }
+      return {
+        payments: [],
+        orders: [],
+        total: 0,
+        page: validPage,
+        pageSize: validSize,
+        totalPages: 1,
+      };
     } catch {
-      // fallback
+      return {
+        payments: [],
+        orders: [],
+        total: 0,
+        page: validPage,
+        pageSize: validSize,
+        totalPages: 1,
+      };
     }
   }
 

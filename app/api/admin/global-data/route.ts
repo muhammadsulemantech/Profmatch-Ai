@@ -21,24 +21,19 @@ export async function GET(request: NextRequest) {
           supabase.from('professors').select('*').order('name', { ascending: true }),
         ]);
 
-        if (!uniRes.error && uniRes.data && uniRes.data.length > 0) {
+        if (!uniRes.error && Array.isArray(uniRes.data)) {
           universities = uniRes.data as University[];
         }
-        if (!profRes.error && profRes.data && profRes.data.length > 0) {
+        if (!profRes.error && Array.isArray(profRes.data)) {
           professors = profRes.data as Professor[];
         }
       } catch {
-        // Fallback
+        // Log query error and report truthful empty data
       }
-    }
-
-    // If database tables are empty, fall back to mockDb baseline
-    if (universities.length === 0) {
+    } else {
+      // Offline development fallback only when Supabase is completely unconfigured
       mockDb.loadFromDisk();
       universities = [...mockDb.universities];
-    }
-    if (professors.length === 0) {
-      mockDb.loadFromDisk();
       professors = [...mockDb.professors];
     }
 

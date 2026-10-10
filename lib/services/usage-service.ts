@@ -1,4 +1,5 @@
-import type { PlanTier } from '@/types/database';
+import type { PlanTier } from '../../types/database.ts';
+import { mockDb } from '../supabase/mock-db.ts';
 
 export interface PlanConfig {
   tier: PlanTier;
@@ -188,6 +189,30 @@ export function saveCustomPlans(plans: Record<string, Partial<PlanConfig>>) {
 }
 
 export function getPlanConfig(tier: PlanTier): PlanConfig {
+  if (typeof window === 'undefined') {
+    try {
+      mockDb.loadFromDisk();
+      const pricingPlans = mockDb.siteContent?.pricing?.content?.plans;
+      if (Array.isArray(pricingPlans) && pricingPlans.length > 0) {
+        const found = pricingPlans.find((p: any) => p.tier === tier);
+        if (found) {
+          const base = ACADEMIC_PLANS[tier] || ACADEMIC_PLANS.FREE;
+          return {
+            ...base,
+            ...found,
+            searchesLimit: found.searchesLimit !== undefined ? Number(found.searchesLimit) : base.searchesLimit,
+            draftsLimit: found.draftsLimit !== undefined ? Number(found.draftsLimit) : base.draftsLimit,
+            autopilotBatchLimit:
+              found.autopilotLimit !== undefined
+                ? Number(found.autopilotLimit)
+                : (found.autopilotBatchLimit !== undefined
+                ? Number(found.autopilotBatchLimit)
+                : base.autopilotBatchLimit),
+          };
+        }
+      }
+    } catch {}
+  }
   const plans = getCustomPlans();
   if (tier === 'STUDENT') return plans.STARTER || ACADEMIC_PLANS.STARTER;
   return plans[tier] || plans.FREE || ACADEMIC_PLANS.FREE;

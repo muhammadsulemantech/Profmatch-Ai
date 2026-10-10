@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { getProfileByEmail } from '@/lib/services/db-service';
+import { getProfileByEmail, saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
 import { createClient } from '@/lib/supabase/server';
 import { createPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient();
     if (supabase) {
       try {
-        const { error: sbErr } = await supabase.auth.signUp({
+        const { data: sbData, error: sbErr } = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -62,6 +62,24 @@ export async function POST(request: NextRequest) {
         });
         if (sbErr && sbErr.message.toLowerCase().includes('already registered')) {
           return apiError('An account with this email address already exists. Please sign in instead.', 409);
+        }
+        if (sbData?.user?.id) {
+          try {
+            await saveUserProfile({
+              id: sbData.user.id,
+              email,
+              full_name: fullName,
+              role: 'USER',
+              is_suspended: false,
+            });
+            await saveUserSubscription({
+              user_id: sbData.user.id,
+              plan_type: 'FREE',
+              status: 'active',
+            });
+          } catch (profileErr) {
+            console.warn('[SIGNUP PRE-PROFILE ATTEMPT]', profileErr);
+          }
         }
       } catch (sbErr) {
         console.warn('[SUPABASE SIGNUP ATTEMPT NOTICE]', sbErr);

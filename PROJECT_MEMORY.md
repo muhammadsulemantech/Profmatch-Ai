@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-07 (Technical SEO, Security Hardening, Manifest, and Full Production-Readiness Audit)
+> **Last Updated:** 2026-10-11 (Database Authority, 30-Day Subscriptions, Feature Entitlements & Mock Elimination)
 
 ---
 
@@ -123,6 +123,33 @@
   - Automated test suite passes 63/63 tests across 6 test suites with 0 failures (`npm run test`).
   - Production build (`npm run build`) compiles cleanly across 65/65 dynamic and static routes with 0 errors.
 
+### 💎 Tier 6: Production Database Authority, 30-Day Subscriptions, Feature Entitlements & Mock Elimination (COMPLETED 2026-10-11)
+- **Real User Registration & Real-Time Admin Synchronization:**
+  - `app/api/auth/signup/route.ts` & `app/api/auth/google/callback/route.ts`: Every new user registration automatically creates records in Supabase PostgreSQL `public.profiles` and `public.subscriptions` with default `FREE` tier.
+  - `lib/services/user-service.ts`: `getEnrichedUsers` queries live Supabase tables (`profiles`, `subscriptions`, `usage_records`). All registered users (Free and Paid) immediately appear in the Admin Console. Eliminated fallback to 48 fake mock profiles and 41 fake legacy payments.
+  - `app/api/admin/global-data/route.ts`: Removed fallback to mock universities and professors; reports truthful 0 counts when Supabase tables are empty.
+- **Authoritative 30-Day Subscription Lifecycle & Automatic Server-Side Downgrades:**
+  - `lib/services/db-service.ts` & `lib/services/user-service.ts`: Paid subscriptions (`STARTER`, `STUDENT`, `PRO`, `ELITE`) are granted with an exact 30-day period (`Date.now() + 30 * 86400000`). `FREE` tier receives `current_period_end = null`.
+  - Immediate Read-Time Downgrades: When `getUserPlanTier(userId)` or `/api/auth/me` is evaluated, expired subscriptions (`current_period_end < Date.now()`) immediately resolve to `FREE` and update to `status: 'expired'` in Supabase PostgreSQL without deleting user accounts or history.
+  - Subscription Renewals & Plan Updates: Re-granting or updating paid plans recalculates a fresh 30-day billing window. Downgrading safely revokes paid features while preserving profile data.
+  - `components/admin/users-tab.tsx`: Added confirmation modal before administrators apply plan tier modifications.
+- **Strict Server-Side Entitlement & Quota Enforcement:**
+  - `lib/services/quota-service.ts` & `lib/services/usage-service.ts`:
+    - `FREE`: Strictly locked to United States (`US`) faculty searches; capped at 5 global searches and 5 AI drafts/month.
+    - `STUDENT`: Up to 5 selected countries; unlimited searches; 75 AI outreach drafts/month.
+    - `PRO` / `ELITE`: Unrestricted global search; 250 AI outreach drafts/month.
+  - `app/api/auth/me/route.ts`: Exposes live subscription dates (`subscription_end`), calculated `is_expired` status, and real usage counters (`searches_count`, `ai_generations_count`, `emails_sent_count`).
+- **Elimination of Synthetic Faculty Data & Silent Fallbacks:**
+  - `lib/providers/search/index.ts`: Deleted synthetic template generator (`facultyTemplatesByCountry`) and fake DOI/email fabricators. All search operations query authentic external providers (`TavilySearchProvider`, `OpenAlexProvider`) with explicit `UNVERIFIED` candidate flags.
+  - `lib/providers/ai/gemini-provider.ts`: Removed silent fallback to `MockAIProvider`. Throws explicit errors when API keys are unconfigured or rate-limited.
+  - `app/api/autopilot/draft-grounded/route.ts`: Replaced template fallback with clean HTTP 502 `AI_PROVIDER_ERROR` when live AI providers fail.
+- **Cross-Device Profile & Activity Synchronization:**
+  - `lib/services/db-service.ts`: `saveUserSyncedData` syncs custom avatars to `public.profiles` and increments `emails_sent_count` in `public.usage_records` in Supabase.
+- **Automated Verification & Production Build:**
+  - Created `tests/subscription-entitlements-e2e.test.mjs` verifying all 8 subscription lifecycle and quota enforcement scenarios (100% pass).
+  - Test suite passes 71/71 tests across 6 test suites (`npm test`).
+  - Production build (`npm run build`) compiles cleanly across 66/66 routes with 0 errors.
+
 ---
 
 ## 2. Core Credentials & Admin Auth
@@ -188,16 +215,16 @@ profmatch-ai/
 │   ├── config.ts         # Runtime environment configuration & validation
 │   └── logger.ts         # Structured JSON logger with credential redaction
 ├── scripts/              # Live verification scripts (verify-email-and-oauth.mjs)
-├── tests/                # 63 automated unit, security, SEO, and integrity tests
+├── tests/                # 71 automated unit, security, SEO, and subscription tests
 └── WEBSITE_AUDIT.md      # Comprehensive pre-launch audit report
 ```
 
 ---
 
-- **Automated Unit, Security & SEO Tests:** `npm test` -> 63/63 tests passing (0 failures).
+- **Automated Unit, Security & Subscription Tests:** `npm test` -> 71/71 tests passing (0 failures); `node --test tests/subscription-entitlements-e2e.test.mjs` -> 8/8 tests passing (0 failures).
 - **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
 - **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
-- **Production Build:** `npm run build` -> Exit code 0 (65/65 dynamic & static routes compiled cleanly with 0 build warnings).
+- **Production Build:** `npm run build` -> Exit code 0 (66/66 dynamic & static routes compiled cleanly with 0 build warnings).
 - **Email Dispatch Handshake:** Verified live Google SMTP TLS handshake & delivery (`250 2.0.0 OK`).
 - **OAuth Production Status:** Google Cloud Console OAuth consent screen promoted to "In Production".
 - **Live User Experience & Journey Verification (`scripts/verify-user-experience.mjs`):**

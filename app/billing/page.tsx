@@ -108,7 +108,9 @@ export default function BillingPage() {
           <p className="text-xs text-slate-400">
             {isFreePlan
               ? 'Free basic tier. Upgrade to unlock full AI outreach, follow-up automations, and priority search.'
-              : `Valid until ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`}
+              : subscription?.current_period_end
+              ? `Valid until ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`
+              : 'Active 30-day billing cycle.'}
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 text-xs">

@@ -137,6 +137,8 @@ export async function saveUserProfile(
 
 export async function getUserSubscription(userId: string): Promise<SubscriptionRecord | null> {
   const supabase = createAdminClient();
+  let sub: SubscriptionRecord | null = null;
+
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -146,21 +148,51 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
         .maybeSingle();
 
       if (!error && data) {
-        return data as SubscriptionRecord;
+        sub = data as SubscriptionRecord;
       }
     } catch (err) {
       // Fallback
     }
   }
 
-  mockDb.loadFromDisk();
-  const found = mockDb.subscriptions.find((s) => s.user_id === userId);
-  return found || null;
+  if (!sub) {
+    mockDb.loadFromDisk();
+    const found = mockDb.subscriptions.find((s) => s.user_id === userId);
+    sub = found ? ({ ...found } as SubscriptionRecord) : null;
+  }
+
+  // Authoritative server-side 30-day expiry check
+  if (sub && sub.plan_type !== 'FREE' && sub.current_period_end) {
+    const isExpired = new Date(sub.current_period_end).getTime() < Date.now();
+    if (isExpired) {
+      sub.status = 'expired' as any;
+      // Idempotently update persistent status
+      if (supabase) {
+        try {
+          await supabase
+            .from('subscriptions')
+            .update({ status: 'expired', updated_at: new Date().toISOString() })
+            .eq('user_id', userId);
+        } catch {}
+      }
+      mockDb.loadFromDisk();
+      const idx = mockDb.subscriptions.findIndex((s) => s.user_id === userId);
+      if (idx >= 0) {
+        mockDb.subscriptions[idx].status = 'expired' as any;
+        mockDb.persist();
+      }
+    }
+  }
+
+  return sub;
 }
 
 export async function getUserPlanTier(userId: string): Promise<PlanTier> {
   const sub = await getUserSubscription(userId);
-  if (sub && sub.status === 'active') {
+  if (sub && sub.status === 'active' && sub.plan_type !== 'FREE') {
+    if (sub.current_period_end && new Date(sub.current_period_end).getTime() < Date.now()) {
+      return 'FREE';
+    }
     return sub.plan_type || 'FREE';
   }
   return 'FREE';
@@ -170,6 +202,14 @@ export async function saveUserSubscription(
   data: Partial<SubscriptionRecord> & { user_id: string; plan_type: PlanTier }
 ): Promise<SubscriptionRecord> {
   const now = new Date().toISOString();
+  const isPaid = data.plan_type !== 'FREE';
+  const periodStart = data.current_period_start || now;
+  // Paid plans receive exactly 30 days unless an explicit valid period end is provided
+  const periodEnd = isPaid
+    ? data.current_period_end || new Date(Date.now() + 30 * 86400000).toISOString()
+    : null;
+  const status = data.status || 'active';
+
   const supabase = createAdminClient();
 
   if (supabase) {
@@ -180,9 +220,9 @@ export async function saveUserSubscription(
           {
             user_id: data.user_id,
             plan_type: data.plan_type,
-            status: data.status || 'active',
-            current_period_start: data.current_period_start || now,
-            current_period_end: data.current_period_end || new Date(Date.now() + 30 * 86400000).toISOString(),
+            status,
+            current_period_start: periodStart,
+            current_period_end: periodEnd,
             cancel_at_period_end: data.cancel_at_period_end ?? false,
             updated_at: now,
           },
@@ -207,27 +247,25 @@ export async function saveUserSubscription(
 
   mockDb.loadFromDisk();
   const existingIndex = mockDb.subscriptions.findIndex((s) => s.user_id === data.user_id);
-  if (existingIndex >= 0) {
-    const updated = { ...mockDb.subscriptions[existingIndex], ...data, updated_at: now };
-    mockDb.subscriptions[existingIndex] = updated;
-    mockDb.persist();
-    return updated;
-  }
-
-  const created: SubscriptionRecord = {
-    id: `sub_${Date.now()}`,
+  const recordToSave: SubscriptionRecord = {
+    id: existingIndex >= 0 ? mockDb.subscriptions[existingIndex].id : `sub_${Date.now()}`,
     user_id: data.user_id,
     plan_type: data.plan_type,
-    status: data.status || 'active',
-    current_period_start: data.current_period_start || now,
-    current_period_end: data.current_period_end || new Date(Date.now() + 30 * 86400000).toISOString(),
+    status: status as any,
+    current_period_start: periodStart,
+    current_period_end: periodEnd || '',
     cancel_at_period_end: data.cancel_at_period_end ?? false,
-    created_at: now,
+    created_at: existingIndex >= 0 ? mockDb.subscriptions[existingIndex].created_at : now,
     updated_at: now,
   };
-  mockDb.subscriptions.push(created);
+
+  if (existingIndex >= 0) {
+    mockDb.subscriptions[existingIndex] = recordToSave;
+  } else {
+    mockDb.subscriptions.push(recordToSave);
+  }
   mockDb.persist();
-  return created;
+  return recordToSave;
 }
 
 // --- USAGE RECORDS ---
@@ -501,7 +539,7 @@ export async function getPaymentsByUserId(userId: string): Promise<Payment[]> {
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
-      if (!error && data) {
+      if (!error && Array.isArray(data) && data.length > 0) {
         return data as Payment[];
       }
     } catch (err) {
@@ -806,9 +844,22 @@ export async function saveUserSyncedData(
       profile.avatar_url = payload.avatarUrl;
       profile.updated_at = new Date().toISOString();
     }
+    const supabase = createAdminClient();
+    if (supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ avatar_url: payload.avatarUrl, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+      } catch {}
+    }
   }
 
   mockDb.userActivities[userId] = existing;
+
+  if (payload.newSentEmail) {
+    incrementUsage(userId, 'emails_sent_count', 1).catch(() => {});
+  }
 
   const currentMonth = new Date().toISOString().substring(0, 7);
   const usageIdx = mockDb.usageRecords.findIndex((u) => u.user_id === userId && u.month_year === currentMonth);

@@ -59,7 +59,7 @@ export class GeminiProvider implements AIProvider {
 
   async generateGroundedEmail(prompt: GroundedEmailPrompt): Promise<GroundedEmailOutput> {
     if (!this.apiKey || this.apiKey.includes('your-ai-api-key')) {
-      return this.fallback.generateGroundedEmail(prompt);
+      throw new Error('AI Provider unconfigured: A valid Gemini API key is required. Please check AI_API_KEY in configuration.');
     }
 
     try {
@@ -75,16 +75,18 @@ Rules:
       const promptText = `${systemInstruction}\n\nStudent Profile:\n${JSON.stringify(prompt, null, 2)}\n\nGenerate outreach email JSON:`;
       const text = await this.callGeminiApi(promptText, 0.3);
 
-      if (!text) return this.fallback.generateGroundedEmail(prompt);
+      if (!text) {
+        throw new Error('Gemini API generation failed: Provider returned an empty response or was rate-limited.');
+      }
       return JSON.parse(text);
-    } catch {
-      return this.fallback.generateGroundedEmail(prompt);
+    } catch (err: any) {
+      throw new Error(`AI email draft generation failed: ${err.message || 'Gemini model error'}`);
     }
   }
 
   async analyzeResearchMatch(prompt: ResearchMatchAnalysisPrompt): Promise<ResearchMatchAnalysisOutput> {
     if (!this.apiKey || this.apiKey.includes('your-ai-api-key')) {
-      return this.fallback.analyzeResearchMatch(prompt);
+      throw new Error('AI Provider unconfigured: A valid Gemini API key is required to perform research match scoring.');
     }
 
     try {
@@ -97,16 +99,18 @@ Student: ${JSON.stringify(prompt.studentProfile)}
 Professor: ${JSON.stringify(prompt.professorProfile)}`;
 
       const text = await this.callGeminiApi(promptText, 0.2);
-      if (!text) return this.fallback.analyzeResearchMatch(prompt);
+      if (!text) {
+        throw new Error('Gemini API match analysis failed: Provider returned an empty response.');
+      }
       return JSON.parse(text);
-    } catch {
-      return this.fallback.analyzeResearchMatch(prompt);
+    } catch (err: any) {
+      throw new Error(`Research match analysis failed: ${err.message || 'Gemini model error'}`);
     }
   }
 
   async analyzeProfessorReply(replyText: string, context: { professorName: string; originalEmail: string }): Promise<ReplyAnalysisOutput> {
     if (!this.apiKey || this.apiKey.includes('your-ai-api-key')) {
-      return this.fallback.analyzeProfessorReply(replyText, context);
+      throw new Error('AI Provider unconfigured: A valid Gemini API key is required to analyze replies.');
     }
 
     try {
@@ -121,10 +125,12 @@ keyRequests (string[]),
 suggestedResponse (string).`;
 
       const text = await this.callGeminiApi(promptText, 0.2);
-      if (!text) return this.fallback.analyzeProfessorReply(replyText, context);
+      if (!text) {
+        throw new Error('Gemini API reply analysis failed: Provider returned an empty response.');
+      }
       return JSON.parse(text);
-    } catch {
-      return this.fallback.analyzeProfessorReply(replyText, context);
+    } catch (err: any) {
+      throw new Error(`Reply analysis failed: ${err.message || 'Gemini model error'}`);
     }
   }
 }

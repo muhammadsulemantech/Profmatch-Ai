@@ -1,6 +1,7 @@
-import { syncGetUserPlanTier, syncGetUsageRecord, syncIncrementUsage } from '@/lib/services/db-service';
-import { ACADEMIC_PLANS, PlanConfig, isCountryUnlockedForTier } from '@/lib/services/usage-service';
-import { PlanTier } from '@/types/database';
+import { syncGetUserPlanTier, syncGetUsageRecord, syncIncrementUsage } from './db-service.ts';
+import { ACADEMIC_PLANS, isCountryUnlockedForTier, getPlanConfig } from './usage-service.ts';
+import type { PlanConfig } from './usage-service.ts';
+import type { PlanTier } from '../../types/database.ts';
 
 export interface QuotaCheckResult {
   allowed: boolean;
@@ -18,7 +19,7 @@ export function checkAndIncrementQuota(
   options?: { country?: string; increment?: boolean }
 ): QuotaCheckResult {
   const tier = syncGetUserPlanTier(userId);
-  const plan: PlanConfig = ACADEMIC_PLANS[tier] || ACADEMIC_PLANS.FREE;
+  const plan: PlanConfig = getPlanConfig(tier);
   const usage = syncGetUsageRecord(userId);
   const shouldIncrement = options?.increment !== false;
 
