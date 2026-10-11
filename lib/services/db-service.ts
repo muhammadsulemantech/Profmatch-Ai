@@ -288,7 +288,7 @@ export async function saveUserSubscription(
 
 export async function getUsageRecord(
   userId: string
-): Promise<{ searches_count: number; ai_generations_count: number; emails_sent_count: number }> {
+): Promise<{ searches_count: number; ai_generations_count: number; emails_sent_count: number; autopilot_count: number }> {
   const currentMonth = new Date().toISOString().substring(0, 7); // '2026-09'
   const supabase = createAdminClient();
 
@@ -306,6 +306,7 @@ export async function getUsageRecord(
           searches_count: data.searches_count || 0,
           ai_generations_count: data.ai_generations_count || 0,
           emails_sent_count: data.emails_sent_count || 0,
+          autopilot_count: (data as any).autopilot_count || 0,
         };
       }
     } catch (err) {
