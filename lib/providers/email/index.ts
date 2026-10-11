@@ -31,6 +31,16 @@ export class ResendEmailProvider implements EmailProvider {
       const data = await response.json();
       if (!response.ok) {
         console.error('[RESEND DISPATCH ERROR]', data);
+
+        // Automatic seamless fallback to Google SMTP if Resend domain is not verified or fails
+        const smtpUser = process.env.SMTP_USER;
+        const smtpPass = process.env.SMTP_PASS;
+        if (smtpUser && smtpPass && !smtpPass.includes('your-google-app-password')) {
+          console.warn('[EMAIL PROVIDER] Resend dispatch failed (' + (data.message || 'Domain issue') + '). Falling back to Google SMTP...');
+          const smtpProvider = new SmtpEmailProvider();
+          return await smtpProvider.sendEmail(params);
+        }
+
         return {
           success: false,
           error: data.message || 'Failed to dispatch email via Resend',
@@ -43,6 +53,16 @@ export class ResendEmailProvider implements EmailProvider {
       };
     } catch (err: any) {
       console.error('[RESEND DISPATCH NETWORK ERROR]', err);
+
+      // Automatic fallback to Google SMTP on network error
+      const smtpUser = process.env.SMTP_USER;
+      const smtpPass = process.env.SMTP_PASS;
+      if (smtpUser && smtpPass && !smtpPass.includes('your-google-app-password')) {
+        console.warn('[EMAIL PROVIDER] Resend network error. Falling back to Google SMTP...');
+        const smtpProvider = new SmtpEmailProvider();
+        return await smtpProvider.sendEmail(params);
+      }
+
       return {
         success: false,
         error: err.message || 'Network error communicating with email provider',
@@ -72,9 +92,11 @@ export function getEmailProvider(): EmailProvider {
   const smtpUser = process.env.SMTP_USER;
   const smtpPass = process.env.SMTP_PASS;
 
-  // 1. Google / Standard SMTP has highest priority if configured
+  // 1. Google / Standard SMTP has highest priority if configured or explicitly requested
   if (
     providerType === 'smtp' ||
+    providerType === 'google' ||
+    providerType === 'gmail' ||
     (!providerType && smtpUser && smtpPass && !smtpPass.includes('your-google-app-password'))
   ) {
     if (smtpUser && smtpPass) {
@@ -90,6 +112,11 @@ export function getEmailProvider(): EmailProvider {
     !resendApiKey.includes('your_resend_api_key')
   ) {
     return new ResendEmailProvider(resendApiKey);
+  }
+
+  // 3. Fallback to SMTP if available
+  if (smtpUser && smtpPass && !smtpPass.includes('your-google-app-password')) {
+    return new SmtpEmailProvider();
   }
 
   return new UnconfiguredEmailProvider();
