@@ -42,62 +42,79 @@ export function verifyPassword(password: string, combinedHash: string): boolean 
   return crypto.timingSafeEqual(hashBuffer, storedHashBuffer);
 }
 
-function loadOtpsFromDisk() {
+function getStoreCandidates(): string[] {
+  const candidates: string[] = [path.join(process.cwd(), 'database', 'pending_otps.json')];
   try {
-    if (fs.existsSync(OTP_STORE_FILE)) {
-      const data = fs.readFileSync(OTP_STORE_FILE, 'utf-8');
-      if (data) {
-        const parsed: Record<string, any> = JSON.parse(data);
-        const now = Date.now();
-        for (const [email, record] of Object.entries(parsed)) {
-          if (record && record.expiresAt > now) {
-            // Upgrade legacy plaintext password if present
-            const passwordHash = record.passwordHash || (record.password ? hashPassword(record.password) : '');
-            pendingOtpMap.set(email.toLowerCase(), {
-              email: record.email,
-              fullName: record.fullName,
-              passwordHash,
-              targetDegree: record.targetDegree || 'PhD',
-              code: record.code,
-              expiresAt: record.expiresAt,
-              attempts: record.attempts || 0,
-              createdAt: record.createdAt || now,
-            });
+    const tmpCandidate = path.join('/tmp', 'pending_otps.json');
+    if (!candidates.includes(tmpCandidate)) {
+      candidates.push(tmpCandidate);
+    }
+  } catch {}
+  return candidates;
+}
+
+function loadOtpsFromDisk() {
+  const candidates = getStoreCandidates();
+  for (const storeFile of candidates) {
+    try {
+      if (fs.existsSync(storeFile)) {
+        const data = fs.readFileSync(storeFile, 'utf-8');
+        if (data) {
+          const parsed: Record<string, any> = JSON.parse(data);
+          const now = Date.now();
+          for (const [email, record] of Object.entries(parsed)) {
+            if (record && record.expiresAt > now) {
+              const passwordHash = record.passwordHash || (record.password ? hashPassword(record.password) : '');
+              pendingOtpMap.set(email.toLowerCase(), {
+                email: record.email,
+                fullName: record.fullName,
+                passwordHash,
+                targetDegree: record.targetDegree || 'PhD',
+                code: record.code,
+                expiresAt: record.expiresAt,
+                attempts: record.attempts || 0,
+                createdAt: record.createdAt || now,
+              });
+            }
           }
         }
       }
+    } catch {
+      // Continue to next candidate
     }
-  } catch (err) {
-    // Non-fatal, continue with memory
   }
 }
 
 function persistOtpsToDisk() {
-  try {
-    const dir = path.dirname(OTP_STORE_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
+  const candidates = getStoreCandidates();
+  const obj: Record<string, PendingSignupRegistration> = {};
+  const now = Date.now();
+  pendingOtpMap.forEach((record, email) => {
+    if (record.expiresAt > now) {
+      obj[email] = {
+        email: record.email,
+        fullName: record.fullName,
+        passwordHash: record.passwordHash,
+        targetDegree: record.targetDegree,
+        code: record.code,
+        expiresAt: record.expiresAt,
+        attempts: record.attempts,
+        createdAt: record.createdAt,
+      };
     }
-    const obj: Record<string, PendingSignupRegistration> = {};
-    const now = Date.now();
-    pendingOtpMap.forEach((record, email) => {
-      if (record.expiresAt > now) {
-        // Guarantee no plaintext password ever gets written
-        obj[email] = {
-          email: record.email,
-          fullName: record.fullName,
-          passwordHash: record.passwordHash,
-          targetDegree: record.targetDegree,
-          code: record.code,
-          expiresAt: record.expiresAt,
-          attempts: record.attempts,
-          createdAt: record.createdAt,
-        };
+  });
+
+  const serialized = JSON.stringify(obj, null, 2);
+  for (const storeFile of candidates) {
+    try {
+      const dir = path.dirname(storeFile);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
       }
-    });
-    fs.writeFileSync(OTP_STORE_FILE, JSON.stringify(obj, null, 2), 'utf-8');
-  } catch (err) {
-    // Non-fatal
+      fs.writeFileSync(storeFile, serialized, 'utf-8');
+    } catch {
+      // Silently fall through to next candidate if read-only
+    }
   }
 }
 

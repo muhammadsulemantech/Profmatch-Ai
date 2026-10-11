@@ -9,10 +9,16 @@ import { checkRateLimit } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import type { UserProfile } from '@/types/database';
 
-const VerifyOtpSchema = z.object({
-  email: z.string().trim().email('Please provide a valid email address').toLowerCase(),
-  otp: z.string().trim().length(6, 'Verification code must be exactly 6 digits'),
-});
+const VerifyOtpSchema = z
+  .object({
+    email: z.string().trim().email('Please provide a valid email address').toLowerCase(),
+    otp: z.string().trim().length(6, 'Verification code must be exactly 6 digits').optional(),
+    code: z.string().trim().length(6, 'Verification code must be exactly 6 digits').optional(),
+  })
+  .refine((data) => !!(data.otp || data.code), {
+    message: 'Verification code must be exactly 6 digits',
+    path: ['code'],
+  });
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,7 +44,8 @@ export async function POST(request: NextRequest) {
       return apiError(errorMsg, 400);
     }
 
-    const { email, otp } = parsed.data;
+    const { email } = parsed.data;
+    const otp = (parsed.data.otp || parsed.data.code)!;
 
     // 1. Verify OTP with timing-safe comparison and automatic single-use burn
     const verification = verifyPendingOtp(email, otp);

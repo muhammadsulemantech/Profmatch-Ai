@@ -218,6 +218,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: fullCode,
+          otp: fullCode,
         }),
       });
 

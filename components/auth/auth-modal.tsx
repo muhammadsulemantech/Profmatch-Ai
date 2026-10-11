@@ -219,6 +219,7 @@ export default function AuthModal() {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           code: fullCode,
+          otp: fullCode,
         }),
       });
 
