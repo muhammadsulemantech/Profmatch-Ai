@@ -41,8 +41,14 @@ export async function getPaymentMethods(country?: string): Promise<PaymentMethod
       }
       const { data, error } = await query;
       if (!error && data && data.length > 0) {
-        mockDb.paymentMethods = data as PaymentMethod[];
-        return data as PaymentMethod[];
+        mockDb.loadFromDisk();
+        const merged = [...(data as PaymentMethod[])];
+        for (const defaultMethod of mockDb.paymentMethods) {
+          if (!merged.some((m) => m.name.toLowerCase() === defaultMethod.name.toLowerCase())) {
+            merged.push(defaultMethod);
+          }
+        }
+        return merged;
       }
     } catch {
       // fallback to disk
