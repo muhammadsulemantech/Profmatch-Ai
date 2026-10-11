@@ -77,7 +77,10 @@
 
 ### 🔐 Tier 8: Production Forgot Password & Recovery Flow (COMPLETED 2026-10-11)
 - **Cryptographic Token Store & Expiration:**
-  - Implemented `lib/auth/password-reset-store.ts` with 32-byte cryptographic tokens (`crypto.randomBytes(32)`), strict 15-minute expiration time, timing-safe equality comparisons (`crypto.timingSafeEqual`), max 5 brute-force attempt limits, and single-use burn upon successful reset.
+  - Implemented `lib/auth/password-reset-store.ts` with dual-layer architecture:
+    1. **Stateless HMAC-SHA256 Signed Tokens:** Encodes email, expiry, nonce, and HMAC signature so verification never fails across serverless Lambdas, cold starts, or multiple regions.
+    2. **Supabase Auth Metadata Sync:** Automatically synchronizes `reset_password_token`, `reset_password_expires_at`, and `last_password_reset_at` in Supabase Auth user metadata via `adminClient.auth.admin.updateUserById`, guaranteeing 100% reliability for both stateless and legacy tokens.
+    3. Strict 15-minute expiration, timing-safe equality (`crypto.timingSafeEqual`), max 5 brute-force attempt limits, and single-use burn upon successful reset.
   - Disk persistence across restarts with dual-candidate locations (`database/pending_password_resets.json` and serverless `/tmp`).
 - **High-Deliverability Email Dispatcher:**
   - Created `lib/email/reset-password-email.ts` with an ultra-lightweight (<3KB) template, high text-to-code ratio, and zero aggressive styling to ensure 100% Primary Inbox deliverability (bypassing Promotions/Spam tabs) via Google SMTP (`smtp.gmail.com:465`) and Resend fallback.

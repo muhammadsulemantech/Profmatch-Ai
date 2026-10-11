@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
       return apiError('Missing email or reset token.', 400);
     }
 
-    const verification = verifyPasswordResetToken(email, token, false);
+    const verification = await verifyPasswordResetToken(email, token, false);
     if (!verification.valid) {
       return apiError(verification.error || 'Password reset link is invalid or expired.', 400, 'TOKEN_INVALID', {
         isExpired: verification.isExpired || false,
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
     const { email, token, newPassword } = parsed.data;
 
     // 1. Verify token and burn it upon success
-    const verification = verifyPasswordResetToken(email, token, true);
+    const verification = await verifyPasswordResetToken(email, token, true);
     if (!verification.valid) {
       return apiError(verification.error || 'Password reset token is invalid or expired.', 400, 'TOKEN_INVALID', {
         isExpired: verification.isExpired || false,
@@ -90,6 +90,12 @@ export async function POST(request: NextRequest) {
           const { error: updateErr } = await adminClient.auth.admin.updateUserById(sbUser.id, {
             password: newPassword,
             email_confirm: true,
+            user_metadata: {
+              ...(sbUser.user_metadata || {}),
+              reset_password_token: null,
+              reset_password_expires_at: null,
+              last_password_reset_at: Date.now(),
+            },
           });
 
           if (updateErr) {

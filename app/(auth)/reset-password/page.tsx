@@ -44,7 +44,7 @@ function ResetPasswordForm() {
     async function checkToken() {
       try {
         const res = await fetch(
-          `/api/auth/reset-password?email=${encodeURIComponent(email)}&token=${encodeURIComponent(token)}`
+          `/api/auth/reset-password?email=${encodeURIComponent(email.trim().toLowerCase())}&token=${encodeURIComponent(token.trim())}`
         );
         const data = await res.json();
         if (!res.ok || !data.success) {
@@ -82,7 +82,7 @@ function ResetPasswordForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
-          token,
+          token: token.trim(),
           newPassword,
         }),
       });

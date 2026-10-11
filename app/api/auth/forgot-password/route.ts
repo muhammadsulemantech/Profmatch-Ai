@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getProfileByEmail } from '@/lib/services/db-service';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { createPasswordResetToken } from '@/lib/auth/password-reset-store';
+import { createPasswordResetToken, persistResetTokenToSupabase } from '@/lib/auth/password-reset-store';
 import { sendPasswordResetEmail } from '@/lib/email/reset-password-email';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
 
     // If account exists, issue secure token and dispatch email
     if (userExists) {
-      const { token } = createPasswordResetToken(email);
+      const { token, expiresAt } = createPasswordResetToken(email);
+      await persistResetTokenToSupabase(email, token, expiresAt);
 
       const emailResult = await sendPasswordResetEmail({
         email,

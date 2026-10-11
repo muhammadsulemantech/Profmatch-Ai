@@ -36,3 +36,4 @@ next-env.d.ts
 # local persistent store
 database/persistent_store.json
 database/pending_otps.json
+database/pending_password_resets.json
