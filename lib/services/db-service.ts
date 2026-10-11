@@ -199,12 +199,28 @@ export async function getUserPlanTier(userId: string): Promise<PlanTier> {
 }
 
 export async function saveUserSubscription(
-  data: Partial<SubscriptionRecord> & { user_id: string; plan_type: PlanTier }
+  data: Partial<SubscriptionRecord> & { user_id: string; plan_type: PlanTier },
+  options?: { forceDowngrade?: boolean }
 ): Promise<SubscriptionRecord> {
   const now = new Date().toISOString();
   const isPaid = data.plan_type !== 'FREE';
+
+  // Guard: Never unintentionally overwrite an active non-expired paid plan with FREE
+  if (data.plan_type === 'FREE' && !options?.forceDowngrade) {
+    const existing = await getUserSubscription(data.user_id);
+    if (
+      existing &&
+      existing.plan_type !== 'FREE' &&
+      existing.status === 'active' &&
+      existing.current_period_end &&
+      new Date(existing.current_period_end).getTime() > Date.now()
+    ) {
+      return existing;
+    }
+  }
+
   const periodStart = data.current_period_start || now;
-  // Paid plans receive exactly 30 days unless an explicit valid period end is provided
+  // Paid plans receive exactly 30 days from grant date unless an explicit valid period end is provided
   const periodEnd = isPaid
     ? data.current_period_end || new Date(Date.now() + 30 * 86400000).toISOString()
     : null;
@@ -303,14 +319,15 @@ export async function getUsageRecord(
     searches_count: local?.searches_count || 0,
     ai_generations_count: local?.ai_generations_count || 0,
     emails_sent_count: local?.emails_sent_count || 0,
+    autopilot_count: local?.autopilot_count || 0,
   };
 }
 
 export async function incrementUsage(
   userId: string,
-  metric: 'searches_count' | 'ai_generations_count' | 'emails_sent_count',
+  metric: 'searches_count' | 'ai_generations_count' | 'emails_sent_count' | 'autopilot_count',
   amount: number = 1
-): Promise<{ searches_count: number; ai_generations_count: number; emails_sent_count: number }> {
+): Promise<{ searches_count: number; ai_generations_count: number; emails_sent_count: number; autopilot_count: number }> {
   const currentMonth = new Date().toISOString().substring(0, 7);
   const current = await getUsageRecord(userId);
   const newCounts = {
@@ -325,7 +342,9 @@ export async function incrementUsage(
         {
           user_id: userId,
           month_year: currentMonth,
-          ...newCounts,
+          searches_count: newCounts.searches_count,
+          ai_generations_count: newCounts.ai_generations_count,
+          emails_sent_count: newCounts.emails_sent_count,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,month_year' }
@@ -348,6 +367,7 @@ export async function incrementUsage(
       searches_count: metric === 'searches_count' ? amount : 0,
       ai_generations_count: metric === 'ai_generations_count' ? amount : 0,
       emails_sent_count: metric === 'emails_sent_count' ? amount : 0,
+      autopilot_count: metric === 'autopilot_count' ? amount : 0,
       updated_at: new Date().toISOString(),
     });
   }
@@ -703,6 +723,7 @@ export function syncGetUsageRecord(userId: string): {
   searches_count: number;
   ai_generations_count: number;
   emails_sent_count: number;
+  autopilot_count: number;
 } {
   mockDb.loadFromDisk();
   const currentMonth = new Date().toISOString().substring(0, 7);
@@ -711,14 +732,15 @@ export function syncGetUsageRecord(userId: string): {
     searches_count: local?.searches_count || 0,
     ai_generations_count: local?.ai_generations_count || 0,
     emails_sent_count: local?.emails_sent_count || 0,
+    autopilot_count: local?.autopilot_count || 0,
   };
 }
 
 export function syncIncrementUsage(
   userId: string,
-  metric: 'searches_count' | 'ai_generations_count' | 'emails_sent_count',
+  metric: 'searches_count' | 'ai_generations_count' | 'emails_sent_count' | 'autopilot_count',
   amount: number = 1
-): { searches_count: number; ai_generations_count: number; emails_sent_count: number } {
+): { searches_count: number; ai_generations_count: number; emails_sent_count: number; autopilot_count: number } {
   mockDb.loadFromDisk();
   mockDb.incrementUsage(userId, metric, amount);
   // Fire-and-forget sync to Supabase Postgres

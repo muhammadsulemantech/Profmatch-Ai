@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
-import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
+import { saveUserProfile, saveUserSubscription, getUserSubscription } from '@/lib/services/db-service';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -28,11 +28,15 @@ export async function GET(request: NextRequest) {
         full_name: data.user.user_metadata?.full_name || '',
         role: 'USER',
       });
-      await saveUserSubscription({
-        user_id: data.user.id,
-        plan_type: 'FREE',
-        status: 'active',
-      });
+
+      const existingSub = await getUserSubscription(data.user.id);
+      if (!existingSub) {
+        await saveUserSubscription({
+          user_id: data.user.id,
+          plan_type: 'FREE',
+          status: 'active',
+        });
+      }
 
       return NextResponse.redirect(`${origin}${safeNext}`);
     }
@@ -51,11 +55,15 @@ export async function GET(request: NextRequest) {
         full_name: data.user.user_metadata?.full_name || '',
         role: 'USER',
       });
-      await saveUserSubscription({
-        user_id: data.user.id,
-        plan_type: 'FREE',
-        status: 'active',
-      });
+
+      const existingSub = await getUserSubscription(data.user.id);
+      if (!existingSub) {
+        await saveUserSubscription({
+          user_id: data.user.id,
+          plan_type: 'FREE',
+          status: 'active',
+        });
+      }
 
       return NextResponse.redirect(`${origin}${safeNext}`);
     }

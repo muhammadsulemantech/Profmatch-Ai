@@ -7,50 +7,77 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  ShieldCheck,
-  Download,
   ExternalLink,
-  ArrowRight,
-  Layers,
-  FileText,
-  RefreshCw
+  Zap,
+  Sparkles,
+  RefreshCw,
+  Lock,
 } from 'lucide-react';
+import { useAuth } from '@/lib/auth/auth-context';
+import { getPlanConfig } from '@/lib/services/usage-service';
+import type { PlanTier, Order, Payment } from '@/types/database';
 import { mockDb } from '@/lib/supabase/mock-db';
-import { Order, Payment, SubscriptionRecord } from '@/types/database';
 
 export default function BillingPage() {
-  const user = mockDb.profiles[1];
+  const { user, isLoading } = useAuth();
 
-  const [subscription, setSubscription] = useState<SubscriptionRecord>(
-    () => mockDb.subscriptions.find(s => s.user_id === user.id) || mockDb.subscriptions[0]
-  );
-  const [orders, setOrders] = useState<Order[]>(
-    () => mockDb.orders.filter((o: Order) => o.user_id === user.id)
-  );
-  const [payments, setPayments] = useState<Payment[]>(
-    () => mockDb.payments.filter((p: Payment) => p.user_id === user.id)
-  );
+  const [activeTier, setActiveTier] = useState<PlanTier>(() => {
+    return ((user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier);
+  });
+  const [subStatus, setSubStatus] = useState<string>('free');
+  const [periodEnd, setPeriodEnd] = useState<string | null>(null);
+  const [isExpired, setIsExpired] = useState<boolean>(false);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [payments, setPayments] = useState<Payment[]>([]);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const refreshBillingData = useCallback(() => {
-    setIsRefreshing(true);
-    const sub = mockDb.subscriptions.find(s => s.user_id === user.id) || mockDb.subscriptions[0];
-    const ords = mockDb.orders.filter((o: Order) => o.user_id === user.id);
-    const pays = mockDb.payments.filter((p: Payment) => p.user_id === user.id);
+  const planConfig = getPlanConfig(activeTier);
 
-    setSubscription({ ...sub });
-    setOrders([...ords]);
-    setPayments([...pays]);
-    setTimeout(() => setIsRefreshing(false), 500);
-  }, [user.id]);
+  const refreshBillingData = useCallback(async () => {
+    setIsRefreshing(true);
+    try {
+      const res = await fetch('/api/auth/me');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          const uTier = (data.user.tier || data.user.plan_tier || 'FREE') as PlanTier;
+          setActiveTier(uTier);
+          setSubStatus(data.user.subscription_status || (uTier !== 'FREE' ? 'active' : 'free'));
+          setPeriodEnd(data.user.subscription_end || null);
+          setIsExpired(Boolean(data.user.is_expired));
+
+          if (typeof window !== 'undefined' && data.user.id) {
+            localStorage.setItem(`profmatch_user_tier_${data.user.id}`, uTier);
+          }
+
+          // Load user orders and payments from persistent mockDb / client storage
+          try {
+            mockDb.loadFromDisk();
+            const uId = data.user.id;
+            const uEmail = (data.user.email || '').toLowerCase();
+            const matchedOrders = mockDb.orders.filter(
+              (o: Order) => o.user_id === uId || (o.user_email && o.user_email.toLowerCase() === uEmail)
+            );
+            const matchedPayments = mockDb.payments.filter(
+              (p: Payment) => p.user_id === uId || (p.user_email && p.user_email.toLowerCase() === uEmail)
+            );
+            setOrders([...matchedOrders]);
+            setPayments([...matchedPayments]);
+          } catch {}
+        }
+      }
+    } catch {
+      // fallback
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
 
   useEffect(() => {
     refreshBillingData();
-  }, [refreshBillingData]);
+  }, [refreshBillingData, user]);
 
-  const isProPlan = subscription.plan_type === 'PRO';
-  const isStudentPlan = subscription.plan_type === 'STUDENT';
-  const isFreePlan = subscription.plan_type === 'FREE';
+  const isPaidActive = activeTier !== 'FREE' && !isExpired && subStatus === 'active';
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
@@ -90,43 +117,57 @@ export default function BillingPage() {
         <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 md:col-span-2">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Current Subscription</span>
-            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
-              <CheckCircle2 className="w-3 h-3" /> ACTIVE
-            </span>
+            {isPaidActive ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                <CheckCircle2 className="w-3 h-3" /> ACTIVE ({activeTier})
+              </span>
+            ) : isExpired ? (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">
+                <Clock className="w-3 h-3" /> EXPIRED (FREE)
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
+                FREE TIER
+              </span>
+            )}
           </div>
 
           <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-extrabold text-white">
-              {isStudentPlan
-                ? 'Graduate Applicant Pro'
-                : isProPlan
-                ? 'Research Lab & Scholar Pro'
-                : 'Global Explorer (Free Plan)'}
+            <h2 className="text-3xl font-extrabold text-white flex items-center gap-2">
+              {activeTier === 'PRO' && <Zap className="w-6 h-6 text-emerald-400" />}
+              {activeTier === 'ELITE' && <Sparkles className="w-6 h-6 text-teal-400" />}
+              {planConfig.name}
             </h2>
           </div>
 
           <p className="text-xs text-slate-400">
-            {isFreePlan
+            {activeTier === 'FREE'
               ? 'Free basic tier. Upgrade to unlock full AI outreach, follow-up automations, and priority search.'
-              : subscription?.current_period_end
-              ? `Valid until ${new Date(subscription.current_period_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`
+              : periodEnd
+              ? `Valid until ${new Date(periodEnd).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} (Active 30-day billing cycle).`
               : 'Active 30-day billing cycle.'}
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800/80 text-xs">
             <div>
               <span className="text-slate-500 block text-[10px] uppercase font-semibold">Global Searches</span>
-              <span className="font-bold text-white">Unlimited</span>
+              <span className="font-bold text-white">
+                {planConfig.searchesLimit >= 999999 ? 'Unlimited' : `${planConfig.searchesLimit} searches / mo`}
+              </span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px] uppercase font-semibold">AI Grounded Outreach</span>
               <span className="font-bold text-emerald-400">
-                {isProPlan ? '250 emails / mo' : isStudentPlan ? '75 emails / mo' : '5 emails / mo'}
+                {planConfig.draftsLimit >= 999999 ? 'Unlimited' : `${planConfig.draftsLimit} drafts / mo`}
               </span>
             </div>
             <div>
               <span className="text-slate-500 block text-[10px] uppercase font-semibold">Country Scope</span>
-              <span className="font-bold text-white">190+ Countries</span>
+              <span className="font-bold text-white">
+                {planConfig.allowedCountries === 'ALL'
+                  ? '190+ Countries (Worldwide)'
+                  : `${Array.isArray(planConfig.allowedCountries) ? planConfig.allowedCountries.length : 2}+ Countries`}
+              </span>
             </div>
           </div>
         </div>
@@ -134,17 +175,21 @@ export default function BillingPage() {
         <div className="glass-panel p-6 rounded-2xl border border-slate-800 space-y-4 flex flex-col justify-between">
           <div className="space-y-2">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Need More Volume?</span>
-            <h3 className="text-lg font-bold text-white">Research Lab Pro</h3>
+            <h3 className="text-lg font-bold text-white">
+              {activeTier === 'ELITE' ? 'PhD Elite Worldwide' : 'Pro Researcher & Elite'}
+            </h3>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Target up to 250 verified professors with priority indexing and phone/office lookups.
+              {activeTier === 'ELITE'
+                ? 'You have unrestricted 100% worldwide faculty indexing and high-capacity AutoPilot outreach.'
+                : 'Target up to 250+ verified professors with priority indexing, AutoPilot automation, and direct contact details.'}
             </p>
           </div>
 
           <Link
-            href="/checkout?plan=pro"
+            href="/pricing"
             className="w-full py-2.5 rounded-xl bg-slate-900 border border-slate-700 hover:bg-slate-800 text-xs font-bold text-white text-center transition-colors block"
           >
-            Upgrade to Pro &rarr;
+            {activeTier === 'ELITE' ? 'Manage Plans →' : 'Upgrade Plan →'}
           </Link>
         </div>
       </div>

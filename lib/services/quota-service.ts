@@ -90,7 +90,8 @@ export function checkAndIncrementQuota(
   }
 
   if (feature === 'autopilot') {
-    if (plan.autopilotBatchLimit <= 0) {
+    const autopilotCap = Number(plan.autopilotBatchLimit !== undefined ? plan.autopilotBatchLimit : 0);
+    if (autopilotCap <= 0) {
       return {
         allowed: false,
         error: 'UPGRADE_REQUIRED',
@@ -98,25 +99,29 @@ export function checkAndIncrementQuota(
         tier,
       };
     }
-    const limit = plan.draftsLimit;
-    const used = usage.ai_generations_count || 0;
+    const limit = autopilotCap;
+    const used = usage.autopilot_count || 0;
     if (used >= limit) {
       return {
         allowed: false,
         error: 'QUOTA_EXCEEDED',
-        message: `Outreach quota exceeded (${used}/${limit}). Please upgrade your plan for additional autonomous drafts.`,
+        message: `AutoPilot outreach cap reached (${used}/${limit} emails). Your active ${plan.name} (${tier}) plan allows up to ${limit} AutoPilot emails. Please upgrade your plan for additional autonomous outreach.`,
         tier,
         limit,
         used,
         remaining: 0,
       };
     }
+    if (shouldIncrement) {
+      syncIncrementUsage(userId, 'autopilot_count', 1);
+      syncIncrementUsage(userId, 'emails_sent_count', 1);
+    }
     return {
       allowed: true,
       tier,
       limit,
-      used,
-      remaining: Math.max(0, limit - used),
+      used: shouldIncrement ? used + 1 : used,
+      remaining: Math.max(0, limit - (shouldIncrement ? used + 1 : used)),
     };
   }
 

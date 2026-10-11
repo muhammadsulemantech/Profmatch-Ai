@@ -424,6 +424,7 @@ export interface UsageRecord {
   searches_count: number;
   ai_generations_count: number;
   emails_sent_count: number;
+  autopilot_count?: number;
   updated_at: string;
 }
 

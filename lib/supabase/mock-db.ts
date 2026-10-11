@@ -80,8 +80,8 @@ class MockDatabase {
         const raw = fs.readFileSync(dbPath, 'utf-8');
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed.siteSettings) this.siteSettings = parsed.siteSettings;
-          if (parsed.siteContent) this.siteContent = parsed.siteContent;
+          if (parsed.siteSettings) this.siteSettings = { ...this.siteSettings, ...parsed.siteSettings };
+          if (parsed.siteContent) this.siteContent = { ...this.siteContent, ...parsed.siteContent };
           if (parsed.paymentMethods) this.paymentMethods = parsed.paymentMethods;
           if (parsed.orders) this.orders = parsed.orders;
           if (parsed.payments) this.payments = parsed.payments;
@@ -1706,6 +1706,10 @@ class MockDatabase {
             price: 'Free',
             pricePkr: 0,
             priceUsd: 0,
+            searchesLimit: 3,
+            draftsLimit: 2,
+            autopilotLimit: 0,
+            autopilotBatchLimit: 0,
             period: 'forever',
             description: 'Basic sample preview with restricted country access and limited searches.',
             features: [
@@ -1724,6 +1728,10 @@ class MockDatabase {
             price: 'Rs. 3,500 / $12',
             pricePkr: 3500,
             priceUsd: 12,
+            searchesLimit: 50,
+            draftsLimit: 30,
+            autopilotLimit: 5,
+            autopilotBatchLimit: 5,
             period: 'month',
             description: 'Essential tools for graduate applicants targeting top 10 academic nations.',
             features: [
@@ -1742,6 +1750,10 @@ class MockDatabase {
             price: 'Rs. 8,000 / $29',
             pricePkr: 8000,
             priceUsd: 29,
+            searchesLimit: 250,
+            draftsLimit: 150,
+            autopilotLimit: 20,
+            autopilotBatchLimit: 20,
             period: 'month',
             description: 'Broad international reach across 45+ countries with autonomous Gmail drafts.',
             features: [
@@ -1760,6 +1772,10 @@ class MockDatabase {
             price: 'Rs. 16,000 / $59',
             pricePkr: 16000,
             priceUsd: 59,
+            searchesLimit: 999999,
+            draftsLimit: 999999,
+            autopilotLimit: 500,
+            autopilotBatchLimit: 500,
             period: 'month',
             description: 'Unrestricted worldwide access to all 190+ countries with high-capacity autonomous outreach.',
             features: [
@@ -2154,6 +2170,7 @@ class MockDatabase {
         searches_count: 0,
         ai_generations_count: 0,
         emails_sent_count: 0,
+        autopilot_count: 0,
         updated_at: new Date().toISOString(),
       };
       this.usageRecords.push(record);
@@ -2164,7 +2181,7 @@ class MockDatabase {
 
   public incrementUsage(
     userId: string,
-    field: 'searches_count' | 'ai_generations_count' | 'emails_sent_count',
+    field: 'searches_count' | 'ai_generations_count' | 'emails_sent_count' | 'autopilot_count',
     delta: number = 1
   ): UsageRecord {
     const record = this.getUsageRecord(userId);

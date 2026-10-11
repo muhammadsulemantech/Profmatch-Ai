@@ -3,7 +3,17 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-11 (Database Authority, 30-Day Subscriptions, Feature Entitlements & Mock Elimination)
+> **Last Updated:** 2026-10-11 (Dynamic Plans, Universal 30-Day Subscriptions, Feature Entitlements & Strict Quotas)
+
+---
+
+## ⚡ CORE DEVELOPMENT PRINCIPLE & GOLDEN RULE (MANDATORY)
+> [!IMPORTANT]
+> **UNIVERSAL SYSTEM-WIDE APPLICATION (NO SPECIALIZED / HARDCODED SINGLE-USER FIXES):**
+> **Every single bug fix, feature logic, entitlement check, quota calculation, database sync, and subscription rule MUST be universal and apply equally to ALL users (already registered, newly registering, and future users alike).**
+> - NEVER hardcode rules or exceptions for specific user IDs or email addresses.
+> - When fixing plan tiers, limits, expiry dates, or UI gates, solve the underlying system and service layers so that ANY user granted or purchasing a tier immediately receives the exact entitlements, validity period, and access across all routes (`/search`, `/autopilot`, `/billing`, `/checkout`, `/pricing`, `/dashboard`).
+> - Test coverage must always verify multi-user and arbitrary random user generation.
 
 ---
 
@@ -45,6 +55,21 @@
   - Rewrote `README.md` to reflect verified architecture and capabilities.
   - Created `ARCHITECTURE.md` detailing system topology, service layer, and data flows.
   - Created `SECURITY.md` detailing threat model, encryption, and authentication invariants.
+
+### 🎯 Tier 4: Dynamic Pricing Persistence & AutoPilot Entitlement Caps (COMPLETED)
+- **Eliminated User Plan Reset to Free & Protected 30-Day Subscriptions:**
+  - Found root cause: Auth callbacks ([app/api/auth/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/callback/route.ts) and [app/api/auth/google/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/callback/route.ts)) unconditionally called `saveUserSubscription({ plan_type: 'FREE' })` on user sign-in/callback, wiping out admin-granted paid subscriptions.
+  - Added existing subscription check in both auth callback routes.
+  - Added protection in [lib/services/db-service.ts](file:///e:/profmatch%20ai%20project/lib/services/db-service.ts) `saveUserSubscription`: Unintentional calls to set `FREE` will never overwrite an active non-expired paid plan unless `forceDowngrade: true` is explicitly provided.
+  - Calculated exact 30-day period (`Date.now() + 30 * 86400000`) starting from the exact date/time of grant.
+- **Fixed Feature Locking on Search Page for Upgraded Users:**
+  - Found root cause: `getSearchUsage(userId)` in [lib/services/usage-service.ts](file:///e:/profmatch%20ai%20project/lib/services/usage-service.ts) passed a user UUID to `getEffectiveUserTier`, which did not match valid plan tier strings and always defaulted to `'FREE'`.
+  - Updated `getSearchUsage(userIdOrTier, explicitTier)` to accept explicit tier strings and client-cached tier.
+  - Updated [app/search/page.tsx](file:///e:/profmatch%20ai%20project/app/search/page.tsx) to hydrate the active tier from `/api/auth/me`, immediately unlocking worldwide/45+ destinations and raising search limits from 3 to 250+ upon plan assignment.
+- **Eliminated Hardcoded Mock Data on Billing Page:**
+  - Found root cause: [app/billing/page.tsx](file:///e:/profmatch%20ai%20project/app/billing/page.tsx) had hardcoded `mockDb.profiles[1]` and `mockDb.subscriptions[0]` with static "Oct 27, 2026" date.
+  - Connected `BillingPage` directly to authenticated session via `useAuth()`, hydrating dynamic plan entitlements, real 30-day period end date, and user-specific transaction history.
+  - Verified across all registered, new, and future users via [tests/universal-entitlements.test.mjs](file:///e:/profmatch%20ai%20project/tests/universal-entitlements.test.mjs).
 
 ### 🚀 Tier 3: Pre-Launch Production Audit, Technical SEO, Mobile UX & Live Handshake Verification (COMPLETED)
 - **Technical SEO, Meta & Social Cards:**

@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getSiteContentSection, updateSiteContent } from '@/lib/cms/content-service';
-import { ACADEMIC_PLANS } from '@/lib/services/usage-service';
+import { ACADEMIC_PLANS, updateLiveServerPlans } from '@/lib/services/usage-service';
 import { assertAdmin } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
@@ -18,6 +18,7 @@ const DEFAULT_PLANS = [
     searchesLimit: 3,
     draftsLimit: 2,
     autopilotLimit: 0,
+    autopilotBatchLimit: 0,
     features: [
       '2 Preview Countries (Pakistan, Germany)',
       '3 Grounded Faculty Searches Total',
@@ -39,6 +40,7 @@ const DEFAULT_PLANS = [
     searchesLimit: 50,
     draftsLimit: 30,
     autopilotLimit: 5,
+    autopilotBatchLimit: 5,
     features: [
       '10+ Major Academic Countries (USA, UK, Canada, Germany, etc.)',
       '50 Grounded Searches / mo',
@@ -55,16 +57,17 @@ const DEFAULT_PLANS = [
     name: 'Pro Researcher',
     tagline: 'Broad international reach across 45+ countries with autonomous Gmail drafts.',
     badge: 'RECOMMENDED FOR 2026/2027',
-    pricePkr: 8500,
+    pricePkr: 8000,
     priceUsd: 29,
     searchesLimit: 250,
-    draftsLimit: 120,
-    autopilotLimit: 25,
+    draftsLimit: 150,
+    autopilotLimit: 20,
+    autopilotBatchLimit: 20,
     features: [
       'All 45+ Academic Countries (Europe, Asia, Americas, Australasia)',
       '250 Grounded Searches / mo',
-      '120 AI Personalized Grounded Drafts / mo',
-      'Autonomous AutoPilot (25 emails/batch)',
+      '150 AI Personalized Grounded Drafts / mo',
+      'Autonomous AutoPilot (20 emails/batch)',
       'Deep Research Alignment Match Scoring',
       'Gmail OAuth One-Click Drafts & Dispatch',
       'Email Tracking & Analytics',
@@ -78,14 +81,15 @@ const DEFAULT_PLANS = [
     name: 'PhD Elite',
     tagline: 'Comprehensive doctoral candidate suite with priority indexing and personal review.',
     badge: 'MAXIMUM ADMISSIONS CHANCES',
-    pricePkr: 18000,
+    pricePkr: 16000,
     priceUsd: 59,
-    searchesLimit: 1000,
-    draftsLimit: 500,
-    autopilotLimit: 50,
+    searchesLimit: 999999,
+    draftsLimit: 999999,
+    autopilotLimit: 500,
+    autopilotBatchLimit: 500,
     features: [
       'Global Unrestricted University Database',
-      '1,000 Searches / mo',
+      'Unlimited Searches / mo',
       'Unlimited AI Grounded Drafts',
       'AutoPilot Engine (Up to 500 Emails / mo)',
       'Direct Phone/Office & 1-on-1 Support',
@@ -102,28 +106,43 @@ export async function GET() {
     const rawPlans = pricingSection?.content?.plans;
     const plans = Array.isArray(rawPlans) && rawPlans.length > 0 ? rawPlans : DEFAULT_PLANS;
 
-    const plansMap: Record<string, any> = {};
-    plans.forEach((p: any) => {
-      const baseConfig = ACADEMIC_PLANS[p.tier as keyof typeof ACADEMIC_PLANS] || {};
-      plansMap[p.tier] = {
+    const normalizedPlans = plans.map((p: any) => {
+      const tierKey = (p.tier || 'FREE').toUpperCase();
+      const baseConfig = ACADEMIC_PLANS[tierKey] || ACADEMIC_PLANS.FREE;
+      const autoLimit = p.autopilotLimit !== undefined 
+        ? Number(p.autopilotLimit) 
+        : (p.autopilotBatchLimit !== undefined ? Number(p.autopilotBatchLimit) : baseConfig.autopilotBatchLimit);
+
+      return {
         ...baseConfig,
-        tier: p.tier,
-        name: p.name,
+        ...p,
+        tier: tierKey,
+        name: p.name || baseConfig.name,
+        tagline: p.tagline || p.description || baseConfig.tagline,
+        description: p.description || p.tagline || baseConfig.tagline,
+        badge: p.badge || baseConfig.badge,
         pricePkr: Number(p.pricePkr !== undefined ? p.pricePkr : baseConfig.pricePkr || 0),
         priceUsd: Number(p.priceUsd !== undefined ? p.priceUsd : baseConfig.priceUsd || 0),
-        searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : baseConfig.searchesLimit,
-        draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : baseConfig.draftsLimit,
-        autopilotBatchLimit: p.autopilotLimit !== undefined ? Number(p.autopilotLimit) : baseConfig.autopilotBatchLimit,
-        features: p.features || baseConfig.features,
-        description: p.description || p.tagline || baseConfig.tagline,
-        tagline: p.tagline || p.description || baseConfig.tagline,
-        badge: p.badge || baseConfig.badge,
+        searchesLimit: Number(p.searchesLimit !== undefined ? p.searchesLimit : baseConfig.searchesLimit),
+        draftsLimit: Number(p.draftsLimit !== undefined ? p.draftsLimit : baseConfig.draftsLimit),
+        autopilotLimit: autoLimit,
+        autopilotBatchLimit: autoLimit,
+        features: Array.isArray(p.features) ? p.features : baseConfig.features,
         highlighted: Boolean(p.highlighted),
+        ctaText: p.ctaText || p.cta || 'Get Started',
       };
     });
 
+    const plansMap: Record<string, any> = {};
+    normalizedPlans.forEach((p: any) => {
+      plansMap[p.tier] = p;
+    });
+
+    // Sync live in-memory server cache
+    updateLiveServerPlans(normalizedPlans);
+
     return apiSuccess({
-      plans,
+      plans: normalizedPlans,
       plansMap,
       updated_at: pricingSection?.updated_at || new Date().toISOString(),
     });
@@ -147,17 +166,48 @@ export async function PUT(request: NextRequest) {
       return apiError(parsed.error.issues[0]?.message || 'Invalid pricing update', 400);
     }
 
+    const cleanPlans = parsed.data.plans.map((p: any) => {
+      const tierKey = String(p.tier || 'FREE').toUpperCase();
+      const baseConfig = ACADEMIC_PLANS[tierKey] || ACADEMIC_PLANS.FREE;
+      const autoLimit = p.autopilotLimit !== undefined 
+        ? Number(p.autopilotLimit) 
+        : (p.autopilotBatchLimit !== undefined ? Number(p.autopilotBatchLimit) : baseConfig.autopilotBatchLimit);
+
+      return {
+        ...baseConfig,
+        ...p,
+        tier: tierKey,
+        name: p.name || baseConfig.name,
+        price: p.price || (p.pricePkr ? `Rs. ${Number(p.pricePkr).toLocaleString()} / $${p.priceUsd || 0}` : 'Free'),
+        pricePkr: Number(p.pricePkr !== undefined ? p.pricePkr : baseConfig.pricePkr || 0),
+        priceUsd: Number(p.priceUsd !== undefined ? p.priceUsd : baseConfig.priceUsd || 0),
+        searchesLimit: Number(p.searchesLimit !== undefined ? p.searchesLimit : baseConfig.searchesLimit),
+        draftsLimit: Number(p.draftsLimit !== undefined ? p.draftsLimit : baseConfig.draftsLimit),
+        autopilotLimit: autoLimit,
+        autopilotBatchLimit: autoLimit,
+        features: Array.isArray(p.features) ? p.features : baseConfig.features,
+        description: p.description || p.tagline || baseConfig.tagline,
+        tagline: p.tagline || p.description || baseConfig.tagline,
+        badge: p.badge || baseConfig.badge,
+        highlighted: Boolean(p.highlighted),
+        ctaText: p.cta || p.ctaText || 'Get Started',
+      };
+    });
+
     const updated = await updateSiteContent('pricing', {
       title: 'Simple, accessible academic plans.',
       subtitle: 'Start exploring global faculty for free; upgrade when launching multi-country active outreach campaigns.',
       content: {
         title: 'Simple, accessible academic plans.',
         subtitle: 'Start exploring global faculty for free; upgrade when launching multi-country active outreach campaigns.',
-        plans: parsed.data.plans,
+        plans: cleanPlans,
       },
     });
 
-    return apiSuccess({ pricing: updated });
+    // Update server live memory
+    updateLiveServerPlans(cleanPlans);
+
+    return apiSuccess({ pricing: updated, plans: cleanPlans });
   } catch (error: any) {
     return apiError(error.message || 'Failed to update pricing', 500);
   }

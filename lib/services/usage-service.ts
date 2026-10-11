@@ -163,6 +163,41 @@ export function getEffectiveUserTier(userTier?: PlanTier | string): PlanTier {
   return 'FREE';
 }
 
+let liveServerPlans: Record<string, PlanConfig> | null = null;
+
+export function updateLiveServerPlans(plans: Record<string, Partial<PlanConfig>> | any[]) {
+  if (Array.isArray(plans)) {
+    const map: Record<string, PlanConfig> = {};
+    plans.forEach((p: any) => {
+      const tierKey = String(p.tier || 'FREE').toUpperCase();
+      const base = ACADEMIC_PLANS[tierKey] || ACADEMIC_PLANS.FREE;
+      map[tierKey] = {
+        ...base,
+        tier: tierKey as PlanTier,
+        name: p.name || base.name,
+        badge: p.badge || base.badge,
+        tagline: p.tagline || p.description || base.tagline,
+        pricePkr: Number(p.pricePkr !== undefined ? p.pricePkr : base.pricePkr),
+        priceUsd: Number(p.priceUsd !== undefined ? p.priceUsd : base.priceUsd),
+        searchesLimit: Number(p.searchesLimit !== undefined ? p.searchesLimit : base.searchesLimit),
+        draftsLimit: Number(p.draftsLimit !== undefined ? p.draftsLimit : base.draftsLimit),
+        autopilotBatchLimit: Number(
+          p.autopilotLimit !== undefined
+            ? p.autopilotLimit
+            : (p.autopilotBatchLimit !== undefined ? p.autopilotBatchLimit : base.autopilotBatchLimit)
+        ),
+        allowedCountries: p.allowedCountries || base.allowedCountries,
+        features: Array.isArray(p.features) ? p.features : base.features,
+        highlighted: Boolean(p.highlighted),
+        ctaText: p.ctaText || p.cta || base.ctaText,
+      };
+    });
+    liveServerPlans = map;
+  } else if (typeof plans === 'object' && plans !== null) {
+    liveServerPlans = { ...(liveServerPlans || ACADEMIC_PLANS), ...(plans as any) };
+  }
+}
+
 export function getCustomPlans(): Record<string, PlanConfig> {
   if (typeof window !== 'undefined') {
     try {
@@ -175,7 +210,7 @@ export function getCustomPlans(): Record<string, PlanConfig> {
       }
     } catch {}
   }
-  return ACADEMIC_PLANS;
+  return liveServerPlans || ACADEMIC_PLANS;
 }
 
 export function saveCustomPlans(plans: Record<string, Partial<PlanConfig>>) {
@@ -189,33 +224,27 @@ export function saveCustomPlans(plans: Record<string, Partial<PlanConfig>>) {
 }
 
 export function getPlanConfig(tier: PlanTier): PlanConfig {
+  const normTier = tier === 'STUDENT' ? 'STARTER' : tier;
+
+  if (liveServerPlans && liveServerPlans[normTier]) {
+    return liveServerPlans[normTier];
+  }
+
   if (typeof window === 'undefined') {
     try {
       mockDb.loadFromDisk();
       const pricingPlans = mockDb.siteContent?.pricing?.content?.plans;
       if (Array.isArray(pricingPlans) && pricingPlans.length > 0) {
-        const found = pricingPlans.find((p: any) => p.tier === tier);
-        if (found) {
-          const base = ACADEMIC_PLANS[tier] || ACADEMIC_PLANS.FREE;
-          return {
-            ...base,
-            ...found,
-            searchesLimit: found.searchesLimit !== undefined ? Number(found.searchesLimit) : base.searchesLimit,
-            draftsLimit: found.draftsLimit !== undefined ? Number(found.draftsLimit) : base.draftsLimit,
-            autopilotBatchLimit:
-              found.autopilotLimit !== undefined
-                ? Number(found.autopilotLimit)
-                : (found.autopilotBatchLimit !== undefined
-                ? Number(found.autopilotBatchLimit)
-                : base.autopilotBatchLimit),
-          };
+        updateLiveServerPlans(pricingPlans);
+        if (liveServerPlans && liveServerPlans[normTier]) {
+          return liveServerPlans[normTier];
         }
       }
     } catch {}
   }
+
   const plans = getCustomPlans();
-  if (tier === 'STUDENT') return plans.STARTER || ACADEMIC_PLANS.STARTER;
-  return plans[tier] || plans.FREE || ACADEMIC_PLANS.FREE;
+  return plans[normTier] || ACADEMIC_PLANS[normTier] || ACADEMIC_PLANS.FREE;
 }
 
 export async function syncLivePricingFromServer(): Promise<Record<string, PlanConfig>> {
@@ -235,14 +264,39 @@ export async function syncLivePricingFromServer(): Promise<Record<string, PlanCo
   return getCustomPlans();
 }
 
-export function getSearchUsage(userId?: string): {
+export function getSearchUsage(
+  userIdOrTier?: string,
+  explicitTier?: PlanTier | string
+): {
   used: number;
   limit: number;
   remaining: number;
   isExhausted: boolean;
   tier: PlanTier;
 } {
-  const tier = getEffectiveUserTier(userId);
+  let tier: PlanTier = 'FREE';
+  let userId: string | undefined = undefined;
+
+  const validTiers = ['FREE', 'STARTER', 'PRO', 'ELITE', 'STUDENT'];
+  if (userIdOrTier && validTiers.includes(userIdOrTier.toUpperCase())) {
+    tier = getEffectiveUserTier(userIdOrTier);
+  } else {
+    userId = userIdOrTier;
+    if (explicitTier) {
+      tier = getEffectiveUserTier(explicitTier);
+    }
+  }
+
+  // If tier is still FREE and window is defined, check stored active plan
+  if (tier === 'FREE' && typeof window !== 'undefined' && userId) {
+    try {
+      const storedTier = localStorage.getItem(`profmatch_user_tier_${userId}`);
+      if (storedTier && validTiers.includes(storedTier.toUpperCase())) {
+        tier = getEffectiveUserTier(storedTier);
+      }
+    } catch {}
+  }
+
   const plan = getPlanConfig(tier);
 
   let used = 0;
@@ -255,7 +309,7 @@ export function getSearchUsage(userId?: string): {
     } catch {}
   }
 
-  const limit = plan.searchesLimit;
+  const limit = Number(plan.searchesLimit !== undefined ? plan.searchesLimit : 3);
   const remaining = Math.max(0, limit - used);
   const isExhausted = used >= limit;
 

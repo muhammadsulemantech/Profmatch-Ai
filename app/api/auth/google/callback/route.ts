@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveUserProfile, saveUserSubscription } from '@/lib/services/db-service';
+import { saveUserProfile, saveUserSubscription, getUserSubscription } from '@/lib/services/db-service';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
 
@@ -74,11 +74,14 @@ export async function GET(request: NextRequest) {
     });
 
     try {
-      await saveUserSubscription({
-        user_id: user.id,
-        plan_type: 'FREE',
-        status: 'active',
-      });
+      const existingSub = await getUserSubscription(user.id);
+      if (!existingSub) {
+        await saveUserSubscription({
+          user_id: user.id,
+          plan_type: 'FREE',
+          status: 'active',
+        });
+      }
     } catch {
       // Non-blocking subscription initialization
     }
