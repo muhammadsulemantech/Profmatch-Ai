@@ -264,6 +264,31 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok || !data.success) {
+        // Fallback: If session expired or refreshed, re-dispatch via send-otp
+        if (fullName && password) {
+          const fallbackRes = await fetch('/api/auth/signup/send-otp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              fullName: fullName.trim(),
+              email: email.trim().toLowerCase(),
+              password,
+              targetDegree,
+            }),
+          });
+          const fallbackData = await fallbackRes.json();
+          if (fallbackRes.ok && fallbackData.success) {
+            setExpiresAt(fallbackData.expiresAt || Date.now() + 15 * 60 * 1000);
+            setSecondsRemaining(15 * 60);
+            setResendCooldown(60);
+            setOtp(['', '', '', '', '', '']);
+            setSuccessMsg(`A fresh 6-digit code has been sent to ${email.trim()}`);
+            setLoading(false);
+            otpInputRefs.current[0]?.focus();
+            return;
+          }
+        }
+
         setError(data.error || 'Failed to resend code. Please try again.');
         setLoading(false);
         return;
