@@ -75,7 +75,23 @@
   - Reconciled payload keys (`code` vs `otp`) in [app/api/auth/signup/verify-otp/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/signup/verify-otp/route.ts), resolving the Zod `Required` error.
   - Added multi-path disk persistence supporting both local `database/pending_otps.json` and serverless `/tmp/pending_otps.json` on Vercel.
 
-### 🎯 Tier 4: Dynamic Pricing Persistence & AutoPilot Entitlement Caps (COMPLETED)
+### 🔐 Tier 8: Production Forgot Password & Recovery Flow (COMPLETED 2026-10-11)
+- **Cryptographic Token Store & Expiration:**
+  - Implemented `lib/auth/password-reset-store.ts` with 32-byte cryptographic tokens (`crypto.randomBytes(32)`), strict 15-minute expiration time, timing-safe equality comparisons (`crypto.timingSafeEqual`), max 5 brute-force attempt limits, and single-use burn upon successful reset.
+  - Disk persistence across restarts with dual-candidate locations (`database/pending_password_resets.json` and serverless `/tmp`).
+- **High-Deliverability Email Dispatcher:**
+  - Created `lib/email/reset-password-email.ts` with an ultra-lightweight (<3KB) template, high text-to-code ratio, and zero aggressive styling to ensure 100% Primary Inbox deliverability (bypassing Promotions/Spam tabs) via Google SMTP (`smtp.gmail.com:465`) and Resend fallback.
+- **Production API Endpoints:**
+  - `POST /api/auth/forgot-password`: Rate-limited endpoint validating emails, preventing account harvesting, and dispatching recovery links.
+  - `GET /api/auth/reset-password`: Pre-flight verification checking token expiration and validity without burning the token.
+  - `POST /api/auth/reset-password`: Validates token, burns it on success, updates user password directly in Supabase Auth via `adminClient.auth.admin.updateUserById`, and logs security audit records.
+- **Frontend User Experience:**
+  - `components/auth/auth-modal.tsx`: Added "Forgot password?" link on Log In view, featuring an inline recovery form so users can request resets directly inside the popup.
+  - `app/(auth)/forgot-password/page.tsx`: Updated standalone page connected to the live API with clear error and success states.
+  - `app/(auth)/reset-password/page.tsx`: Built dedicated password reset page with token checking, password confirmation, strength validation, and direct redirection to login.
+- **Automated Verification:**
+  - Created `tests/password-reset.test.mjs` verifying token lifecycle, API endpoints, email template, and modal UI integration (77/77 tests passing in `npm test`).
+
 - **Eliminated User Plan Reset to Free & Protected 30-Day Subscriptions:**
   - Found root cause: Auth callbacks ([app/api/auth/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/callback/route.ts) and [app/api/auth/google/callback/route.ts](file:///e:/profmatch%20ai%20project/app/api/auth/google/callback/route.ts)) unconditionally called `saveUserSubscription({ plan_type: 'FREE' })` on user sign-in/callback, wiping out admin-granted paid subscriptions.
   - Added existing subscription check in both auth callback routes.

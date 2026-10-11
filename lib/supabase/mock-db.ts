@@ -82,7 +82,17 @@ class MockDatabase {
           const parsed = JSON.parse(raw);
           if (parsed.siteSettings) this.siteSettings = { ...this.siteSettings, ...parsed.siteSettings };
           if (parsed.siteContent) this.siteContent = { ...this.siteContent, ...parsed.siteContent };
-          if (parsed.paymentMethods) this.paymentMethods = parsed.paymentMethods;
+          if (parsed.paymentMethods) {
+            const diskMethods = parsed.paymentMethods;
+            const defaults = this.paymentMethods;
+            const merged = [...diskMethods];
+            for (const def of defaults) {
+              if (!merged.some((m: any) => m.id === def.id || m.name.toLowerCase() === def.name.toLowerCase())) {
+                merged.push(def);
+              }
+            }
+            this.paymentMethods = merged;
+          }
           if (parsed.orders) this.orders = parsed.orders;
           if (parsed.payments) this.payments = parsed.payments;
           if (parsed.featureFlags) this.featureFlags = parsed.featureFlags;

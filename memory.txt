@@ -117,6 +117,19 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 • OTP Key Reconciliation:
   - Reconciled { code, otp } in verify-otp route, eliminating Zod 'Required' validation errors. Supported /tmp persistence for Vercel.
 
+[TIER 8] Production Forgot Password & Recovery Flow (COMPLETED 2026-10-11)
+• Cryptographically Secure Reset Token Store (lib/auth/password-reset-store.ts):
+  - 32-byte crypto.randomBytes tokens with timing-safe comparison (crypto.timingSafeEqual), strict 15-minute expiration, max 5 brute-force attempts, and single-use burn upon successful password update. Disk persistence in database/pending_password_resets.json with /tmp support.
+• Primary-Inbox Email Dispatch (lib/email/reset-password-email.ts):
+  - Ultra-lightweight template (<3KB) with high text-to-code ratio, zero heavy styles/shadows, and clean white container to pass Spam/Promotions filters and land directly in user's Primary Inbox via Google SMTP (smtp.gmail.com:465) / Resend.
+• Production API Routes:
+  - POST /api/auth/forgot-password: Rate-limited email recovery endpoint preventing account enumeration.
+  - GET/POST /api/auth/reset-password: Token validation and authoritative Supabase Auth password update via adminClient.auth.admin.updateUserById, audit logging.
+• Seamless Frontend Recovery Experience:
+  - components/auth/auth-modal.tsx: Added "Forgot password?" trigger on Log In view, with in-modal recovery flow without forcing page navigation.
+  - app/(auth)/forgot-password/page.tsx: Real API integration with email dispatch and error handling.
+  - app/(auth)/reset-password/page.tsx: Token verification, password confirmation, strength validation, and direct sign-in redirection.
+
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
@@ -136,10 +149,10 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 --------------------------------------------------------------------
 4. VERIFICATION STATUS
 --------------------------------------------------------------------
-• Automated Unit & Security Tests: npm test -> 71/71 tests passing (0 failures); node --test tests/subscription-entitlements-e2e.test.mjs -> 8/8 tests passing.
+• Automated Unit & Security Tests: npm test -> 77/77 tests passing (0 failures); node --test tests/password-reset.test.mjs -> 5/5 passing.
 • ESLint Quality Check: npx eslint . -> 0 errors, 0 warnings.
 • TypeScript Verification: npx tsc --noEmit -> 0 errors.
-• Production Build: npm run build -> Exit code 0 (66/66 dynamic & static routes compiled cleanly).
+• Production Build: npm run build -> Exit code 0 (69/69 dynamic & static routes compiled cleanly).
 • Live Handshake: Google SMTP TLS delivery & Resend confirmed.
 • Live User Experience Verified (scripts/verify-user-experience.mjs):
   - Signup & OTP: Scrypt hashing verified, 6-digit OTP delivered live via Google SMTP (250 2.0.0 OK).
