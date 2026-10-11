@@ -1,3 +1,7 @@
+---
+trigger: manual
+---
+
 # Universal System-Wide Scope Rule
 
 ## Invariant: All Fixes Must Apply to All Users
