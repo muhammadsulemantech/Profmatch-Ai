@@ -14,8 +14,8 @@ export class SmtpEmailProvider implements EmailProvider {
     const user = (process.env.SMTP_USER || 'profmatchsupport@gmail.com').trim();
     const pass = (process.env.SMTP_PASS || '').replace(/\s+/g, '').trim();
 
-    this.defaultFrom = process.env.EMAIL_FROM || `ProfMatch AI <${user}>`;
-    this.defaultReplyTo = process.env.EMAIL_REPLY_TO || user;
+    this.defaultFrom = (process.env.EMAIL_FROM || `ProfMatch <${user}>`).replace(/^["']|["']$/g, '').trim();
+    this.defaultReplyTo = (process.env.EMAIL_REPLY_TO || user).replace(/^["']|["']$/g, '').trim();
 
     if (user && pass) {
       this.transporter = nodemailer.createTransport({
@@ -36,8 +36,8 @@ export class SmtpEmailProvider implements EmailProvider {
         throw new Error('SMTP transporter is not configured. Missing SMTP_USER or SMTP_PASS.');
       }
 
-      const fromAddress = params.from || this.defaultFrom;
-      const replyToAddress = params.replyTo || this.defaultReplyTo;
+      const fromAddress = (params.from || this.defaultFrom).replace(/^["']|["']$/g, '').trim();
+      const replyToAddress = (params.replyTo || this.defaultReplyTo).replace(/^["']|["']$/g, '').trim();
 
       const info = await this.transporter.sendMail({
         from: fromAddress,
@@ -47,7 +47,7 @@ export class SmtpEmailProvider implements EmailProvider {
         text: params.text,
         html: params.html || params.text,
         headers: {
-          'X-Entity-Ref-ID': `profmatch_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`,
+          'X-Auto-Response-Suppress': 'All',
         },
       });
 
