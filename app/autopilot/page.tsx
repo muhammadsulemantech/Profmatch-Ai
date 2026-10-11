@@ -17,10 +17,24 @@ import {
   PreparedDraftsList,
   ContactedProfRecord,
 } from '@/components/autopilot/prepared-drafts-list';
+import {
+  getPlanConfig,
+  syncLivePricingFromServer,
+  PlanConfig,
+} from '@/lib/services/usage-service';
+import type { PlanTier } from '@/types/database';
 
 export default function AutoPilotPage() {
   const { user } = useAuth();
   const userId = user?.id || 'usr_student_001';
+
+  const userTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
+  const [planConfig, setPlanConfig] = useState<PlanConfig>(() => getPlanConfig(userTier));
+  const [autopilotUsed, setAutopilotUsed] = useState<number>(() => Number(user?.usage?.autopilot_count || 0));
+
+  const maxAllowedCap = Number(planConfig?.autopilotBatchLimit !== undefined ? planConfig.autopilotBatchLimit : 0);
+  const isLocked = maxAllowedCap <= 0;
+  const remainingQuota = Math.max(0, maxAllowedCap - autopilotUsed);
 
   const countries = React.useMemo(() => getAllCountries(), []);
 
@@ -29,7 +43,7 @@ export default function AutoPilotPage() {
   const [targetDegree, setTargetDegree] = useState('PhD');
   const [discipline, setDiscipline] = useState('Artificial Intelligence & NLP');
   const [keywordsText, setKeywordsText] = useState('Large Language Models, AI Reasoning, Multi-Agent Systems');
-  const [batchLimit, setBatchLimit] = useState<number>(10);
+  const [batchLimit, setBatchLimit] = useState<number>(() => (maxAllowedCap > 0 ? Math.min(10, maxAllowedCap) : 5));
   const [cooldownSec, setCooldownSec] = useState<number>(60);
   const [tone, setTone] = useState<'academic' | 'concise' | 'inquisitive'>('academic');
 
@@ -68,6 +82,45 @@ export default function AutoPilotPage() {
     }
   }, [logs]);
 
+  // Hydrate live plan pricing and user usage entitlements
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveEntitlements() {
+      await syncLivePricingFromServer();
+      const currentTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
+      const initialCfg = getPlanConfig(currentTier);
+      if (isMounted) {
+        setPlanConfig(initialCfg);
+        const initialCap = Number(initialCfg.autopilotBatchLimit !== undefined ? initialCfg.autopilotBatchLimit : 0);
+        if (initialCap > 0) {
+          setBatchLimit((prev) => Math.min(prev, initialCap));
+        }
+      }
+
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user && isMounted) {
+            const freshTier = (data.user.tier || data.user.plan_tier || 'FREE') as PlanTier;
+            const freshCfg = getPlanConfig(freshTier);
+            setPlanConfig(freshCfg);
+            const used = Number(data.user.usage?.autopilot_count || 0);
+            setAutopilotUsed(used);
+            const cap = Number(freshCfg.autopilotBatchLimit !== undefined ? freshCfg.autopilotBatchLimit : 0);
+            if (cap > 0) {
+              setBatchLimit((prev) => Math.min(prev, cap));
+            }
+          }
+        }
+      } catch { }
+    }
+    loadLiveEntitlements();
+    return () => {
+      isMounted = false;
+    };
+  }, [user]);
+
   // Load profile defaults & saved CV from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -99,7 +152,7 @@ export default function AutoPilotPage() {
               size: parsedCv.file_size || 154000,
             });
           }
-        } catch {}
+        } catch { }
       }
 
       // Check for previously saved AutoPilot document (only if explicitly uploaded in AutoPilot)
@@ -107,9 +160,9 @@ export default function AutoPilotPage() {
       if (savedAutopilotDoc) {
         try {
           setAttachedDocument(JSON.parse(savedAutopilotDoc));
-        } catch {}
+        } catch { }
       }
-    } catch {}
+    } catch { }
   }, [userId]);
 
   const handleDocumentUpload = (file: File) => {
@@ -122,7 +175,7 @@ export default function AutoPilotPage() {
     setAttachedDocument(docData);
     try {
       localStorage.setItem(`profmatch_autopilot_doc_${userId}`, JSON.stringify(docData));
-    } catch {}
+    } catch { }
     appendLog('INFO', `📎 Attached document: "${file.name}" (${Math.round(file.size / 1024)} KB) for faculty review.`);
   };
 
@@ -137,7 +190,7 @@ export default function AutoPilotPage() {
     setAttachedDocument(docData);
     try {
       localStorage.setItem(`profmatch_autopilot_doc_${userId}`, JSON.stringify(docData));
-    } catch {}
+    } catch { }
     appendLog('INFO', `📎 Attached account CV: "${profileCv.name}" (${Math.round(profileCv.size / 1024)} KB) for faculty review.`);
   };
 
@@ -145,7 +198,7 @@ export default function AutoPilotPage() {
     setAttachedDocument(null);
     try {
       localStorage.removeItem(`profmatch_autopilot_doc_${userId}`);
-    } catch {}
+    } catch { }
     appendLog('INFO', '🗑️ Attached document removed.');
   };
 
@@ -188,12 +241,24 @@ export default function AutoPilotPage() {
       return;
     }
 
+    if (isLocked) {
+      appendLog('ERROR', `⛔ AutoPilot outreach is not available on the ${planConfig.name} (${planConfig.tier}) plan. Please upgrade to Scholar Starter or Pro Researcher.`);
+      return;
+    }
+
+    if (remainingQuota <= 0) {
+      appendLog('ERROR', `⛔ AutoPilot monthly cap reached (${autopilotUsed}/${maxAllowedCap} emails). Please upgrade your plan for additional autonomous outreach.`);
+      return;
+    }
+
+    const effectiveTargetBatch = Math.min(batchLimit, remainingQuota);
+
     isPausedRef.current = false;
     isCancelledRef.current = false;
     setEngineStatus('SEARCHING');
     setCurrentProgress(0);
     appendLog('INFO', `🚀 AutoPilot outreach initiated: Target [${targetCountry} • ${targetDegree} • ${discipline}]`);
-    appendLog('INFO', `⚡ Batch quota: ${batchLimit} emails • Anti-spam delay: ${cooldownSec}s`);
+    appendLog('INFO', `⚡ Batch quota: ${effectiveTargetBatch} emails (Plan cap: ${maxAllowedCap}, Used: ${autopilotUsed}) • Anti-spam delay: ${cooldownSec}s`);
 
     const keywordsArray = keywordsText
       .split(',')
@@ -226,9 +291,9 @@ export default function AutoPilotPage() {
       contactedHistory.forEach((rec) => {
         if (rec.email) contactedEmails.push(rec.email);
       });
-    } catch {}
+    } catch { }
 
-    while (completedCount < batchLimit) {
+    while (completedCount < effectiveTargetBatch) {
       if (isPausedRef.current) {
         appendLog('WARN', '⏸️ AutoPilot campaign paused by user. Awaiting resume...');
         break;
@@ -240,7 +305,7 @@ export default function AutoPilotPage() {
 
       // STEP 1: Discover Next Matching Faculty Member
       setEngineStatus('SEARCHING');
-      appendLog('SEARCH', `🔍 Querying faculty registry & real-time search for uncontacted professor (${completedCount + 1}/${batchLimit})...`);
+      appendLog('SEARCH', `🔍 Querying faculty registry & real-time search for uncontacted professor (${completedCount + 1}/${effectiveTargetBatch})...`);
 
       let discoveredProf: any = null;
       try {
@@ -301,6 +366,10 @@ export default function AutoPilotPage() {
         const draftData = await draftRes.json();
         const payload = draftData.data || draftData;
         if (!draftRes.ok || (!draftData.success && !payload.subject)) {
+          if (draftRes.status === 403 || draftData.code === 'QUOTA_EXCEEDED' || draftData.code === 'UPGRADE_REQUIRED') {
+            appendLog('ERROR', `🛑 AutoPilot Quota Reached: ${draftData.message || draftData.error || 'Plan limit reached'}`);
+            break;
+          }
           throw new Error(draftData.error || 'Failed to generate email');
         }
 
@@ -337,6 +406,7 @@ export default function AutoPilotPage() {
         const draftUrl = savePayload?.draftUrl || saveDraftData.draftUrl;
 
         completedCount += 1;
+        setAutopilotUsed((prev) => prev + 1);
         setCurrentProgress(completedCount);
 
         const newRecord: ContactedProfRecord = {
@@ -362,7 +432,7 @@ export default function AutoPilotPage() {
           if (currentDraftsStr) {
             try {
               currentDrafts = JSON.parse(currentDraftsStr);
-            } catch {}
+            } catch { }
           }
 
           currentDrafts.unshift({
@@ -395,18 +465,18 @@ export default function AutoPilotPage() {
               appliedDate: new Date().toISOString().split('T')[0],
             });
             localStorage.setItem(kanbanKey, JSON.stringify(cards));
-          } catch {}
+          } catch { }
 
           window.dispatchEvent(new Event('profmatch_messages_updated'));
         }
 
-        appendLog('SUCCESS', `📝 Draft saved to Gmail! Ready for your review (${completedCount}/${batchLimit})`);
+        appendLog('SUCCESS', `📝 Draft saved to Gmail! Ready for your review (${completedCount}/${effectiveTargetBatch})`);
       } catch (err: any) {
         appendLog('ERROR', `Draft creation failed for ${discoveredProf.email}: ${err.message}`);
       }
 
       // STEP 4: Anti-Spam Cooldown Timer
-      if (completedCount < batchLimit && !isPausedRef.current && !isCancelledRef.current) {
+      if (completedCount < effectiveTargetBatch && !isPausedRef.current && !isCancelledRef.current) {
         setEngineStatus('COOLDOWN');
         appendLog('WAIT', `⏳ Anti-Spam protection active: Waiting ${cooldownSec}s before next contact...`);
         await sleep(cooldownSec);
@@ -415,7 +485,7 @@ export default function AutoPilotPage() {
 
     if (!isPausedRef.current && !isCancelledRef.current) {
       setEngineStatus('COMPLETED');
-      appendLog('SUCCESS', `🎉 AutoPilot Campaign Finished! Contacted ${completedCount} professors.`);
+      appendLog('SUCCESS', `🎉 AutoPilot Campaign Finished! Processed ${completedCount} faculty drafts.`);
     }
   };
 
@@ -507,6 +577,11 @@ export default function AutoPilotPage() {
               onPause={handlePause}
               onResume={handleResume}
               onAbort={handleAbort}
+              planName={planConfig.name}
+              planTier={planConfig.tier}
+              maxBatchCap={maxAllowedCap}
+              usedCount={autopilotUsed}
+              isLocked={isLocked}
             />
           </div>
 
@@ -515,7 +590,7 @@ export default function AutoPilotPage() {
             <CampaignTerminal
               engineStatus={engineStatus}
               currentProgress={currentProgress}
-              batchLimit={batchLimit}
+              batchLimit={maxAllowedCap > 0 ? Math.min(batchLimit, maxAllowedCap) : batchLimit}
               remainingCooldown={remainingCooldown}
               isRunning={isRunning}
               logs={logs}

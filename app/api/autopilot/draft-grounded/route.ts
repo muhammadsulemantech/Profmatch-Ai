@@ -50,9 +50,20 @@ export async function POST(request: NextRequest) {
 
     const { professor, studentProfile } = parsed.data;
 
-    const quotaCheck = checkAndIncrementQuota(userId, 'draft');
+    // Strict AutoPilot quota enforcement based on active subscription cap
+    const autopilotQuota = checkAndIncrementQuota(userId, 'autopilot', { increment: true });
+    if (!autopilotQuota.allowed) {
+      return apiError(autopilotQuota.message || autopilotQuota.error || 'AutoPilot cap reached', 403, autopilotQuota.error || 'QUOTA_EXCEEDED', {
+        message: autopilotQuota.message,
+        tier: autopilotQuota.tier,
+        limit: autopilotQuota.limit,
+        used: autopilotQuota.used,
+      });
+    }
+
+    const quotaCheck = checkAndIncrementQuota(userId, 'draft', { increment: true });
     if (!quotaCheck.allowed) {
-      return apiError(quotaCheck.error || 'Quota limit reached', 403, 'QUOTA_EXCEEDED', {
+      return apiError(quotaCheck.message || quotaCheck.error || 'Draft quota reached', 403, quotaCheck.error || 'QUOTA_EXCEEDED', {
         message: quotaCheck.message,
         tier: quotaCheck.tier,
         limit: quotaCheck.limit,

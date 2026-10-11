@@ -56,11 +56,37 @@ export default function SearchPage() {
   const router = useRouter();
   const { user, requireAuth } = useAuth();
 
-  const [usage, setUsage] = useState(() => getSearchUsage(user?.id));
+  const currentTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
+  const [usage, setUsage] = useState(() => getSearchUsage(user?.id, currentTier));
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
   useEffect(() => {
-    setUsage(getSearchUsage(user?.id));
+    let isMounted = true;
+    async function refreshTierAndUsage() {
+      const activeTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
+      if (isMounted) {
+        setUsage(getSearchUsage(user?.id, activeTier));
+      }
+
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.authenticated && data.user && isMounted) {
+            const freshTier = (data.user.tier || data.user.plan_tier || 'FREE') as PlanTier;
+            if (data.user.id) {
+              localStorage.setItem(`profmatch_user_tier_${data.user.id}`, freshTier);
+            }
+            setUsage(getSearchUsage(data.user.id, freshTier));
+          }
+        }
+      } catch {}
+    }
+
+    refreshTierAndUsage();
+    return () => {
+      isMounted = false;
+    };
   }, [user]);
 
   const [naturalQuery, setNaturalQuery] = useState('');

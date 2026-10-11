@@ -264,13 +264,16 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
     // Authoritative 30-day period for paid plans, null for FREE
     const periodEnd = isPaid ? new Date(Date.now() + 30 * 86400000).toISOString() : null;
 
-    await saveUserSubscription({
-      user_id: userId,
-      plan_type: planTier,
-      status: 'active',
-      current_period_start: now,
-      current_period_end: periodEnd,
-    });
+    await saveUserSubscription(
+      {
+        user_id: userId,
+        plan_type: planTier,
+        status: 'active',
+        current_period_start: now,
+        current_period_end: periodEnd,
+      },
+      { forceDowngrade: !isPaid }
+    );
   }
 
   if (role) {

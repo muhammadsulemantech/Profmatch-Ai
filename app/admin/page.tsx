@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Settings,
@@ -93,6 +93,7 @@ export default function AdminDashboardPage() {
 
   // Pricing plans state
   const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const isPricingDirtyRef = useRef(false);
 
   // User management states
   const [users, setUsers] = useState<any[]>([]);
@@ -178,8 +179,39 @@ export default function AdminDashboardPage() {
             primaryCta: cObj.hero.content?.primaryCta || '',
           });
         }
-        if (cObj?.pricing?.content?.plans) {
-          setPricingPlans(cObj.pricing.content.plans);
+        if (cObj?.pricing?.content?.plans && Array.isArray(cObj.pricing.content.plans)) {
+          const raw = cObj.pricing.content.plans;
+          const normalized = raw.map((p: any) => {
+            const tierKey = String(p.tier || 'FREE').toUpperCase();
+            const autoCap = p.autopilotLimit !== undefined 
+              ? Number(p.autopilotLimit) 
+              : (p.autopilotBatchLimit !== undefined 
+                ? Number(p.autopilotBatchLimit) 
+                : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500));
+            return {
+              ...p,
+              tier: tierKey,
+              name: p.name || (tierKey === 'FREE' ? 'Free Explorer' : tierKey === 'STARTER' ? 'Scholar Starter' : tierKey === 'PRO' ? 'Pro Researcher' : 'PhD Elite'),
+              price: p.price || (tierKey === 'FREE' ? 'Free' : `Rs. ${p.pricePkr || 0} / $${p.priceUsd || 0}`),
+              pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 3500 : tierKey === 'PRO' ? 8000 : 16000),
+              priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 12 : tierKey === 'PRO' ? 29 : 59),
+              searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
+              draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
+              autopilotLimit: autoCap,
+              autopilotBatchLimit: autoCap,
+              features: Array.isArray(p.features) ? p.features : [],
+              badge: p.badge || '',
+              description: p.description || p.tagline || '',
+              cta: p.cta || p.ctaText || 'Get Started',
+              ctaText: p.ctaText || p.cta || 'Get Started',
+              highlighted: Boolean(p.highlighted),
+            };
+          });
+
+          // Only overwrite if the admin hasn't made unsaved local modifications or on explicit non-silent fetch
+          if (!isPricingDirtyRef.current || !isSilent) {
+            setPricingPlans(normalized);
+          }
         }
       }
 
@@ -258,14 +290,19 @@ export default function AdminDashboardPage() {
 
   // Pricing Plan handlers
   const handleUpdatePlan = (planIdx: number, field: string, value: any) => {
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => {
       const copy = [...prev];
       copy[planIdx] = { ...copy[planIdx], [field]: value };
+      if (field === 'autopilotLimit') {
+        copy[planIdx].autopilotBatchLimit = Number(value);
+      }
       return copy;
     });
   };
 
   const handleUpdateFeature = (planIdx: number, featIdx: number, value: string) => {
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => {
       const copy = [...prev];
       const newFeats = [...copy[planIdx].features];
@@ -276,6 +313,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleAddFeature = (planIdx: number) => {
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => {
       const copy = [...prev];
       copy[planIdx] = { ...copy[planIdx], features: [...copy[planIdx].features, 'New Plan Feature'] };
@@ -284,6 +322,7 @@ export default function AdminDashboardPage() {
   };
 
   const handleRemoveFeature = (planIdx: number, featIdx: number) => {
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => {
       const copy = [...prev];
       copy[planIdx] = { ...copy[planIdx], features: copy[planIdx].features.filter((_, i) => i !== featIdx) };
@@ -292,16 +331,24 @@ export default function AdminDashboardPage() {
   };
 
   const handleAddPlan = () => {
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => [
       ...prev,
       {
         name: 'New Custom Tier',
         tier: 'PRO',
-        price: '$29',
+        price: 'Rs. 8,000 / $29',
+        pricePkr: 8000,
+        priceUsd: 29,
+        searchesLimit: 250,
+        draftsLimit: 150,
+        autopilotLimit: 20,
+        autopilotBatchLimit: 20,
         period: 'per month',
         description: 'Custom academic research plan tailored for intensive candidate outreach.',
         features: ['Unlimited Searches', 'Priority Outreach Drafts', 'Dedicated Support'],
         cta: 'Upgrade Plan',
+        ctaText: 'Upgrade Plan',
         highlighted: false,
       },
     ]);
@@ -309,12 +356,41 @@ export default function AdminDashboardPage() {
 
   const handleRemovePlan = (planIdx: number) => {
     if (!confirm('Are you sure you want to remove this pricing plan?')) return;
+    isPricingDirtyRef.current = true;
     setPricingPlans(prev => prev.filter((_, i) => i !== planIdx));
   };
 
   const handleSavePricingOnly = async () => {
     setSaving(true);
     try {
+      const cleanPlans = pricingPlans.map(p => {
+        const tierKey = String(p.tier || 'FREE').toUpperCase();
+        const autoCap = p.autopilotLimit !== undefined 
+          ? Number(p.autopilotLimit) 
+          : (p.autopilotBatchLimit !== undefined 
+            ? Number(p.autopilotBatchLimit) 
+            : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500));
+        return {
+          ...p,
+          tier: tierKey,
+          name: p.name || tierKey,
+          price: p.price || (tierKey === 'FREE' ? 'Free' : `Rs. ${p.pricePkr || 0} / $${p.priceUsd || 0}`),
+          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 3500 : tierKey === 'PRO' ? 8000 : 16000),
+          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 12 : tierKey === 'PRO' ? 29 : 59),
+          searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
+          draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
+          autopilotLimit: autoCap,
+          autopilotBatchLimit: autoCap,
+          features: Array.isArray(p.features) ? p.features : [],
+          description: p.description || '',
+          tagline: p.description || '',
+          badge: p.badge || '',
+          highlighted: Boolean(p.highlighted),
+          cta: p.cta || p.ctaText || 'Get Started',
+          ctaText: p.ctaText || p.cta || 'Get Started',
+        };
+      });
+
       const pRes = await fetch('/api/admin/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -322,7 +398,7 @@ export default function AdminDashboardPage() {
           sectionKey: 'pricing',
           title: 'Transparent Worldwide Academic Subscriptions',
           subtitle: 'Access verified faculty across 190+ countries. Free to explore; upgrade for full worldwide contacts and autonomous outreach.',
-          content: { plans: pricingPlans },
+          content: { plans: cleanPlans },
         }),
       });
 
@@ -330,39 +406,22 @@ export default function AdminDashboardPage() {
         await fetch('/api/pricing', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plans: pricingPlans }),
+          body: JSON.stringify({ plans: cleanPlans }),
         });
       } catch (e) {
         console.warn('API pricing direct sync warning:', e);
       }
 
-      const pData = await pRes.json();
-      if (pRes.ok && pData.section?.content?.plans) {
-        setPricingPlans(pData.section.content.plans);
-      }
-
       const planMap: Record<string, any> = {};
-      pricingPlans.forEach(p => {
-        const tierKey = p.tier.toUpperCase();
-        planMap[tierKey] = {
-          tier: tierKey,
-          name: p.name,
-          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (p.price?.includes('3,500') ? 3500 : p.price?.includes('8,000') ? 8000 : p.price?.includes('16,000') ? 16000 : 0),
-          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (p.price?.includes('12') ? 12 : p.price?.includes('29') ? 29 : p.price?.includes('59') ? 59 : 0),
-          searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
-          draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
-          autopilotBatchLimit: p.autopilotLimit !== undefined ? Number(p.autopilotLimit) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500),
-          features: p.features,
-          tagline: p.description,
-          badge: p.badge,
-          highlighted: Boolean(p.highlighted),
-          ctaText: p.cta || p.ctaText || 'Get Started',
-        };
+      cleanPlans.forEach(p => {
+        planMap[p.tier] = p;
       });
       saveCustomPlans(planMap);
+      isPricingDirtyRef.current = false;
+      setPricingPlans(cleanPlans);
 
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: pricingPlans, planMap } }));
+        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: cleanPlans, planMap } }));
         localStorage.setItem('profmatch_pricing_last_sync', String(Date.now()));
       }
 
@@ -502,6 +561,34 @@ export default function AdminDashboardPage() {
         }),
       });
 
+      const cleanPlans = pricingPlans.map(p => {
+        const tierKey = String(p.tier || 'FREE').toUpperCase();
+        const autoCap = p.autopilotLimit !== undefined 
+          ? Number(p.autopilotLimit) 
+          : (p.autopilotBatchLimit !== undefined 
+            ? Number(p.autopilotBatchLimit) 
+            : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500));
+        return {
+          ...p,
+          tier: tierKey,
+          name: p.name || tierKey,
+          price: p.price || (tierKey === 'FREE' ? 'Free' : `Rs. ${p.pricePkr || 0} / $${p.priceUsd || 0}`),
+          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 3500 : tierKey === 'PRO' ? 8000 : 16000),
+          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 12 : tierKey === 'PRO' ? 29 : 59),
+          searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
+          draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
+          autopilotLimit: autoCap,
+          autopilotBatchLimit: autoCap,
+          features: Array.isArray(p.features) ? p.features : [],
+          description: p.description || '',
+          tagline: p.description || '',
+          badge: p.badge || '',
+          highlighted: Boolean(p.highlighted),
+          cta: p.cta || p.ctaText || 'Get Started',
+          ctaText: p.ctaText || p.cta || 'Get Started',
+        };
+      });
+
       const pRes = await fetch('/api/admin/content', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -509,7 +596,7 @@ export default function AdminDashboardPage() {
           sectionKey: 'pricing',
           title: 'Transparent Global Academic Pricing',
           subtitle: 'Free to start exploring faculty worldwide; upgrade when launching multi-country campaigns.',
-          content: { plans: pricingPlans },
+          content: { plans: cleanPlans },
         }),
       });
 
@@ -517,44 +604,26 @@ export default function AdminDashboardPage() {
         await fetch('/api/pricing', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plans: pricingPlans }),
+          body: JSON.stringify({ plans: cleanPlans }),
         });
       } catch (e) {
         console.warn('API pricing direct sync warning:', e);
       }
 
-      const pData = await pRes.json();
-      if (pRes.ok && pData.section?.content?.plans) {
-        setPricingPlans(pData.section.content.plans);
-      }
-
       const planMap: Record<string, any> = {};
-      pricingPlans.forEach(p => {
-        const tierKey = p.tier.toUpperCase();
-        planMap[tierKey] = {
-          tier: tierKey,
-          name: p.name,
-          pricePkr: p.pricePkr !== undefined ? Number(p.pricePkr) : (p.price?.includes('3,500') ? 3500 : p.price?.includes('8,000') ? 8000 : p.price?.includes('16,000') ? 16000 : 0),
-          priceUsd: p.priceUsd !== undefined ? Number(p.priceUsd) : (p.price?.includes('12') ? 12 : p.price?.includes('29') ? 29 : p.price?.includes('59') ? 59 : 0),
-          searchesLimit: p.searchesLimit !== undefined ? Number(p.searchesLimit) : (tierKey === 'FREE' ? 3 : tierKey === 'STARTER' ? 50 : tierKey === 'PRO' ? 250 : 999999),
-          draftsLimit: p.draftsLimit !== undefined ? Number(p.draftsLimit) : (tierKey === 'FREE' ? 2 : tierKey === 'STARTER' ? 30 : tierKey === 'PRO' ? 150 : 999999),
-          autopilotBatchLimit: p.autopilotLimit !== undefined ? Number(p.autopilotLimit) : (tierKey === 'FREE' ? 0 : tierKey === 'STARTER' ? 5 : tierKey === 'PRO' ? 20 : 500),
-          features: p.features,
-          tagline: p.description,
-          badge: p.badge,
-          highlighted: Boolean(p.highlighted),
-          ctaText: p.cta || p.ctaText || 'Get Started',
-        };
+      cleanPlans.forEach(p => {
+        planMap[p.tier] = p;
       });
       saveCustomPlans(planMap);
+      isPricingDirtyRef.current = false;
+      setPricingPlans(cleanPlans);
 
       if (typeof window !== 'undefined') {
-        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: pricingPlans, planMap } }));
+        window.dispatchEvent(new CustomEvent('profmatch_pricing_updated', { detail: { plans: cleanPlans, planMap } }));
         localStorage.setItem('profmatch_pricing_last_sync', String(Date.now()));
       }
 
       showNotice('success', 'Global editorial copy & pricing packages published live across all pages!');
-      fetchAdminData(true);
     } catch {
       showNotice('error', 'Error publishing content.');
     } finally {
@@ -608,6 +677,8 @@ export default function AdminDashboardPage() {
 
   const handleUpdateUserPlan = async (userId: string, targetPlan: string) => {
     try {
+      const isPaid = targetPlan !== 'FREE';
+      const periodEnd = isPaid ? new Date(Date.now() + 30 * 86400000).toISOString() : null;
       const res = await fetch('/api/admin/users', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -623,13 +694,20 @@ export default function AdminDashboardPage() {
               ? {
                   ...u,
                   plan_tier: targetPlan,
-                  is_paid: targetPlan !== 'FREE',
-                  subscription_status: 'active',
+                  is_paid: isPaid,
+                  subscription_status: isPaid ? 'active' : 'free',
+                  subscription_start: isPaid ? new Date().toISOString() : null,
+                  subscription_end: periodEnd,
+                  is_expired: false,
                 }
               : u
           )
         );
-        showNotice('success', `User plan changed to ${targetPlan} successfully!`);
+        showNotice('success', `User plan changed to ${targetPlan} successfully (30-day period active)!`);
+        await fetchAdminData(true);
+      } else {
+        const err = await res.json();
+        showNotice('error', err.error || err.message || 'Failed to update user plan.');
       }
     } catch {
       showNotice('error', 'Failed to update user plan.');

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   Globe,
   GraduationCap,
@@ -15,6 +16,9 @@ import {
   Upload,
   X,
   CheckCircle2,
+  Zap,
+  Lock,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface CountryOption {
@@ -69,6 +73,11 @@ interface CampaignConfigPanelProps {
   onPause: () => void;
   onResume: () => void;
   onAbort: () => void;
+  planName?: string;
+  planTier?: string;
+  maxBatchCap?: number;
+  usedCount?: number;
+  isLocked?: boolean;
 }
 
 export function CampaignConfigPanel({
@@ -100,8 +109,14 @@ export function CampaignConfigPanel({
   onPause,
   onResume,
   onAbort,
+  planName = 'Pro Researcher',
+  planTier = 'PRO',
+  maxBatchCap = 20,
+  usedCount = 0,
+  isLocked = false,
 }: CampaignConfigPanelProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const remainingQuota = Math.max(0, maxBatchCap - usedCount);
   return (
     <div className="space-y-6">
       {/* Campaign Configuration Form */}
@@ -114,6 +129,48 @@ export function CampaignConfigPanel({
         </div>
 
         <div className="space-y-4 text-xs">
+          {/* Active Subscription & Entitlements Badge */}
+          {isLocked ? (
+            <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" /> AutoPilot Locked ({planName})
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 uppercase">
+                  0 Emails Allowed
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                Autonomous AutoPilot outreach requires an active Scholar Starter or Pro Researcher subscription.
+              </p>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors"
+              >
+                <Zap className="w-3 h-3" /> Upgrade to Unlock AutoPilot
+              </Link>
+            </div>
+          ) : (
+            <div className="p-3 bg-slate-950/80 border border-emerald-500/30 rounded-xl space-y-1">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="font-bold text-white text-xs">Plan Limit: {planName}</span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 font-mono">
+                    {planTier}
+                  </span>
+                </div>
+                <span className="text-[11px] font-mono font-bold text-emerald-400">
+                  Cap: {maxBatchCap} Emails
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+                <span>Drafted This Cycle: <strong className="text-white">{usedCount}</strong> / {maxBatchCap}</span>
+                <span>Remaining: <strong className={remainingQuota > 0 ? 'text-emerald-400' : 'text-rose-400'}>{remainingQuota} Emails</strong></span>
+              </div>
+            </div>
+          )}
+
           <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl space-y-1">
             <div className="flex items-center justify-between">
               <span className="font-bold text-emerald-400 text-xs">Safety Guaranteed: Draft Mode Only</span>
@@ -205,14 +262,35 @@ export function CampaignConfigPanel({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" /> Batch Emails
+                </span>
+                <span className="text-[10px] text-slate-400 font-mono">Plan Cap: {maxBatchCap}</span>
+              </label>
+              <input
+                type="number"
+                min={1}
+                max={Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap))}
+                value={batchLimit}
+                disabled={isRunning || isLocked || remainingQuota <= 0}
+                onChange={(e) => {
+                  const val = Math.max(1, Math.min(Number(e.target.value), Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap))));
+                  setBatchLimit(val);
+                }}
+                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              />
+            </div>
+
             <div>
               <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-emerald-400" /> Anti-Spam Delay
               </label>
               <select
                 value={cooldownSec}
-                disabled={isRunning}
+                disabled={isRunning || isLocked}
                 onChange={(e) => setCooldownSec(Number(e.target.value))}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               >
@@ -226,7 +304,7 @@ export function CampaignConfigPanel({
               <label className="block text-slate-300 font-semibold mb-1">Outreach Tone</label>
               <select
                 value={tone}
-                disabled={isRunning}
+                disabled={isRunning || isLocked}
                 onChange={(e) => setTone(e.target.value as any)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               >
@@ -389,15 +467,41 @@ export function CampaignConfigPanel({
         {/* Action Trigger Buttons */}
         <div className="pt-2">
           {engineStatus === 'IDLE' || engineStatus === 'COMPLETED' ? (
-            <button
-              type="button"
-              onClick={onLaunch}
-              disabled={!hasAuthorized}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-slate-950" />
-              Launch AutoPilot (Create {batchLimit} Gmail Drafts)
-            </button>
+            isLocked ? (
+              <Link
+                href="/pricing"
+                className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+              >
+                <Lock className="w-4 h-4" />
+                Upgrade to Unlock AutoPilot Engine
+              </Link>
+            ) : remainingQuota <= 0 ? (
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  disabled
+                  className="w-full py-3 rounded-xl bg-slate-800 text-slate-400 font-extrabold text-xs flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
+                >
+                  <AlertTriangle className="w-4 h-4 text-amber-400" />
+                  AutoPilot Limit Reached ({usedCount}/{maxBatchCap} Emails)
+                </button>
+                <div className="text-center">
+                  <Link href="/pricing" className="text-emerald-400 text-xs font-semibold hover:underline">
+                    Upgrade Subscription for Additional AutoPilot Emails &rarr;
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={onLaunch}
+                disabled={!hasAuthorized || batchLimit <= 0}
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
+              >
+                <FileText className="w-4 h-4 text-slate-950" />
+                Launch AutoPilot (Create {batchLimit} Gmail Drafts)
+              </button>
+            )
           ) : isRunning ? (
             <div className="flex items-center gap-2">
               <button
