@@ -18,6 +18,7 @@ export interface PricingPlan {
   searchesLimit?: number;
   draftsLimit?: number;
   autopilotLimit?: number;
+  autopilotBatchLimit?: number;
   badge?: string;
 }
 
