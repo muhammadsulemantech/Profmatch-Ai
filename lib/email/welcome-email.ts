@@ -27,75 +27,58 @@ export async function sendWelcomeEmail({
     return { success: true, alreadySent: true };
   }
 
-  const subject = 'Welcome to ProfMatch AI — Let’s Find Your Perfect Research Match 🎓';
+  const subject = 'Welcome to ProfMatch';
 
   const bodyText = `Hi ${userName},
 
-Welcome to ProfMatch AI! 🎉
+Welcome to ProfMatch!
 
-Your account has been successfully created.
+Your researcher account has been successfully created.
 
-ProfMatch AI helps students find the right professors, understand their research, discover potential research matches, and prepare better outreach.
+With ProfMatch, you can explore faculty across top global universities, review verified research interests, find faculty matching your background, and draft personalized outreach emails.
 
-With your account, you can explore professors and universities, review research interests, find relevant opportunities, and create personalized outreach drafts.
-
-We’re excited to have you with us.
-
-Start exploring your research matches and take the next step toward your academic journey.
+Log in to your workspace:
+${process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai'}/dashboard
 
 Best regards,
-The ProfMatch AI Team
-
-P.S. Always review your outreach before sending and make sure the information is accurate and relevant to your academic goals.`;
+The ProfMatch Team
+Support: profmatchsupport@gmail.com`;
 
   const htmlBody = `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; background-color: #f8fafc; margin: 0; padding: 24px; }
-    .container { max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; }
-    .header { background: #0f172a; padding: 28px 32px; color: #ffffff; }
-    .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
-    .header p { margin: 6px 0 0 0; font-size: 13px; color: #94a3b8; }
-    .content { padding: 32px; }
-    .greeting { font-size: 17px; font-weight: 600; color: #0f172a; margin-bottom: 16px; }
-    p { margin: 0 0 16px 0; font-size: 14px; color: #334155; }
-    .highlight-box { background: #f0fdf4; border-left: 4px solid #10b981; padding: 14px 18px; border-radius: 4px; margin: 20px 0; }
-    .highlight-box p { margin: 0; color: #065f46; font-size: 13px; font-weight: 500; }
-    .button-container { margin: 24px 0; }
-    .button { display: inline-block; padding: 12px 24px; background: #10b981; color: #022c22; font-weight: 600; text-decoration: none; border-radius: 8px; font-size: 14px; }
-    .footer { padding: 20px 32px; background: #f8fafc; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; }
-    .ps { font-size: 12px; color: #64748b; font-style: italic; margin-top: 20px; border-top: 1px dashed #cbd5e1; pt: 12px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-<body>
-  <div class="container">
-    <div class="header">
-      <h1>ProfMatch AI 🎓</h1>
-      <p>Verified Academic Faculty Discovery &amp; Outreach</p>
+<body style="margin: 0; padding: 24px 12px; background-color: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #111827; -webkit-font-smoothing: antialiased;">
+  <div style="max-width: 520px; margin: 0 auto; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 32px 24px;">
+    <div style="margin-bottom: 20px;">
+      <span style="font-size: 18px; font-weight: 700; color: #111827; letter-spacing: -0.02em;">ProfMatch</span>
     </div>
-    <div class="content">
-      <div class="greeting">Hi ${userName},</div>
-      <p>Welcome to ProfMatch AI! 🎉</p>
-      <p>Your account has been successfully created.</p>
-      <div class="highlight-box">
-        <p>ProfMatch AI helps students find the right professors, understand their research, discover potential research matches, and prepare better outreach.</p>
-      </div>
-      <p>With your account, you can explore professors and universities, review research interests, find relevant opportunities, and create personalized outreach drafts.</p>
-      <p>We’re excited to have you with us.</p>
-      <p>Start exploring your research matches and take the next step toward your academic journey.</p>
-      <div class="button-container">
-        <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/dashboard" class="button">Access Your Workspace &rarr;</a>
-      </div>
-      <p>Best regards,<br><strong>The ProfMatch AI Team</strong></p>
-      <div class="ps">
-        P.S. Always review your outreach before sending and make sure the information is accurate and relevant to your academic goals.
-      </div>
+    
+    <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: #374151;">
+      Hi ${userName},
+    </p>
+    
+    <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.5; color: #374151;">
+      Welcome to ProfMatch! Your researcher account has been successfully created.
+    </p>
+    
+    <p style="margin: 0 0 20px; font-size: 14px; line-height: 1.6; color: #4b5563;">
+      ProfMatch helps you discover professors, analyze academic research profiles, and draft personalized outreach to advance your research and graduate admissions journey.
+    </p>
+    
+    <div style="margin: 24px 0;">
+      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai'}/dashboard" style="display: inline-block; padding: 10px 20px; background-color: #10b981; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 6px;">
+        Go to Dashboard &rarr;
+      </a>
     </div>
-    <div class="footer">
-      &copy; ${new Date().getFullYear()} ProfMatch AI &bull; Grounded in official institutional registries and peer-reviewed literature.
-    </div>
+    
+    <hr style="margin: 24px 0; border: none; border-top: 1px solid #e5e7eb;" />
+    
+    <p style="margin: 0; font-size: 12px; line-height: 1.4; color: #9ca3af;">
+      ProfMatch &bull; Faculty Discovery &amp; Academic Outreach
+    </p>
   </div>
 </body>
 </html>`;
