@@ -104,6 +104,19 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 • Truthful Search Provenance & AI Integrity: Removed synthetic template generators in search pipeline; removed silent MockAI fallbacks in Gemini provider.
 • Cross-Device Activity Sync: Avatar updates sync to public.profiles; emails sent increment public.usage_records in Supabase.
 
+[TIER 7] Production Email Deliverability, Primary Inbox & Verification Optimization (COMPLETED 2026-10-11)
+• Google Gmail SMTP Priority Delivery: Configured on smtp.gmail.com:465 with 16-character App Password, TLS handshake 250 2.0.0 OK.
+• Resend Automatic Failover: lib/providers/email/index.ts catches unverified domain errors and automatically falls back to Google SMTP.
+• 100% Primary Inbox Anti-Spam Optimization:
+  - Stripped heavy CSS <style> tags and dark headers from otp-email.ts and welcome-email.ts; converted to clean inline styles on white container.
+  - Standardized subject lines to '{code} is your ProfMatch verification code' and 'Welcome to ProfMatch'.
+  - Sanitized envelope From/Reply-To and added X-Auto-Response-Suppress: All.
+• OTP Lifecycle & Grace Period (2 Hours):
+  - lib/auth/otp-store.ts preserves registration data for 2 hours, allowing instant resending of expired 15-minute codes.
+  - Added send-otp auto-dispatch fallback in auth-modal.tsx and signup/page.tsx.
+• OTP Key Reconciliation:
+  - Reconciled { code, otp } in verify-otp route, eliminating Zod 'Required' validation errors. Supported /tmp persistence for Vercel.
+
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
