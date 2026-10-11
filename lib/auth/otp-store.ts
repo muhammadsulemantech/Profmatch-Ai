@@ -161,7 +161,8 @@ export function createPendingRegistration(params: {
 }
 
 /**
- * Retrieves the pending registration if it exists and hasn't expired.
+ * Retrieves the pending registration.
+ * Keeps record available for 2 hours so users can click "Resend code" even if the 15-minute OTP expired.
  */
 export function getPendingRegistration(email: string): PendingSignupRegistration | null {
   loadOtpsFromDisk();
@@ -169,7 +170,9 @@ export function getPendingRegistration(email: string): PendingSignupRegistration
   const record = pendingOtpMap.get(normalizedEmail);
   if (!record) return null;
 
-  if (Date.now() > record.expiresAt) {
+  // Keep pending registration for 2 hours for resending fresh OTP codes
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+  if (Date.now() > record.createdAt + TWO_HOURS_MS) {
     pendingOtpMap.delete(normalizedEmail);
     persistOtpsToDisk();
     return null;
