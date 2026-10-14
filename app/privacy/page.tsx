@@ -77,6 +77,38 @@ export default function PrivacyPage() {
               All student data stored in our database is secured by Row Level Security (RLS). Direct API access requires authenticated session tokens, and documents are accessible only by their respective authenticated account owners.
             </p>
           </div>
+
+          <div className="glass-panel bg-slate-900/60 p-6 sm:p-8 rounded-2xl border border-emerald-500/30 shadow-xl space-y-3">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              4. Google API Services User Data Policy (Limited Use Disclosure)
+            </h2>
+            <p className="text-slate-300 font-light leading-relaxed">
+              ProfMatch AI’s use and transfer to any other app of information received from Google APIs will adhere to the{' '}
+              <a
+                href="https://developers.google.com/terms/api-services-user-data-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-emerald-400 underline font-medium hover:text-emerald-300"
+              >
+                Google API Services User Data Policy
+              </a>
+              , including the Limited Use requirements.
+            </p>
+            <p className="text-slate-300 font-light leading-relaxed text-xs">
+              Specifically: We access your Google account solely to authenticate you and facilitate user-directed academic email drafts and outreach dispatch via Gmail. We do not transfer your Google data to third parties, we do not use your Google Workspace data to train, fine-tune, or develop generalized artificial intelligence (AI) or machine learning (ML) models, and humans do not read your emails unless explicitly authorized by you for technical troubleshooting.
+            </p>
+          </div>
+
+          <div className="glass-panel bg-slate-900/60 p-6 sm:p-8 rounded-2xl border border-slate-800 shadow-xl space-y-3">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Lock className="w-4 h-4 text-emerald-400" />
+              5. Data Retention &amp; Deletion Rights
+            </h2>
+            <p className="text-slate-300 font-light leading-relaxed">
+              You retain full control over your academic data. You can disconnect your linked Google account at any time from the Connectors settings. If you wish to delete your entire account, uploaded documents, and outreach history permanently, you can submit a deletion request to <strong className="text-emerald-400">profmatchsupport@gmail.com</strong> or delete your account directly from your settings. All associated personal records will be permanently purged from our database within 30 days.
+            </p>
+          </div>
         </div>
       </div>
     </div>
