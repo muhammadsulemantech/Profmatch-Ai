@@ -16,7 +16,6 @@ import {
 import { useAuth } from '@/lib/auth/auth-context';
 import { getPlanConfig } from '@/lib/services/usage-service';
 import type { PlanTier, Order, Payment } from '@/types/database';
-import { mockDb } from '@/lib/supabase/mock-db';
 
 export default function BillingPage() {
   const { user, isLoading } = useAuth();
@@ -50,20 +49,13 @@ export default function BillingPage() {
             localStorage.setItem(`profmatch_user_tier_${data.user.id}`, uTier);
           }
 
-          // Load user orders and payments from persistent mockDb / client storage
-          try {
-            mockDb.loadFromDisk();
-            const uId = data.user.id;
-            const uEmail = (data.user.email || '').toLowerCase();
-            const matchedOrders = mockDb.orders.filter(
-              (o: Order) => o.user_id === uId || (o.user_email && o.user_email.toLowerCase() === uEmail)
-            );
-            const matchedPayments = mockDb.payments.filter(
-              (p: Payment) => p.user_id === uId || (p.user_email && p.user_email.toLowerCase() === uEmail)
-            );
-            setOrders([...matchedOrders]);
-            setPayments([...matchedPayments]);
-          } catch {}
+          // Populate live orders & payments directly from database session response
+          if (Array.isArray(data.user.orders)) {
+            setOrders(data.user.orders);
+          }
+          if (Array.isArray(data.user.payments)) {
+            setPayments(data.user.payments);
+          }
         }
       }
     } catch {

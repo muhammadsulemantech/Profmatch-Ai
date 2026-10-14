@@ -6,6 +6,8 @@ import { assertAdmin } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 const DEFAULT_PLANS = [
   {
@@ -50,7 +52,7 @@ const DEFAULT_PLANS = [
     ],
     ctaText: 'Get Starter',
     ctaHref: '/checkout?plan=starter',
-    highlighted: false,
+    highlighted: true,
   },
   {
     tier: 'PRO',
@@ -141,11 +143,20 @@ export async function GET() {
     // Sync live in-memory server cache
     updateLiveServerPlans(normalizedPlans);
 
-    return apiSuccess({
-      plans: normalizedPlans,
-      plansMap,
-      updated_at: pricingSection?.updated_at || new Date().toISOString(),
-    });
+    return apiSuccess(
+      {
+        plans: normalizedPlans,
+        plansMap,
+        updated_at: pricingSection?.updated_at || new Date().toISOString(),
+      },
+      undefined,
+      200,
+      {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    );
   } catch (error: any) {
     return apiError(error.message || 'Failed to fetch pricing', 500);
   }

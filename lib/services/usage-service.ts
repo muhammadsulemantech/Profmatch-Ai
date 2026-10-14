@@ -198,17 +198,25 @@ export function updateLiveServerPlans(plans: Record<string, Partial<PlanConfig>>
   }
 }
 
-export function getCustomPlans(): Record<string, PlanConfig> {
+export function getStoredCustomPlans(): Record<string, PlanConfig> | null {
   if (typeof window !== 'undefined') {
     try {
       const stored = localStorage.getItem('profmatch_custom_plans');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed && typeof parsed === 'object') {
-          return { ...ACADEMIC_PLANS, ...parsed };
+        if (parsed && typeof parsed === 'object' && Object.keys(parsed).length > 0) {
+          return parsed;
         }
       }
     } catch {}
+  }
+  return null;
+}
+
+export function getCustomPlans(): Record<string, PlanConfig> {
+  const stored = getStoredCustomPlans();
+  if (stored) {
+    return { ...ACADEMIC_PLANS, ...stored };
   }
   return liveServerPlans || ACADEMIC_PLANS;
 }
@@ -216,8 +224,8 @@ export function getCustomPlans(): Record<string, PlanConfig> {
 export function saveCustomPlans(plans: Record<string, Partial<PlanConfig>>) {
   if (typeof window !== 'undefined') {
     try {
-      const existing = getCustomPlans();
-      const updated = { ...existing, ...plans };
+      const existing = getStoredCustomPlans() || {};
+      const updated = { ...ACADEMIC_PLANS, ...existing, ...plans };
       localStorage.setItem('profmatch_custom_plans', JSON.stringify(updated));
     } catch {}
   }
