@@ -320,15 +320,9 @@ class MockDatabase {
     {
       id: 'rp_001',
       student_id: 'sp_001',
-      research_interests: [
-        'Natural Language Processing',
-        'Large Language Models',
-        'Faithful Reasoning & Hallucination Mitigation',
-        'Neuro-symbolic AI',
-        'Information Extraction'
-      ],
-      thesis_title: 'Mitigating Factual Hallucinations in Multi-Hop RAG Systems',
-      thesis_abstract: 'Investigated constraint-guided beam search and graph-augmented context injection to reduce entity drift in retrieval-augmented generative pipelines.',
+      research_interests: [],
+      thesis_title: '',
+      thesis_abstract: '',
       experience_summary: '2 years of undergraduate research in NLP Lab with 1 ACL Workshop publication and open-source PyTorch implementations.',
       academic_domain: 'Computing, Artificial Intelligence & Informatics',
       primary_discipline: 'Computer Science',
