@@ -53,9 +53,9 @@ export default function OnboardingPage() {
     achievements: 'Ranked 1st in Department; ACM ICPC Regional Finalist',
 
     // Step 3: Research & Projects
-    researchInterests: ['Artificial Intelligence', 'Machine Learning', 'Computational Optimization', 'Information Extraction'],
-    thesisTitle: 'Mitigating Factual Drift in Retrieval-Augmented Generative Pipelines',
-    thesisAbstract: 'Investigated constraint-guided beam search and graph-augmented context injection to reduce entity drift in retrieval-augmented generative systems.',
+    researchInterests: [] as string[],
+    thesisTitle: '',
+    thesisAbstract: '',
     newInterest: '',
 
     // Projects

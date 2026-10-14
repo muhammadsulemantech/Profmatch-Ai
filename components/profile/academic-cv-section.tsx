@@ -1,15 +1,16 @@
 'use client';
 
 import React from 'react';
-import { FileText, Upload, CheckCircle2 } from 'lucide-react';
+import { FileText, Upload, CheckCircle2, Loader2 } from 'lucide-react';
 
 interface AcademicCvSectionProps {
   cvFile: {
     file_name: string;
     file_size: number;
     uploaded_at: string;
-  };
+  } | null;
   cvParsedNotice: string | null;
+  isParsingCv?: boolean;
   fileInputRef: React.RefObject<HTMLInputElement>;
   onCvFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
@@ -17,6 +18,7 @@ interface AcademicCvSectionProps {
 export function AcademicCvSection({
   cvFile,
   cvParsedNotice,
+  isParsingCv,
   fileInputRef,
   onCvFileUpload,
 }: AcademicCvSectionProps) {
@@ -29,15 +31,36 @@ export function AcademicCvSection({
         </div>
         <label
           htmlFor="cv-file-upload-input"
-          className="cursor-pointer px-3.5 py-1.5 rounded-xl bg-purple-500/15 hover:bg-purple-500/25 border border-purple-500/30 text-purple-300 text-xs font-semibold flex items-center gap-1.5 transition-all"
+          className={`cursor-pointer px-3.5 py-1.5 rounded-xl border text-xs font-semibold flex items-center gap-1.5 transition-all ${
+            isParsingCv
+              ? 'bg-purple-500/30 border-purple-500 text-purple-200 pointer-events-none'
+              : 'bg-purple-500/15 hover:bg-purple-500/25 border-purple-500/30 text-purple-300'
+          }`}
         >
-          <Upload className="w-3.5 h-3.5" /> Upload &amp; AI Parse CV
+          {isParsingCv ? (
+            <>
+              <Loader2 className="w-3.5 h-3.5 animate-spin text-purple-300" />
+              Parsing CV...
+            </>
+          ) : (
+            <>
+              <Upload className="w-3.5 h-3.5" /> Upload &amp; AI Parse CV
+            </>
+          )}
         </label>
       </div>
 
       {cvParsedNotice && (
-        <div className="p-3.5 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-semibold flex items-center gap-2 animate-in fade-in">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2 animate-in fade-in ${
+          isParsingCv
+            ? 'bg-purple-500/15 border-purple-500/30 text-purple-300'
+            : 'bg-emerald-500/15 border-emerald-500/30 text-emerald-300'
+        }`}>
+          {isParsingCv ? (
+            <Loader2 className="w-4 h-4 text-purple-400 animate-spin shrink-0" />
+          ) : (
+            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+          )}
           <span>{cvParsedNotice}</span>
         </div>
       )}
@@ -46,45 +69,66 @@ export function AcademicCvSection({
         id="cv-file-upload-input"
         ref={fileInputRef}
         type="file"
-        accept=".pdf,.doc,.docx"
+        accept=".pdf,.doc,.docx,.txt"
+        disabled={isParsingCv}
         onChange={onCvFileUpload}
         className="hidden"
       />
 
-      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
-            <FileText className="w-5 h-5" />
+      {cvFile ? (
+        <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-lg bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400">
+              <FileText className="w-5 h-5" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-white">{cvFile.file_name}</p>
+              <p className="text-[11px] text-slate-400">
+                {Math.round(cvFile.file_size / 1024)} KB &bull; Uploaded {new Date(cvFile.uploaded_at).toLocaleDateString()}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-xs font-bold text-white">{cvFile.file_name}</p>
-            <p className="text-[11px] text-slate-400">
-              {Math.round(cvFile.file_size / 1024)} KB &bull; Uploaded {new Date(cvFile.uploaded_at).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
-            Active CV
-          </span>
-          <label
-            htmlFor="cv-file-upload-input"
-            className="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-            title="Upload New File"
-          >
-            <Upload className="w-4 h-4" />
-          </label>
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
+              Active CV
+            </span>
+            <label
+              htmlFor="cv-file-upload-input"
+              className="cursor-pointer p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Upload New File"
+            >
+              <Upload className="w-4 h-4" />
+            </label>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div className="p-4 rounded-xl bg-slate-950/40 border border-slate-800 text-xs text-slate-400 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <FileText className="w-4 h-4 text-slate-500" />
+            <span>No active academic CV uploaded yet.</span>
+          </div>
+          <span className="text-[10px] text-slate-500">PDF, DOCX supported</span>
+        </div>
+      )}
 
       {/* Interactive Drag & Drop Upload Zone (Always Available) */}
       <label
         htmlFor="cv-file-upload-input"
-        className="block border-2 border-dashed border-slate-800 hover:border-purple-500/50 rounded-xl p-5 text-center cursor-pointer transition-colors bg-slate-950/40 space-y-1.5"
+        className={`block border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-colors space-y-1.5 ${
+          isParsingCv
+            ? 'border-purple-500/50 bg-purple-500/5 cursor-wait'
+            : 'border-slate-800 hover:border-purple-500/50 bg-slate-950/40'
+        }`}
       >
-        <Upload className="w-6 h-6 text-purple-400 mx-auto" />
-        <p className="text-xs font-semibold text-slate-200">Click to upload or drag &amp; drop your updated CV (PDF, DOCX)</p>
+        {isParsingCv ? (
+          <Loader2 className="w-6 h-6 text-purple-400 mx-auto animate-spin" />
+        ) : (
+          <Upload className="w-6 h-6 text-purple-400 mx-auto" />
+        )}
+        <p className="text-xs font-semibold text-slate-200">
+          {isParsingCv ? 'AI Engine is reading and extracting your CV...' : 'Click to upload or drag & drop your updated CV (PDF, DOCX)'}
+        </p>
         <p className="text-[10px] text-slate-500">Max file size 15MB &bull; Native upload supported on mobile, laptop &amp; PC</p>
       </label>
     </div>

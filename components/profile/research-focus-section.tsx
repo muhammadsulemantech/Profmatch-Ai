@@ -12,6 +12,7 @@ interface ResearchFocusSectionProps {
   setIsSuggestionOpen: (v: boolean) => void;
   handleAddInterest: (val?: string) => void;
   handleRemoveInterest: (item: string) => void;
+  handleClearAllInterests?: () => void;
   keywordContainerRef: React.RefObject<HTMLDivElement>;
   thesisTitle: string;
   setThesisTitle: (v: string) => void;
@@ -28,6 +29,7 @@ export function ResearchFocusSection({
   setIsSuggestionOpen,
   handleAddInterest,
   handleRemoveInterest,
+  handleClearAllInterests,
   keywordContainerRef,
   thesisTitle,
   setThesisTitle,
@@ -43,25 +45,47 @@ export function ResearchFocusSection({
 
       <div className="space-y-4">
         <div>
-          <label className="block text-xs font-semibold text-slate-300 mb-1.5">Research Keywords / Specific Topics</label>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {interests.map((item) => (
-              <span
-                key={item}
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
+          <div className="flex items-center justify-between mb-1.5">
+            <label className="block text-xs font-semibold text-slate-300">
+              Research Keywords / Specific Topics{' '}
+              <span className="text-slate-400 font-normal">({interests.length} added)</span>
+            </label>
+            {interests.length > 0 && handleClearAllInterests && (
+              <button
+                type="button"
+                onClick={handleClearAllInterests}
+                className="text-[11px] text-slate-400 hover:text-rose-400 transition-colors flex items-center gap-1"
+                title="Remove all keywords"
               >
-                {item}
-                <button
-                  type="button"
-                  onClick={() => handleRemoveInterest(item)}
-                  className="text-slate-400 hover:text-rose-400 transition-colors"
-                  title="Remove keyword"
-                >
-                  <Trash2 className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
+                <Trash2 className="w-3 h-3" /> Clear All
+              </button>
+            )}
           </div>
+
+          {interests.length === 0 ? (
+            <div className="p-3 rounded-xl bg-slate-950/60 border border-dashed border-slate-800 text-slate-400 text-xs mb-3 flex items-center justify-between">
+              <span>No research keywords added yet (0 keywords). Add topics below or upload your CV to auto-extract.</span>
+            </div>
+          ) : (
+            <div className="flex flex-wrap gap-2 mb-3">
+              {interests.map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
+                >
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveInterest(item)}
+                    className="text-slate-400 hover:text-rose-400 transition-colors"
+                    title="Remove keyword"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          )}
 
           <div ref={keywordContainerRef} className="relative flex flex-col sm:flex-row gap-2">
             <div className="relative flex-1">

@@ -309,12 +309,38 @@ profmatch-ai/
 
 ---
 
-- **Automated Unit, Security & Subscription Tests:** `npm test` -> 71/71 tests passing (0 failures); `node --test tests/subscription-entitlements-e2e.test.mjs` -> 8/8 tests passing (0 failures).
+- **Automated Unit, Security & Subscription Tests:** `npm test` -> 77/77 tests passing (0 failures); `node --test tests/cv-parser.test.mjs` -> 5/5 tests passing (0 failures).
 - **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
 - **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
-- **Production Build:** `npm run build` -> Exit code 0 (66/66 dynamic & static routes compiled cleanly with 0 build warnings).
+- **Production Build:** `npm run build` -> Exit code 0 (69/69 dynamic & static routes compiled cleanly with 0 build warnings).
 - **Email Dispatch Handshake:** Verified live Google SMTP TLS handshake & delivery (`250 2.0.0 OK`).
 - **OAuth Production Status:** Google Cloud Console OAuth consent screen promoted to "In Production".
+
+---
+
+## 8. Tier 8: Zero-Default Keywords & Intelligent AI CV Auto-Parser
+
+### 8.1 Zero-Default Keywords Architecture
+- **Problem Solved:** Previously, new accounts and guest sessions defaulted to 5 mock keywords (`Natural Language Processing`, `Large Language Models`, etc.) and a mock thesis title (`Mitigating Factual Hallucinations in Multi-Hop RAG Systems`) from `mockDb.researchProfiles[0]`.
+- **Implementation:**
+  - `lib/supabase/mock-db.ts`: `research_interests` initialized to `[]`, `thesis_title` and `thesis_abstract` initialized to `''`.
+  - `app/onboarding/page.tsx`: Step 3 `researchInterests` initialized to `[] as string[]`, `thesisTitle` and `thesisAbstract` initialized to `''`.
+  - `app/profile/page.tsx`: Strict zero-keyword default for new users (`interests: []`). Added legacy mock list detection that auto-cleanses previously stored mock keyword lists down to 0 upon page visit.
+  - `components/profile/research-focus-section.tsx`: Added `(0 added)` keyword counter badge, an empty state banner when no keywords are added, and a "Clear All" button with trash icon for one-click keyword removal.
+
+### 8.2 Intelligent AI Academic CV Auto-Parser
+- **Problem Solved:** The previous CV upload logic only inspected the file name for `'ai'` or `'bio'` substrings and injected 3 hardcoded mock keywords, ignoring the actual file content entirely.
+- **Implementation:**
+  - Integrated `pdf-parse` for binary PDF text stream extraction, with fallback for text/DOCX documents and corrupted streams.
+  - Created dedicated endpoint `app/api/profile/parse-cv/route.ts` that analyzes candidate text against a comprehensive academic dictionary and `ACADEMIC_DOMAINS` taxonomy.
+  - Automatically extracts:
+    - **Genuine Research Keywords:** Top 5-8 scholarly topics directly present in the CV text.
+    - **Degrees & Major:** Accurately maps BS, MS, PhD, and fields (Computer Science, Data Science, Biotechnology, etc.).
+    - **University & CGPA:** Detects institutions (NUST, FAST, LUMS, etc.) and GPA metrics.
+    - **Thesis / Project Title & Abstract:** Extracts Final Year Projects (FYP) and Capstones.
+    - **Academic Bio:** Synthesizes a tailored, professional candidate statement based on their parsed profile.
+  - `components/profile/academic-cv-section.tsx`: Added `isParsingCv` state with real-time pulsing spinner and loading notices (`🤖 Reading and analyzing CV text via AI engine...`).
+
 - **Live User Experience & Journey Verification (`scripts/verify-user-experience.mjs`):**
   - **Signup & OTP:** Salted scrypt password hashing verified, 6-digit OTP generated with 15-minute expiry, and live OTP email successfully delivered to inbox via Google SMTP.
   - **Field Search Relevance:** Live OpenAlex graph verified across multiple fields (Machine Learning, Bioinformatics Genomics, Quantum Computing) with real institution/concept mappings.

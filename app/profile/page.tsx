@@ -163,22 +163,19 @@ export default function ProfilePage() {
   const [university, setUniversity] = useState(academic.university || 'National University of Sciences and Technology (NUST)');
   const [gradYear, setGradYear] = useState(academic.graduation_year || 2026);
 
-  const [thesisTitle, setThesisTitle] = useState(research.thesis_title || '');
-  const [thesisAbstract, setThesisAbstract] = useState(research.thesis_abstract || '');
+  const [thesisTitle, setThesisTitle] = useState('');
+  const [thesisAbstract, setThesisAbstract] = useState('');
   const [interests, setInterests] = useState<string[]>([]);
   const [newInterest, setNewInterest] = useState('');
   const [isSuggestionOpen, setIsSuggestionOpen] = useState(false);
 
-  // Active CV state
+  // Active CV state (null by default for new users)
   const [cvFile, setCvFile] = useState<{
     file_name: string;
     file_size: number;
     uploaded_at: string;
-  }>({
-    file_name: cvDoc.file_name || 'Academic_Curriculum_Vitae_2026.pdf',
-    file_size: cvDoc.file_size || 142336,
-    uploaded_at: cvDoc.created_at || new Date().toISOString(),
-  });
+  } | null>(null);
+  const [isParsingCv, setIsParsingCv] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const keywordContainerRef = useRef<HTMLDivElement>(null);
   const profileAvatarInputRef = useRef<HTMLInputElement>(null);
@@ -209,16 +206,31 @@ export default function ProfilePage() {
     const interestsKey = `profmatch_user_interests_${userKey}`;
     const cvKey = `profmatch_user_cv_${userKey}`;
 
-    // Load interests
+    // Load interests - strictly start at 0 for new accounts
     try {
       const storedInterests = localStorage.getItem(interestsKey);
-      if (storedInterests) {
-        setInterests(JSON.parse(storedInterests));
+      if (storedInterests !== null) {
+        const parsed = JSON.parse(storedInterests);
+        // If it was the legacy mock list from previous versions, clear down to 0
+        const isLegacyMock = Array.isArray(parsed) && (
+          (parsed.length === 8 && parsed.includes('Applied Machine Learning') && parsed.includes('Data Science & Big Data Engineering')) ||
+          (parsed.length === 3 && parsed.includes('Large Language Models') && parsed.includes('Factuality')) ||
+          (parsed.length === 5 && parsed.includes('Faithful Reasoning & Hallucination Mitigation'))
+        );
+        if (isLegacyMock) {
+          setInterests([]);
+          localStorage.setItem(interestsKey, JSON.stringify([]));
+        } else if (Array.isArray(parsed)) {
+          setInterests(parsed);
+        } else {
+          setInterests([]);
+        }
       } else {
-        setInterests(research.research_interests || ['Large Language Models', 'Retrieval-Augmented Generation', 'Factuality']);
+        // Brand new account: start at 0 keywords
+        setInterests([]);
       }
     } catch {
-      setInterests(research.research_interests || []);
+      setInterests([]);
     }
 
     // Load CV
@@ -246,8 +258,20 @@ export default function ProfilePage() {
         if (p.major) setMajor(p.major);
         if (p.university) setUniversity(p.university);
         if (p.gradYear) setGradYear(p.gradYear);
-        if (p.thesisTitle) setThesisTitle(p.thesisTitle);
-        if (p.thesisAbstract) setThesisAbstract(p.thesisAbstract);
+        if (p.thesisTitle) {
+          if (p.thesisTitle === 'Mitigating Factual Hallucinations in Multi-Hop RAG Systems' && !localStorage.getItem(cvKey)) {
+            setThesisTitle('');
+          } else {
+            setThesisTitle(p.thesisTitle);
+          }
+        }
+        if (p.thesisAbstract) {
+          if (p.thesisAbstract.includes('Investigated constraint-guided beam search') && !localStorage.getItem(cvKey)) {
+            setThesisAbstract('');
+          } else {
+            setThesisAbstract(p.thesisAbstract);
+          }
+        }
       }
     } catch {}
 
@@ -363,51 +387,112 @@ export default function ProfilePage() {
     saveInterestsToStorage(updated);
   };
 
+  const handleClearAllInterests = () => {
+    setInterests([]);
+    saveInterestsToStorage([]);
+  };
+
   const [cvParsedNotice, setCvParsedNotice] = useState<string | null>(null);
 
-  const handleCvFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCvFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const fileNameLower = file.name.toLowerCase();
-      const newCv = {
-        file_name: file.name,
-        file_size: file.size,
-        uploaded_at: new Date().toISOString(),
-      };
-      setCvFile(newCv);
-      if (typeof window !== 'undefined') {
-        const userKey = user ? user.id : 'guest';
-        localStorage.setItem(`profmatch_user_cv_${userKey}`, JSON.stringify(newCv));
-      }
-      mockDb.studentDocuments[0].file_name = file.name;
-      mockDb.studentDocuments[0].file_size = file.size;
+    if (!file) return;
 
-      // Smart AI Resume Parser Extraction
-      const extractedKeywords: string[] = [];
-      if (fileNameLower.includes('ai') || fileNameLower.includes('cs') || fileNameLower.includes('data')) {
-        extractedKeywords.push('Artificial Intelligence & NLP', 'Large Language Models (LLMs)', 'Generative AI & RAG Systems', 'Machine Learning & Deep Learning');
-      } else if (fileNameLower.includes('bio') || fileNameLower.includes('chem') || fileNameLower.includes('gen')) {
-        extractedKeywords.push('CRISPR Assays & Genome Editing', 'Bioinformatics & Computational Biology', 'Molecular & Cellular Biology');
-      } else if (fileNameLower.includes('econ') || fileNameLower.includes('fin') || fileNameLower.includes('biz')) {
-        extractedKeywords.push('Applied Econometrics & Quantitative Economics', 'Corporate Finance & Asset Pricing');
+    setIsParsingCv(true);
+    setCvParsedNotice('🤖 Reading and analyzing CV text via AI engine...');
+
+    const newCv = {
+      file_name: file.name,
+      file_size: file.size,
+      uploaded_at: new Date().toISOString(),
+    };
+    setCvFile(newCv);
+    const userKey = user ? user.id : 'guest';
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`profmatch_user_cv_${userKey}`, JSON.stringify(newCv));
+    }
+    mockDb.studentDocuments[0].file_name = file.name;
+    mockDb.studentDocuments[0].file_size = file.size;
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const res = await fetch('/api/profile/parse-cv', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!res.ok) {
+        throw new Error(`Parse server returned status ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success && data.parsed) {
+        const p = data.parsed;
+
+        // 1. Research Keywords extracted directly from CV text
+        if (Array.isArray(p.keywords) && p.keywords.length > 0) {
+          setInterests(p.keywords);
+          saveInterestsToStorage(p.keywords);
+        }
+
+        // 2. Degrees & Major
+        if (p.targetDegree) setTargetDegree(p.targetDegree);
+        if (p.currentDegree) setCurrentDegree(p.currentDegree);
+        if (p.major) setMajor(p.major);
+        if (p.academicDomain) setAcademicDomain(p.academicDomain);
+        if (p.desiredField) setDesiredField(p.desiredField);
+
+        // 3. University & Metrics
+        if (p.university) setUniversity(p.university);
+        if (p.cgpa) setCgpa(p.cgpa);
+        if (p.gradYear) setGradYear(p.gradYear);
+
+        // 4. Thesis / Project
+        if (p.thesisTitle) setThesisTitle(p.thesisTitle);
+        if (p.thesisAbstract) setThesisAbstract(p.thesisAbstract);
+
+        // 5. Bio
+        if (p.bio) setBio(p.bio);
+
+        // Save updated full profile
+        if (typeof window !== 'undefined') {
+          const updatedProfile = {
+            targetDegree: p.targetDegree || targetDegree,
+            targetCountry,
+            targetRegion,
+            academicDomain: p.academicDomain || academicDomain,
+            desiredField: p.desiredField || desiredField,
+            fundingPref,
+            bio: p.bio || bio,
+            cgpa: p.cgpa || cgpa,
+            currentDegree: p.currentDegree || currentDegree,
+            major: p.major || major,
+            university: p.university || university,
+            gradYear: p.gradYear || gradYear,
+            thesisTitle: p.thesisTitle || thesisTitle,
+            thesisAbstract: p.thesisAbstract || thesisAbstract,
+          };
+          localStorage.setItem(`profmatch_user_profile_${userKey}`, JSON.stringify(updatedProfile));
+        }
+
+        setCvParsedNotice(
+          `✨ AI Resume Parser Success! Auto-extracted ${p.keywords?.length || 0} genuine research keywords, degree credentials & thesis from "${file.name}".`
+        );
       } else {
-        extractedKeywords.push('Applied Machine Learning', 'Data Science & Big Data Engineering', 'Empirical Research Methods');
+        throw new Error('No parsed data returned');
       }
-
-      const mergedInterests = Array.from(new Set([...interests, ...extractedKeywords]));
-      setInterests(mergedInterests);
-      saveInterestsToStorage(mergedInterests);
-
-      if (fileNameLower.includes('phd') || fileNameLower.includes('doc')) {
-        setTargetDegree('PhD');
-      } else if (fileNameLower.includes('ms') || fileNameLower.includes('master')) {
-        setTargetDegree('MS');
+    } catch (err: any) {
+      console.warn('[CV AUTO PARSE WARNING]', err);
+      // Clean fallback
+      setCvParsedNotice(`✨ Academic CV "${file.name}" uploaded successfully.`);
+    } finally {
+      setIsParsingCv(false);
+      setTimeout(() => setCvParsedNotice(null), 8000);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
       }
-
-      setBio(`CV Auto-Parsed (${file.name}): Specializing in ${extractedKeywords[0] || 'Academic Research'}. Active scholar seeking graduate RA/TA opportunities with funded research groups.`);
-
-      setCvParsedNotice(`✨ AI Resume Parser Success! Auto-extracted ${extractedKeywords.length} research keywords, degree targets & updated academic profile from "${file.name}".`);
-      setTimeout(() => setCvParsedNotice(null), 7000);
     }
   };
 
@@ -547,6 +632,7 @@ export default function ProfilePage() {
           setIsSuggestionOpen={setIsSuggestionOpen}
           handleAddInterest={handleAddInterest}
           handleRemoveInterest={handleRemoveInterest}
+          handleClearAllInterests={handleClearAllInterests}
           keywordContainerRef={keywordContainerRef}
           thesisTitle={thesisTitle}
           setThesisTitle={setThesisTitle}
@@ -558,6 +644,7 @@ export default function ProfilePage() {
         <AcademicCvSection
           cvFile={cvFile}
           cvParsedNotice={cvParsedNotice}
+          isParsingCv={isParsingCv}
           fileInputRef={fileInputRef}
           onCvFileUpload={handleCvFileUpload}
         />
