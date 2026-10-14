@@ -229,6 +229,11 @@
   - Enhanced `app/billing/page.tsx` with dynamic active plan badge, 30-day renewal timeline countdown, and complete searchable payment ledger with status indicators (Pending, Approved, Rejected).
 - **Postgres Database Enum & Schema Upgrades:**
   - Executed `ALTER TYPE plan_tier ADD VALUE 'STARTER'` and `ALTER TYPE plan_tier ADD VALUE 'ELITE'` to prevent PostgreSQL enum type errors during subscription creation and upgrades.
+- **Google API Services User Data Policy & Compliance Hardening:**
+  - Updated `app/privacy/page.tsx` with official Google Limited Use Disclosure adhering to Google API Services User Data Policy.
+  - Added explicit AI Model Training Exclusion clause prohibiting the use of Google Workspace user data to train or fine-tune generalized AI/ML models.
+  - Added GDPR Article 17 "Right to Erasure" Data Retention and Account Deletion section with direct support channel (`profmatchsupport@gmail.com`).
+  - Verified anti-spam safeguards (15-second debounce window, ethical citation-grounded drafts, hard sending caps, CAN-SPAM / Gmail bulk sender compliance).
 - **Automated Verification & Production Build:**
   - Production build (`npm run build`) compiles cleanly across 69/69 dynamic and static routes with 0 errors.
   - TypeScript types verified (`npx tsc --noEmit`) with 0 errors.
