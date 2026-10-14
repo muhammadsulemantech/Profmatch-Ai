@@ -306,31 +306,47 @@ export function getSearchUsage(
   }
 
   const plan = getPlanConfig(tier);
+  const limit = Number(plan.searchesLimit !== undefined ? plan.searchesLimit : 3);
 
-  let used = 0;
+  let rawUsed = 0;
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem(`${SEARCH_USAGE_KEY}_${userId || 'anon'}`);
+      const key = `${SEARCH_USAGE_KEY}_${userId || 'anon'}`;
+      const stored = localStorage.getItem(key);
       if (stored) {
-        used = parseInt(stored, 10) || 0;
+        rawUsed = parseInt(stored, 10) || 0;
+        // Auto-heal legacy overflow: If stored count ever exceeded limit, normalize it back down to limit
+        if (limit < 999999 && rawUsed > limit) {
+          rawUsed = limit;
+          localStorage.setItem(key, limit.toString());
+        }
       }
     } catch {}
   }
 
-  const limit = Number(plan.searchesLimit !== undefined ? plan.searchesLimit : 3);
+  // Strictly clamp used count at limit for display and quota tracking so it never shows 4/3, 5/3, 8/3 etc.
+  const used = limit < 999999 ? Math.min(limit, Math.max(0, rawUsed)) : rawUsed;
   const remaining = Math.max(0, limit - used);
-  const isExhausted = used >= limit;
+  const isExhausted = limit < 999999 && used >= limit;
 
   return { used, limit, remaining, isExhausted, tier };
 }
 
-export function incrementSearchUsage(userId?: string): number {
+export function incrementSearchUsage(userId?: string, maxLimit?: number): number {
   if (typeof window === 'undefined') return 1;
 
   try {
     const key = `${SEARCH_USAGE_KEY}_${userId || 'anon'}`;
     const current = parseInt(localStorage.getItem(key) || '0', 10);
-    const next = current + 1;
+    const limit = maxLimit !== undefined ? maxLimit : 3;
+
+    // Strict guard: If limit is already reached or exceeded, do NOT increment further!
+    if (limit < 999999 && current >= limit) {
+      localStorage.setItem(key, limit.toString());
+      return limit;
+    }
+
+    const next = limit < 999999 ? Math.min(limit, current + 1) : current + 1;
     localStorage.setItem(key, next.toString());
     return next;
   } catch {
