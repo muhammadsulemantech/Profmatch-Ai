@@ -27,6 +27,8 @@ import InteractivePlatformShowcase from '@/components/home/interactive-platform-
 import HomePricingSection from '@/components/home/home-pricing-section';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+export const fetchCache = 'force-no-store';
 
 export default async function HomePage() {
   const content = await getAllSiteContent();
@@ -250,7 +252,7 @@ export default async function HomePage() {
       </section>
 
       {/* 5. ACADEMIC PRICING (4-TIER WORLDWIDE PLANS WITH CURRENCY SWITCHER) */}
-      <HomePricingSection initialPlans={pricing.content.plans} />
+      <HomePricingSection initialPlans={Array.isArray(pricing?.content?.plans) ? pricing.content.plans : undefined} />
 
       {/* 6. FAQ */}
       <section className="py-24 bg-[#080B11] border-b border-slate-800/80">

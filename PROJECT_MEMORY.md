@@ -213,6 +213,26 @@
   - Test suite passes 71/71 tests across 6 test suites (`npm test`).
   - Production build (`npm run build`) compiles cleanly across 66/66 routes with 0 errors.
 
+### 💎 Tier 7: Dynamic Pricing Synchronization, Anti-Cache Pipeline, Admin Payment Alerts & Billing Authority (COMPLETED 2026-10-14)
+- **Dynamic Pricing & Highlight Synchronization Across All Accounts:**
+  - Resolved cache-staleness and default plan overwrite bug where non-admin users/browsers fell back to static unhighlighted defaults due to empty `localStorage`.
+  - Added `getStoredCustomPlans()` in `lib/services/usage-service.ts` to strictly prevent unconfigured client browsers from overwriting live database plans with hardcoded fallbacks.
+  - Implemented anti-cache route directives (`export const dynamic = 'force-dynamic'; export const revalidate = 0; export const fetchCache = 'force-no-store';`) in `app/api/pricing/route.ts` and `app/page.tsx`.
+  - Injected explicit HTTP anti-cache headers (`Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0`, `Pragma: no-cache`, `Expires: 0`) in `app/api/pricing/route.ts`.
+  - Added real-time timestamp cache-buster queries (`/api/pricing?t=${Date.now()}`) and `{ cache: 'no-store' }` in `app/pricing/page.tsx`, `app/choose-plan/page.tsx`, and `components/home/home-pricing-section.tsx`.
+  - Set Scholar Starter (`STARTER`) to `highlighted: true` in Supabase `site_content`, seed files, and mock DB fallbacks.
+- **Admin Email Alerts & Customer Receipts on Payment Submission:**
+  - Created `lib/email/payment-admin-alert.ts` to dispatch instant email alerts to all platform administrators upon manual payment submissions (JazzCash, Bank Wire, Crypto).
+  - Integrated customer payment receipt confirmation dispatch in `app/api/checkout/submit/route.ts`.
+- **Billing History & Real-Time Validity Dashboard:**
+  - Updated `/api/auth/me` to query and return real user transactions (`orders`, `payments`, `subscription_end`, `is_expired`) directly from Supabase PostgreSQL.
+  - Enhanced `app/billing/page.tsx` with dynamic active plan badge, 30-day renewal timeline countdown, and complete searchable payment ledger with status indicators (Pending, Approved, Rejected).
+- **Postgres Database Enum & Schema Upgrades:**
+  - Executed `ALTER TYPE plan_tier ADD VALUE 'STARTER'` and `ALTER TYPE plan_tier ADD VALUE 'ELITE'` to prevent PostgreSQL enum type errors during subscription creation and upgrades.
+- **Automated Verification & Production Build:**
+  - Production build (`npm run build`) compiles cleanly across 69/69 dynamic and static routes with 0 errors.
+  - TypeScript types verified (`npx tsc --noEmit`) with 0 errors.
+
 ---
 
 ## 2. Core Credentials & Admin Auth

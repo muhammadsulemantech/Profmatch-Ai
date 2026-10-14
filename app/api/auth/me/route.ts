@@ -6,6 +6,8 @@ import {
   getUserSubscription,
   getUserPlanTier,
   getUsageRecord,
+  getOrdersByUserId,
+  getPaymentsByUserId,
 } from '@/lib/services/db-service';
 
 export async function GET(request: NextRequest) {
@@ -51,6 +53,8 @@ export async function GET(request: NextRequest) {
     const sub = await getUserSubscription(userProfile.id);
     const tier = await getUserPlanTier(userProfile.id);
     const usage = await getUsageRecord(userProfile.id);
+    const orders = await getOrdersByUserId(userProfile.id, userProfile.email);
+    const payments = await getPaymentsByUserId(userProfile.id, userProfile.email);
 
     const isExpired = Boolean(
       sub &&
@@ -76,6 +80,8 @@ export async function GET(request: NextRequest) {
         subscription_end: sub ? sub.current_period_end : null,
         is_expired: isExpired,
         usage,
+        orders,
+        payments,
       },
     });
   } catch (err) {

@@ -17,33 +17,46 @@ import {
   CheckCircle2,
   FileCheck2,
 } from 'lucide-react';
-import { ACADEMIC_PLANS, getCustomPlans } from '@/lib/services/usage-service';
+import { ACADEMIC_PLANS, getStoredCustomPlans } from '@/lib/services/usage-service';
 
 export default function PricingPage() {
   const [currency, setCurrency] = useState<'PKR' | 'USD'>('PKR');
   const [plans, setPlans] = useState<any[]>([]);
 
   useEffect(() => {
-    // 1. Instantly check localStorage custom plans
+    // 1. Only check local storage if explicitly saved on this browser (e.g. admin preview)
     try {
-      const custom = getCustomPlans();
-      if (custom && Object.keys(custom).length > 0) {
-        const localPlans = Object.values(custom);
+      const stored = getStoredCustomPlans();
+      if (stored && Object.keys(stored).length > 0) {
+        const localPlans = Object.values(stored);
         if (localPlans.length >= 3) {
           setPlans(localPlans);
         }
       }
     } catch {}
 
-    const refreshPlans = () => {
-      fetch('/api/pricing')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.plans && data.plans.length > 0) {
-            setPlans(data.plans);
-          }
-        })
-        .catch(() => {});
+    const refreshPlans = async () => {
+      try {
+        const res = await fetch(`/api/pricing?t=${Date.now()}`, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+          },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        const incomingPlans = (Array.isArray(data.plans) && data.plans.length > 0)
+          ? data.plans
+          : (Array.isArray(data.data?.plans) && data.data.plans.length > 0)
+          ? data.data.plans
+          : null;
+        if (incomingPlans && incomingPlans.length >= 3) {
+          setPlans(incomingPlans);
+        }
+      } catch (err) {
+        console.warn('Live pricing sync warning:', err);
+      }
     };
 
     refreshPlans();
@@ -89,7 +102,7 @@ export default function PricingPage() {
       'Direct Institutional Email Access',
     ],
     ctaText: 'Get Starter',
-    highlighted: false,
+    highlighted: true,
   };
 
   const proPlan = plans.find(p => p.tier === 'PRO') || {

@@ -1752,7 +1752,7 @@ class MockDatabase {
               'Direct Institutional Email Access',
             ],
             cta: 'Get Starter',
-            highlighted: false,
+            highlighted: true,
           },
           {
             name: 'Pro Researcher',

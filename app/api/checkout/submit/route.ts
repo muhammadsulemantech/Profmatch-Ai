@@ -1,8 +1,12 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
-import { submitPaymentProof } from '@/lib/services/payment-service';
+import { submitPaymentProof, getPaymentMethodById } from '@/lib/services/payment-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import {
+  sendPaymentAdminAlertEmail,
+  sendPaymentCustomerReceiptEmail,
+} from '@/lib/email/payment-admin-alert';
 
 const SubmitCheckoutSchema = z.object({
   planTier: z.string().default('STUDENT'),
@@ -47,6 +51,35 @@ export async function POST(request: NextRequest) {
       proofFileName,
       proofFileUrl,
     });
+
+    // 2. Dispatch instant asynchronous notification emails (Admin alert & Customer receipt)
+    (async () => {
+      try {
+        const method = await getPaymentMethodById(paymentMethodId);
+        const emailParams = {
+          orderReference: result.orderReference,
+          userName: session.user.full_name || 'Academic Applicant',
+          userEmail: session.user.email,
+          planName: result.planName,
+          planTier,
+          amount: result.amount,
+          currency: result.currency,
+          paymentMethodName: method?.name || 'Direct Transfer / Digital Wallet',
+          transactionId: transactionId.trim(),
+          paymentNote: paymentNote?.trim(),
+          proofFileName,
+          proofFileUrl,
+        };
+
+        // 1. Alert administrator
+        await sendPaymentAdminAlertEmail(emailParams);
+
+        // 2. Send receipt confirmation to student
+        await sendPaymentCustomerReceiptEmail(emailParams);
+      } catch (emailErr) {
+        console.error('[PAYMENT EMAIL DISPATCH ERROR]', emailErr);
+      }
+    })();
 
     return apiSuccess({
       message: 'Payment proof submitted successfully. Your plan will activate upon administrative verification.',

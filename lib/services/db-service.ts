@@ -256,8 +256,11 @@ export async function saveUserSubscription(
         mockDb.persist();
         return result as SubscriptionRecord;
       }
+      if (error) {
+        console.error('[SUPABASE SUBSCRIPTION SAVE ERROR]', error);
+      }
     } catch (err) {
-      // Fallback
+      console.error('[SUPABASE SUBSCRIPTION EXCEPTION]', err);
     }
   }
 
@@ -470,6 +473,33 @@ export async function getOrderByReference(reference: string): Promise<Order | nu
   return found || null;
 }
 
+export async function getOrdersByUserId(userId: string, email?: string): Promise<Order[]> {
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      let q = supabase.from('orders').select('*');
+      if (email && email.trim()) {
+        q = q.or(`user_id.eq.${userId},user_email.ilike.${email.trim()}`);
+      } else {
+        q = q.eq('user_id', userId);
+      }
+      const { data, error } = await q.order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        return data as Order[];
+      }
+    } catch (err) {
+      // Fallback
+    }
+  }
+
+  mockDb.loadFromDisk();
+  const lowerEmail = (email || '').toLowerCase().trim();
+  return mockDb.orders.filter(
+    (o) => o.user_id === userId || (lowerEmail && o.user_email?.toLowerCase() === lowerEmail)
+  );
+}
+
 export async function createPayment(paymentData: Partial<Payment>): Promise<Payment> {
   const now = new Date().toISOString();
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -550,15 +580,17 @@ export async function createPayment(paymentData: Partial<Payment>): Promise<Paym
   return localPayment;
 }
 
-export async function getPaymentsByUserId(userId: string): Promise<Payment[]> {
+export async function getPaymentsByUserId(userId: string, email?: string): Promise<Payment[]> {
   const supabase = createAdminClient();
   if (supabase) {
     try {
-      const { data, error } = await supabase
-        .from('payments')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      let q = supabase.from('payments').select('*');
+      if (email && email.trim()) {
+        q = q.or(`user_id.eq.${userId},user_email.ilike.${email.trim()}`);
+      } else {
+        q = q.eq('user_id', userId);
+      }
+      const { data, error } = await q.order('created_at', { ascending: false });
 
       if (!error && Array.isArray(data) && data.length > 0) {
         return data as Payment[];
@@ -569,7 +601,10 @@ export async function getPaymentsByUserId(userId: string): Promise<Payment[]> {
   }
 
   mockDb.loadFromDisk();
-  return mockDb.payments.filter((p) => p.user_id === userId);
+  const lowerEmail = (email || '').toLowerCase().trim();
+  return mockDb.payments.filter(
+    (p) => p.user_id === userId || (lowerEmail && p.user_email?.toLowerCase() === lowerEmail)
+  );
 }
 
 // --- CONNECTED EMAIL ACCOUNTS (GMAIL OAUTH) ---
