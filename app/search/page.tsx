@@ -262,6 +262,11 @@ export default function SearchPage() {
   const handleNaturalLanguageParse = () => {
     if (!naturalQuery.trim()) return;
 
+    if (usage.isExhausted) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     requireAuth('search accredited faculty registries', async () => {
       setIsSearching(true);
       setProgressPercent(10);
@@ -302,17 +307,26 @@ export default function SearchPage() {
 
   // Direct search execution
   const executeSearch = (overrides?: any) => {
+    if (usage.isExhausted) {
+      setShowUpgradeModal(true);
+      return;
+    }
     requireAuth('query European and global faculty registries', async () => {
       await runSearchPayload(overrides);
     });
   };
 
   const runSearchPayload = async (overrides?: any, append: boolean = false) => {
+    if (!append && usage.isExhausted) {
+      setShowUpgradeModal(true);
+      return;
+    }
+
     if (append) {
       setIsLoadingMore(true);
     } else {
-      incrementSearchUsage(user?.id);
-      setUsage(getSearchUsage(user?.id));
+      incrementSearchUsage(user?.id, usage.limit);
+      setUsage(getSearchUsage(user?.id, currentTier));
       setIsSearching(true);
       setProgressPercent(20);
       setDiscoveryStageIndex(1);
@@ -370,6 +384,9 @@ export default function SearchPage() {
           setProfessorsList(incomingProfs);
           setSearchPage(1);
         }
+      } else if (res.status === 403) {
+        setShowUpgradeModal(true);
+        setUsage(getSearchUsage(user?.id, currentTier));
       }
     } catch (err) {
       console.error('Search request failed', err);
