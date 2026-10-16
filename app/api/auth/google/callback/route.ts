@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { saveUserProfile, saveUserSubscription, getUserSubscription, getProfileByEmail } from '@/lib/services/db-service';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
@@ -9,14 +12,14 @@ export async function GET(request: NextRequest) {
   const stateEncoded = searchParams.get('state');
   const error = searchParams.get('error');
 
-  let redirectTo = '/choose-plan';
+  let redirectTo = '/dashboard';
   const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
 
   if (stateEncoded) {
     try {
       const parsedState = JSON.parse(Buffer.from(stateEncoded, 'base64').toString('utf-8'));
       if (parsedState.redirectTo) {
-        redirectTo = validateSafeRedirect(parsedState.redirectTo, '/choose-plan');
+        redirectTo = validateSafeRedirect(parsedState.redirectTo, '/dashboard');
       }
     } catch {
       // safe fallback
@@ -65,14 +68,41 @@ export async function GET(request: NextRequest) {
     const cleanEmail = googleUser.email.toLowerCase().trim();
     const isSystemAdmin = isAdminEmail(cleanEmail);
 
-    // Look up existing persistent profile by email to preserve real UUID
+    // 3. Establish authentic Supabase Auth session and generate auth tokens
+    const adminClient = createAdminClient();
+    let sbUserId: string | null = null;
+    let authHashedToken: string | null = null;
+
+    if (adminClient) {
+      try {
+        const { data: linkData, error: linkErr } = await adminClient.auth.admin.generateLink({
+          type: 'magiclink',
+          email: cleanEmail,
+          options: {
+            data: {
+              full_name: googleUser.name || cleanEmail.split('@')[0],
+              avatar_url: googleUser.picture || null,
+            },
+          },
+        });
+
+        if (!linkErr && linkData?.user) {
+          sbUserId = linkData.user.id;
+          authHashedToken = linkData.properties?.hashed_token || null;
+        }
+      } catch (authErr) {
+        console.error('[GOOGLE SUPABASE AUTH ADMIN ERROR]', authErr);
+      }
+    }
+
+    // 4. Look up existing persistent profile by email to preserve real UUID
     const existingProfile = await getProfileByEmail(cleanEmail);
-    const userId = existingProfile ? existingProfile.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr_google_${Date.now()}`);
+    const userId = sbUserId || (existingProfile ? existingProfile.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr_google_${Date.now()}`));
 
     const user = await saveUserProfile({
       id: userId,
       email: cleanEmail,
-      full_name: existingProfile?.full_name || googleUser.name || googleUser.email.split('@')[0],
+      full_name: existingProfile?.full_name || googleUser.name || cleanEmail.split('@')[0],
       avatar_url: existingProfile?.avatar_url || googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
       role: isSystemAdmin ? 'ADMIN' : (existingProfile?.role || 'USER'),
       is_suspended: existingProfile?.is_suspended ?? false,
@@ -92,16 +122,43 @@ export async function GET(request: NextRequest) {
       // Non-blocking subscription initialization
     }
 
-    const responseUser = {
-      id: user.id,
-      email: user.email,
-      full_name: user.full_name,
-      avatar_url: user.avatar_url,
-      role: user.role,
-    };
+    // 5. Build safe target redirect URL
+    const targetUrl = redirectTo && redirectTo !== '/choose-plan'
+      ? (redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`)
+      : `${origin}/dashboard`;
 
-    const targetUrl = redirectTo.startsWith('http') ? redirectTo : `${origin}${redirectTo.startsWith('/') ? '' : '/'}${redirectTo}`;
-    return NextResponse.redirect(targetUrl);
+    const redirectResponse = NextResponse.redirect(targetUrl);
+
+    // 6. Verify OTP and attach auth cookies so browser is immediately recognized as logged in
+    if (authHashedToken) {
+      const supabaseServerClient = createClient();
+      if (supabaseServerClient) {
+        try {
+          await supabaseServerClient.auth.verifyOtp({
+            token_hash: authHashedToken,
+            type: 'magiclink',
+          });
+        } catch (verifyErr) {
+          console.error('[GOOGLE SUPABASE VERIFY OTP ERROR]', verifyErr);
+        }
+      }
+
+      // Propagate all session cookies onto the redirect response
+      try {
+        const cookieJar = cookies();
+        cookieJar.getAll().forEach((c) => {
+          redirectResponse.cookies.set({
+            name: c.name,
+            value: c.value,
+            path: '/',
+          });
+        });
+      } catch (cookieErr) {
+        console.error('[GOOGLE COOKIE ATTACH ERROR]', cookieErr);
+      }
+    }
+
+    return redirectResponse;
   } catch (err: any) {
     console.error('[GOOGLE CALLBACK ERROR]', err);
     return NextResponse.redirect(`${origin}/login?error=Google authentication process failed.`);
