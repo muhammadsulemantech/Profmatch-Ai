@@ -351,3 +351,23 @@ profmatch-ai/
 - **Constant-Time OTP Comparison (`lib/auth/otp-store.ts`):** Upgraded `verifyPendingOtp` to use `crypto.timingSafeEqual` over buffers, eliminating timing side-channel attacks on 6-digit OTP verification.
 - **Automated Verification:** Added `tests/rate-limiting.test.mjs` verifying limiter logic, IP extraction, RFC headers, and static code audit across all critical route handlers. Full test suite passes at 84/84 tests.
 
+---
+
+## 10. Tier 10: AutoPilot Live Database Tier Resolution & Gmail Draft Endpoint (COMPLETED 2026-10-16)
+
+### 10.1 Dynamic Supabase Subscription Tier Resolution (Quota & Country Gating)
+- **Problem Solved:** When running on Vercel / serverless Next.js, API routes run in isolated, stateless containers. The quota and country-gating checks in `app/api/autopilot/discover-next/route.ts` and `draft-grounded/route.ts` invoked synchronous `checkAndIncrementQuota`, which relied on in-memory `syncGetUserPlanTier(userId)`. In production, this always defaulted to `'FREE'`. Even though a user had an active `PRO` plan in Supabase PostgreSQL (`subscriptions` table), their destination country (e.g., Japan, Canada, UK) was rejected with *"Faculty in 'Japan' is not accessible on the Free Explorer (FREE) tier"*.
+- **Fix Implemented:**
+  - Implemented `checkAndIncrementQuotaAsync(userId, feature, options)` in `lib/services/quota-service.ts` which asynchronously queries Supabase (`getUserPlanTier` and `getUsageRecord`).
+  - Added support for passing `{ tier?: PlanTier }` into quota verification so routes with pre-resolved tiers can bypass redundant queries.
+  - Mirrored live Supabase subscriptions into local process cache in `lib/services/db-service.ts` (`getUserSubscription`).
+  - Upgraded `discover-next`, `draft-grounded`, `/api/professors/search`, and `/api/matches/analyze` to use `checkAndIncrementQuotaAsync`. Active `PRO` or `ELITE` users now immediately access all global destination countries (including Japan, Germany, USA, etc.) without restriction.
+
+### 10.2 Production AutoPilot Gmail Draft Endpoint (`/api/autopilot/save-gmail-draft`)
+- **Problem Solved:** `app/autopilot/page.tsx` triggers `POST /api/autopilot/save-gmail-draft` during Step 3 of AutoPilot execution to save generated drafts into Gmail. The route handler was missing, causing HTTP 404 responses.
+- **Fix Implemented:**
+  - Created `app/api/autopilot/save-gmail-draft/route.ts` with strict session verification, rate limiting (`RATE_LIMIT_PRESETS.AI_COMPUTE`), and Zod validation.
+  - Automatically attempts live Gmail draft creation via `createOutreachDraft` if Gmail OAuth is connected.
+  - Gracefully falls back to storing the draft in the user's synced activity cache if Gmail is not yet connected, preventing pipeline crashes.
+  - Verified with 70/70 Next.js production build routes and 84/84 unit tests.
+

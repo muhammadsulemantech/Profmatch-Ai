@@ -106,6 +106,7 @@ test('Comprehensive Security & Rate Limiting Suite', async (t) => {
       'app/api/outreach/create-draft/route.ts',
       'app/api/autopilot/discover-next/route.ts',
       'app/api/autopilot/draft-grounded/route.ts',
+      'app/api/autopilot/save-gmail-draft/route.ts',
       'app/api/checkout/submit/route.ts',
       'app/api/auth/login/route.ts',
       'app/api/auth/signup/route.ts',

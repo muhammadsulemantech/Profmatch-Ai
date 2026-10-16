@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { getAIProvider, ResearchMatchAnalysisPrompt } from '@/lib/providers/ai';
-import { verifyAuthSession } from '@/lib/auth/server-auth';
-import { checkAndIncrementQuota } from '@/lib/services/quota-service';
+import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
+import { getUserPlanTier } from '@/lib/services/db-service';
 import { getProfessorById, saveResearchMatch } from '@/lib/services/professor-service';
 import { getStudentProfileByUserId } from '@/lib/services/user-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
@@ -45,7 +46,10 @@ export async function POST(request: NextRequest) {
       return apiError('Too many research match requests. Please slow down and try again shortly.', 429);
     }
 
-    const quotaCheck = checkAndIncrementQuota(userId, 'search');
+    const tier = (session.user as any)?.tier || await getUserPlanTier(userId);
+    const effectiveTier = (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) && tier === 'FREE' ? 'PRO' : tier;
+
+    const quotaCheck = await checkAndIncrementQuotaAsync(userId, 'search', { tier: effectiveTier });
     if (!quotaCheck.allowed) {
       return apiError(quotaCheck.error || 'Quota limit reached', 403, 'QUOTA_EXCEEDED', {
         message: quotaCheck.message,

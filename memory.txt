@@ -151,6 +151,14 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 • Automated Verification (tests/rate-limiting.test.mjs):
   - Verifies limits, IP parsing, 429 RFC headers, presets, and route audit. 84/84 tests passing across full test suite.
 
+[TIER 10] AutoPilot Live Database Tier Resolution & Gmail Draft Endpoint (COMPLETED 2026-10-16)
+• Live Supabase Tier Resolution:
+  - Replaced synchronous mockDb lookups in checkAndIncrementQuota with checkAndIncrementQuotaAsync, which fetches the user's authoritative tier from Supabase public.subscriptions.
+  - Fixes country-gating failure where users with active PRO/ELITE plans were treated as FREE in serverless Vercel lambdas, unblocking Japan, Canada, UK, etc.
+• Dedicated Gmail Draft Endpoint (POST /api/autopilot/save-gmail-draft):
+  - Created missing endpoint expected by app/autopilot/page.tsx.
+  - Implements session verification, AI_COMPUTE rate limiting, live Gmail OAuth draft creation, and safe activity cache fallback.
+
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
@@ -173,11 +181,12 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 • Automated Unit & Security Tests: npm test -> 84/84 tests passing (0 failures); node --test tests/rate-limiting.test.mjs -> 7/7 passing.
 • ESLint Quality Check: npx eslint . -> 0 errors, 0 warnings.
 • TypeScript Verification: npx tsc --noEmit -> 0 errors.
-• Production Build: npm run build -> Exit code 0 (69/69 dynamic & static routes compiled cleanly).
+• Production Build: npm run build -> Exit code 0 (70/70 dynamic & static routes compiled cleanly).
 • Live Handshake: Google SMTP TLS delivery & Resend confirmed.
 • Live User Experience Verified (scripts/verify-user-experience.mjs):
   - Signup & OTP: Scrypt hashing verified, 6-digit OTP delivered live via Google SMTP (250 2.0.0 OK).
   - Search Relevance: Real-time author/concept retrieval verified across Machine Learning, Bioinformatics, Quantum Computing.
   - AI Outreach Quality: Real-time generation verified with Gemini, automated fallback to gemini-flash-lite-latest added for 503 resilience, 100/100 EmailQualityAgent score.
 ====================================================================
+
 

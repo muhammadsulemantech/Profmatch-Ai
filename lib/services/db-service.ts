@@ -149,6 +149,10 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
 
       if (!error && data) {
         sub = data as SubscriptionRecord;
+        mockDb.loadFromDisk();
+        const idx = mockDb.subscriptions.findIndex((s) => s.user_id === userId);
+        if (idx >= 0) mockDb.subscriptions[idx] = sub;
+        else mockDb.subscriptions.push(sub);
       }
     } catch (err) {
       // Fallback
