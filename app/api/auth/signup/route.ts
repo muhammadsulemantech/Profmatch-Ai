@@ -4,7 +4,7 @@ import { getProfileByEmail, saveUserProfile, saveUserSubscription } from '@/lib/
 import { createClient } from '@/lib/supabase/server';
 import { createPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 const SignupSchema = z.object({
@@ -16,7 +16,7 @@ const SignupSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
 
     // Rate limit signup attempts to prevent abuse
     const rl = checkRateLimit(`auth_signup:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });

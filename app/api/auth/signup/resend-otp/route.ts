@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getPendingRegistration, refreshPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 const ResendOtpSchema = z.object({
   email: z.string().trim().email().toLowerCase(),
@@ -10,7 +10,7 @@ const ResendOtpSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
 
     // Rate limit resend attempts (max 5 in 10 minutes)
     const rl = checkRateLimit(`auth_resend_otp:${ip}`, { limit: 5, windowMs: 10 * 60 * 1000 });

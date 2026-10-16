@@ -4,7 +4,7 @@ import { getProfileByEmail } from '@/lib/services/db-service';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { createPasswordResetToken, persistResetTokenToSupabase } from '@/lib/auth/password-reset-store';
 import { sendPasswordResetEmail } from '@/lib/email/reset-password-email';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
@@ -14,7 +14,7 @@ const ForgotPasswordSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
 
     // Rate limiting: Max 5 password reset requests per 15 minutes per IP
     const rl = checkRateLimit(`auth_forgot_password:${ip}`, { limit: 5, windowMs: 15 * 60 * 1000 });

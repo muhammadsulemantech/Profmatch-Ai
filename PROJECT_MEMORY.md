@@ -309,7 +309,7 @@ profmatch-ai/
 
 ---
 
-- **Automated Unit, Security & Subscription Tests:** `npm test` -> 77/77 tests passing (0 failures); `node --test tests/cv-parser.test.mjs` -> 5/5 tests passing (0 failures).
+- **Automated Unit, Security & Subscription Tests:** `npm test` -> 84/84 tests passing (0 failures); `node --test tests/rate-limiting.test.mjs` -> 7/7 tests passing (0 failures).
 - **ESLint Code Quality:** `npx eslint .` -> 0 errors, 0 warnings.
 - **TypeScript Compilation:** `npx tsc --noEmit` -> 0 errors.
 - **Production Build:** `npm run build` -> Exit code 0 (69/69 dynamic & static routes compiled cleanly with 0 build warnings).
@@ -318,30 +318,36 @@ profmatch-ai/
 
 ---
 
-## 8. Tier 8: Zero-Default Keywords & Intelligent AI CV Auto-Parser
+## 9. Tier 9: Global Edge & Route-Level Anti-Abuse Rate Limiting & Zero-Trust Auth Hardening (COMPLETED 2026-10-16)
 
-### 8.1 Zero-Default Keywords Architecture
-- **Problem Solved:** Previously, new accounts and guest sessions defaulted to 5 mock keywords (`Natural Language Processing`, `Large Language Models`, etc.) and a mock thesis title (`Mitigating Factual Hallucinations in Multi-Hop RAG Systems`) from `mockDb.researchProfiles[0]`.
-- **Implementation:**
-  - `lib/supabase/mock-db.ts`: `research_interests` initialized to `[]`, `thesis_title` and `thesis_abstract` initialized to `''`.
-  - `app/onboarding/page.tsx`: Step 3 `researchInterests` initialized to `[] as string[]`, `thesisTitle` and `thesisAbstract` initialized to `''`.
-  - `app/profile/page.tsx`: Strict zero-keyword default for new users (`interests: []`). Added legacy mock list detection that auto-cleanses previously stored mock keyword lists down to 0 upon page visit.
-  - `components/profile/research-focus-section.tsx`: Added `(0 added)` keyword counter badge, an empty state banner when no keywords are added, and a "Clear All" button with trash icon for one-click keyword removal.
+### 9.1 Multi-Layer Rate Limiting Architecture
+- **Problem Solved:** Prevented malicious bot activity, brute-force attacks, DDoS, and token/quota exhaustion on AI and PDF processing endpoints.
+- **Core Engine (`lib/security/rate-limit.ts`):**
+  - Robust client IP resolution (`getClientIp`) safely extracting the leftmost client IP from complex, multi-proxy `x-forwarded-for`, `x-real-ip`, and `cf-connecting-ip` headers.
+  - Opportunistic memory pruning (`pruneExpiredRecords`) when store size exceeds 2,000 entries, preventing memory leaks in both long-lived Node.js and ephemeral Edge environments.
+  - Standardized RFC HTTP 429 helper (`rateLimitResponse`) providing `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+  - Centralized security thresholds (`RATE_LIMIT_PRESETS`): `GLOBAL_API` (120 req/min), `AUTH` (15 req/15 min), `AUTH_STRICT` (5 req/10 min), `CV_PARSE` (10 uploads/5 min), `AI_COMPUTE` (20 req/min), `CHECKOUT` (5 submissions/15 min), and `ADMIN` (60 req/min).
 
-### 8.2 Intelligent AI Academic CV Auto-Parser
-- **Problem Solved:** The previous CV upload logic only inspected the file name for `'ai'` or `'bio'` substrings and injected 3 hardcoded mock keywords, ignoring the actual file content entirely.
-- **Implementation:**
-  - Integrated `pdf-parse` for binary PDF text stream extraction, with fallback for text/DOCX documents and corrupted streams.
-  - Created dedicated endpoint `app/api/profile/parse-cv/route.ts` that analyzes candidate text against a comprehensive academic dictionary and `ACADEMIC_DOMAINS` taxonomy.
-  - Automatically extracts:
-    - **Genuine Research Keywords:** Top 5-8 scholarly topics directly present in the CV text.
-    - **Degrees & Major:** Accurately maps BS, MS, PhD, and fields (Computer Science, Data Science, Biotechnology, etc.).
-    - **University & CGPA:** Detects institutions (NUST, FAST, LUMS, etc.) and GPA metrics.
-    - **Thesis / Project Title & Abstract:** Extracts Final Year Projects (FYP) and Capstones.
-    - **Academic Bio:** Synthesizes a tailored, professional candidate statement based on their parsed profile.
-  - `components/profile/academic-cv-section.tsx`: Added `isParsingCv` state with real-time pulsing spinner and loading notices (`🤖 Reading and analyzing CV text via AI engine...`).
+### 9.2 Edge Middleware Rate Limiter (`middleware.ts`)
+- Configured edge-level API protection intercepting all `/api/*` requests (excluding public `/api/health`).
+- Evaluates verified client IP against category-specific rate windows before route handler execution:
+  - `/api/auth/*`: 30 requests / minute
+  - `/api/profile/parse-cv`, `/api/matches/analyze`, `/api/autopilot/*`, `/api/outreach/*`: 30 requests / minute
+  - `/api/admin/*`: 60 requests / minute
+  - General API: 120 requests / minute
+- Returns immediate HTTP 429 with `Retry-After` on limit violation.
 
-- **Live User Experience & Journey Verification (`scripts/verify-user-experience.mjs`):**
-  - **Signup & OTP:** Salted scrypt password hashing verified, 6-digit OTP generated with 15-minute expiry, and live OTP email successfully delivered to inbox via Google SMTP.
-  - **Field Search Relevance:** Live OpenAlex graph verified across multiple fields (Machine Learning, Bioinformatics Genomics, Quantum Computing) with real institution/concept mappings.
-  - **AI Outreach Quality:** Real-time generation verified with Google Gemini, resilient fallback to `gemini-flash-lite-latest` implemented, achieving a 100/100 score on EmailQualityAgent audit (exact publication citation, zero spam flattery, proper word count, and CV reference).
+### 9.3 Route-Level Defense-in-Depth
+- Added dedicated per-user/per-IP rate limiting across heavy mutation endpoints:
+  - `app/api/profile/parse-cv/route.ts`: 10 uploads per 5 minutes per IP.
+  - `app/api/matches/analyze/route.ts`: 20 requests per minute per user.
+  - `app/api/outreach/create-draft/route.ts`: 20 drafts per minute per user.
+  - `app/api/autopilot/discover-next/route.ts`: 30 discovery calls per minute per user.
+  - `app/api/autopilot/draft-grounded/route.ts`: 15 email generations per minute per user.
+  - `app/api/checkout/submit/route.ts`: 5 payment submissions per 15 minutes per user/IP.
+- Standardized `getClientIp` across all auth endpoints: `login`, `signup`, `send-otp`, `verify-otp`, `resend-otp`, `forgot-password`, `reset-password`, `search`, and `email/send`.
+
+### 9.4 Zero-Trust Authentication Hardening
+- **Constant-Time OTP Comparison (`lib/auth/otp-store.ts`):** Upgraded `verifyPendingOtp` to use `crypto.timingSafeEqual` over buffers, eliminating timing side-channel attacks on 6-digit OTP verification.
+- **Automated Verification:** Added `tests/rate-limiting.test.mjs` verifying limiter logic, IP extraction, RFC headers, and static code audit across all critical route handlers. Full test suite passes at 84/84 tests.
+

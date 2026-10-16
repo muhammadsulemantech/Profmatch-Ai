@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { createOutreachDraft } from '@/lib/services/outreach-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 
 const CreateDraftSchema = z.object({
   professorEmail: z.string().trim().email('Valid professor email address is required'),
@@ -17,6 +18,12 @@ export async function POST(request: NextRequest) {
     const session = await verifyAuthSession(request);
     if (!session || !session.user || !session.user.id) {
       return apiError('Unauthorized: Authentication required.', 401);
+    }
+
+    // Rate limiting to prevent draft flooding / Gmail API quota abuse
+    const rl = checkRateLimit(`draft_create:${session.user.id}`, RATE_LIMIT_PRESETS.AI_COMPUTE);
+    if (!rl.success) {
+      return apiError('Draft creation rate limit exceeded. Please wait a minute before creating more drafts.', 429);
     }
 
     const requestBody = await request.json();

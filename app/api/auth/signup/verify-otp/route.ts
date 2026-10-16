@@ -5,7 +5,7 @@ import { createAdminClient } from '@/lib/supabase/admin';
 import { verifyPendingOtp } from '@/lib/auth/otp-store';
 import { sendWelcomeEmail } from '@/lib/email/welcome-email';
 import { logAuditEvent } from '@/lib/security/audit';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import type { UserProfile } from '@/types/database';
 
@@ -22,7 +22,7 @@ const VerifyOtpSchema = z
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
     
     // Strict rate limit: max 10 verify attempts per 15 minutes per IP
     const rl = checkRateLimit(`auth_verify_otp:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });

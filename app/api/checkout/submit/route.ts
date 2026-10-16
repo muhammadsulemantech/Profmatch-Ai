@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { submitPaymentProof, getPaymentMethodById } from '@/lib/services/payment-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 import {
   sendPaymentAdminAlertEmail,
   sendPaymentCustomerReceiptEmail,
@@ -23,6 +24,13 @@ export async function POST(request: NextRequest) {
     const session = await verifyAuthSession(request);
     if (!session || !session.user || !session.user.id) {
       return apiError('Unauthorized: You must be logged in to submit a payment.', 401);
+    }
+
+    // Rate limiting to prevent payment submission spamming / fraud attempts
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`checkout_submit:${session.user.id}:${ip}`, RATE_LIMIT_PRESETS.CHECKOUT);
+    if (!rl.success) {
+      return apiError('Too many payment submission attempts. Please wait before submitting again.', 429);
     }
 
     const body = await request.json();

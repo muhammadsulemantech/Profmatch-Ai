@@ -130,6 +130,27 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - app/(auth)/forgot-password/page.tsx: Real API integration with email dispatch and error handling.
   - app/(auth)/reset-password/page.tsx: Token verification, password confirmation, strength validation, and direct sign-in redirection.
 
+[TIER 9] Global Edge & Route-Level Anti-Abuse Rate Limiting & Zero-Trust Auth Hardening (COMPLETED 2026-10-16)
+• Core Rate Limiter Engine (lib/security/rate-limit.ts):
+  - Robust client IP resolution (getClientIp) resolving leftmost client IP across multi-proxy x-forwarded-for, x-real-ip, and cf-connecting-ip.
+  - Opportunistic memory pruning (pruneExpiredRecords) when cache exceeds 2,000 entries; safe in Node and Edge runtimes.
+  - Standardized RFC HTTP 429 response helper (rateLimitResponse) with Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, and X-RateLimit-Reset headers.
+  - Pre-calibrated RATE_LIMIT_PRESETS: GLOBAL_API (120 req/min), AUTH (15 req/15 min), AUTH_STRICT (5 req/10 min), CV_PARSE (10 uploads/5 min), AI_COMPUTE (20 req/min), CHECKOUT (5 submissions/15 min), ADMIN (60 req/min).
+• Edge Middleware Rate Limiter (middleware.ts):
+  - Global edge protection on all /api/* routes (excluding /api/health). Blocks bot storms and brute force before route handler execution.
+• Route-Level Defense-in-Depth:
+  - app/api/profile/parse-cv/route.ts: 10 uploads / 5 min per IP.
+  - app/api/matches/analyze/route.ts: 20 match analyses / min per user.
+  - app/api/outreach/create-draft/route.ts: 20 drafts / min per user.
+  - app/api/autopilot/discover-next/route.ts: 30 calls / min per user.
+  - app/api/autopilot/draft-grounded/route.ts: 15 emails / min per user.
+  - app/api/checkout/submit/route.ts: 5 payment attempts / 15 min per user/IP.
+  - getClientIp standardized across all auth, search, and email route handlers.
+• Constant-Time OTP Comparison (lib/auth/otp-store.ts):
+  - Upgraded verifyPendingOtp to use crypto.timingSafeEqual over buffers, eliminating timing side-channel attacks on 6-digit OTP verification.
+• Automated Verification (tests/rate-limiting.test.mjs):
+  - Verifies limits, IP parsing, 429 RFC headers, presets, and route audit. 84/84 tests passing across full test suite.
+
 --------------------------------------------------------------------
 2. CORE CREDENTIALS & ADMIN AUTHENTICATION
 --------------------------------------------------------------------
@@ -149,7 +170,7 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 --------------------------------------------------------------------
 4. VERIFICATION STATUS
 --------------------------------------------------------------------
-• Automated Unit & Security Tests: npm test -> 77/77 tests passing (0 failures); node --test tests/password-reset.test.mjs -> 5/5 passing.
+• Automated Unit & Security Tests: npm test -> 84/84 tests passing (0 failures); node --test tests/rate-limiting.test.mjs -> 7/7 passing.
 • ESLint Quality Check: npx eslint . -> 0 errors, 0 warnings.
 • TypeScript Verification: npx tsc --noEmit -> 0 errors.
 • Production Build: npm run build -> Exit code 0 (69/69 dynamic & static routes compiled cleanly).
@@ -159,3 +180,4 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Search Relevance: Real-time author/concept retrieval verified across Machine Learning, Bioinformatics, Quantum Computing.
   - AI Outreach Quality: Real-time generation verified with Gemini, automated fallback to gemini-flash-lite-latest added for 503 resilience, 100/100 EmailQualityAgent score.
 ====================================================================
+

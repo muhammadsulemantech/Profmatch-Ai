@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { getUserProfile, saveUserProfile } from '@/lib/services/db-service';
 import { createClient } from '@/lib/supabase/server';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 
@@ -13,14 +13,23 @@ const LoginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
 
     // Rate limit login attempts to prevent brute-force attacks
-    const rl = checkRateLimit(`auth_login:${ip}`, { limit: 15, windowMs: 15 * 60 * 1000 });
+    const rl = checkRateLimit(`auth_login:${ip}`, RATE_LIMIT_PRESETS.AUTH);
     if (!rl.success) {
+      const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json(
         { success: false, error: 'Too many login attempts. Please wait 15 minutes before trying again.' },
-        { status: 429 }
+        {
+          status: 429,
+          headers: {
+            'Retry-After': retryAfter.toString(),
+            'X-RateLimit-Limit': RATE_LIMIT_PRESETS.AUTH.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(rl.reset / 1000).toString(),
+          },
+        }
       );
     }
 

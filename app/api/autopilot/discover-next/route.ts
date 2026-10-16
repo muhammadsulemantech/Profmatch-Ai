@@ -4,6 +4,7 @@ import { discoverNextProfessor } from '@/lib/services/professor-service';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 
 const DiscoverNextSchema = z.object({
   targetCountry: z.string().optional().default('United States'),
@@ -18,6 +19,12 @@ export async function POST(request: NextRequest) {
     const session = await verifyAuthSession(request);
     if (!session || !session.user || !session.user.id) {
       return apiError('Unauthorized: Authentication required.', 401);
+    }
+
+    // Rate limiting to prevent external academic provider API hammering
+    const rl = checkRateLimit(`autopilot_discover:${session.user.id}`, { limit: 30, windowMs: 60 * 1000 });
+    if (!rl.success) {
+      return apiError('AutoPilot discovery request limit exceeded. Please slow down and wait a moment.', 429);
     }
 
     const body = await request.json();
