@@ -4,6 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
 import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
 import { getUserPlanTier } from '@/lib/services/db-service';
+import { upsertProfessorsBatch } from '@/lib/services/professor-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -94,6 +95,13 @@ export async function POST(request: NextRequest) {
       page: page ? Number(page) : 1,
       limit: limit ? Number(limit) : 30,
     });
+
+    // Asynchronously persist canonical professor records into PostgreSQL
+    if (results && results.length > 0) {
+      upsertProfessorsBatch(results).catch((err) =>
+        console.warn('[SEARCH BATCH PERSIST NOTICE]', err)
+      );
+    }
 
     return NextResponse.json({
       professors: results,
