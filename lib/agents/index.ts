@@ -159,25 +159,60 @@ export class ResearchMatchingAgent {
   }
 }
 
+export interface EmailGenerationOptions {
+  tone?: string;
+  customNote?: string;
+  studentName?: string;
+  studentDegree?: string;
+  studentUniversity?: string;
+  targetDegree?: string;
+  targetIntake?: string;
+  studentInterests?: string[];
+  studentThesis?: string;
+  studentProjects?: { title: string; description: string }[];
+}
+
 // 6. Global Email Personalization Agent
 export class EmailPersonalizationAgent {
-  static async generateEmail(studentUserId: string, professor: Professor, options: { tone?: string; customNote?: string } = {}) {
+  static async generateEmail(
+    studentUserId: string,
+    professor: Professor,
+    options: EmailGenerationOptions = {}
+  ) {
     const ai = getAIProvider();
-    const studentUser = mockDb.profiles.find(p => p.id === studentUserId) || mockDb.profiles[1];
+    const studentUser = mockDb.profiles.find(p => p.id === studentUserId);
     const student = mockDb.studentProfiles.find(s => s.user_id === studentUserId) || mockDb.studentProfiles[0];
-    const academic = mockDb.academicProfiles.find(a => a.student_id === student.id) || mockDb.academicProfiles[0];
-    const research = mockDb.researchProfiles.find(r => r.student_id === student.id) || mockDb.researchProfiles[0];
-    const projects = mockDb.studentProjects.filter(p => p.student_id === student.id);
+    const academic = mockDb.academicProfiles.find(a => a.student_id === student?.id) || mockDb.academicProfiles[0];
+    const research = mockDb.researchProfiles.find(r => r.student_id === student?.id) || mockDb.researchProfiles[0];
+    const projects = student ? mockDb.studentProjects.filter(p => p.student_id === student.id) : [];
+
+    const studentName =
+      options.studentName ||
+      studentUser?.full_name ||
+      'Prospective Researcher';
+
+    const studentDegree =
+      options.studentDegree ||
+      academic?.current_degree ||
+      'Graduate Candidate';
+
+    const studentUniversity =
+      options.studentUniversity ||
+      academic?.university ||
+      'University';
 
     const prompt: GroundedEmailPrompt = {
-      studentName: studentUser.full_name || 'Student Applicant',
-      studentDegree: academic.current_degree,
-      studentUniversity: academic.university,
-      targetDegree: student.target_degree || 'PhD',
-      targetIntake: student.target_intake || 'Fall 2027',
-      studentInterests: research.research_interests,
-      studentThesis: research.thesis_title,
-      studentProjects: projects.map(p => ({ title: p.title, description: p.description })),
+      studentName,
+      studentDegree,
+      studentUniversity,
+      targetDegree: options.targetDegree || student?.target_degree || 'PhD',
+      targetIntake: options.targetIntake || student?.target_intake || 'Fall 2027',
+      studentInterests: options.studentInterests || research?.research_interests || ['Artificial Intelligence & NLP'],
+      studentThesis: options.studentThesis !== undefined ? options.studentThesis : research?.thesis_title,
+      studentProjects: (options.studentProjects || projects.map(p => ({ title: p.title, description: p.description || '' }))).map(p => ({
+        title: p.title,
+        description: p.description || '',
+      })),
       professorName: professor.name,
       professorTitle: professor.title || 'Professor',
       professorUniversity: professor.university_name || 'University',

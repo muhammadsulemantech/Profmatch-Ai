@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 
 export interface PendingSignupRegistration {
   email: string;
@@ -45,7 +46,7 @@ export function verifyPassword(password: string, combinedHash: string): boolean 
 function getStoreCandidates(): string[] {
   const candidates: string[] = [path.join(process.cwd(), 'database', 'pending_otps.json')];
   try {
-    const tmpCandidate = path.join('/tmp', 'pending_otps.json');
+    const tmpCandidate = path.join(os.tmpdir(), 'pending_otps.json');
     if (!candidates.includes(tmpCandidate)) {
       candidates.push(tmpCandidate);
     }
@@ -55,27 +56,30 @@ function getStoreCandidates(): string[] {
 
 function loadOtpsFromDisk() {
   const candidates = getStoreCandidates();
-  pendingOtpMap.clear();
   for (const storeFile of candidates) {
     try {
       if (fs.existsSync(storeFile)) {
         const data = fs.readFileSync(storeFile, 'utf-8');
-        if (data) {
+        if (data && data.trim()) {
           const parsed: Record<string, any> = JSON.parse(data);
           const now = Date.now();
+          const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
           for (const [email, record] of Object.entries(parsed)) {
-            if (record && record.expiresAt > now) {
-              const passwordHash = record.passwordHash || (record.password ? hashPassword(record.password) : '');
-              pendingOtpMap.set(email.toLowerCase(), {
-                email: record.email,
-                fullName: record.fullName,
-                passwordHash,
-                targetDegree: record.targetDegree || 'PhD',
-                code: record.code,
-                expiresAt: record.expiresAt,
-                attempts: record.attempts || 0,
-                createdAt: record.createdAt || now,
-              });
+            if (record && (record.expiresAt > now || (record.createdAt && record.createdAt + TWO_HOURS_MS > now))) {
+              const existing = pendingOtpMap.get(email.toLowerCase());
+              if (!existing || existing.createdAt <= (record.createdAt || 0)) {
+                const passwordHash = record.passwordHash || (record.password ? hashPassword(record.password) : '');
+                pendingOtpMap.set(email.toLowerCase(), {
+                  email: record.email,
+                  fullName: record.fullName,
+                  passwordHash,
+                  targetDegree: record.targetDegree || 'PhD',
+                  code: record.code,
+                  expiresAt: record.expiresAt,
+                  attempts: record.attempts || 0,
+                  createdAt: record.createdAt || now,
+                });
+              }
             }
           }
         }
@@ -90,8 +94,9 @@ function persistOtpsToDisk() {
   const candidates = getStoreCandidates();
   const obj: Record<string, PendingSignupRegistration> = {};
   const now = Date.now();
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
   pendingOtpMap.forEach((record, email) => {
-    if (record.expiresAt > now) {
+    if (record.expiresAt > now || (record.createdAt && record.createdAt + TWO_HOURS_MS > now)) {
       obj[email] = {
         email: record.email,
         fullName: record.fullName,

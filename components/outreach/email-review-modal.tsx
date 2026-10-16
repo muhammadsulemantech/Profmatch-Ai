@@ -17,6 +17,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { Professor } from '@/types/database';
+import { useAuth } from '@/lib/auth/auth-context';
 
 interface EmailReviewModalProps {
   isOpen: boolean;
@@ -33,6 +34,7 @@ export default function EmailReviewModal({
   initialSubject = '',
   initialBody = '',
 }: EmailReviewModalProps) {
+  const { user } = useAuth();
   const [toEmail, setToEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [bodyText, setBodyText] = useState('');
@@ -76,13 +78,44 @@ export default function EmailReviewModal({
       const defaultSubject = initialSubject || `Prospective MS/PhD Research Student — Interested in ${professor.primary_discipline || 'Academic Research'}`;
       setSubject(defaultSubject);
 
-      const defaultBody = initialBody || `Dear Professor ${professor.name},\n\nI hope this email finds you well.\n\nI have been closely following your research group's work in ${professor.primary_discipline || 'your department'} at ${professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university')}. I am writing to express my strong interest in joining your lab as a prospective graduate research assistant.\n\nMy academic background and research interests align strongly with your publications. I would appreciate the opportunity to discuss any open positions in your lab for the upcoming term.\n\nThank you for your time and consideration. I have attached my CV for your review.\n\nSincerely,\n[Your Name]`;
+      let senderName = user?.full_name || '';
+      if (typeof window !== 'undefined') {
+        const userKey = user ? user.id : 'guest';
+        const savedName = localStorage.getItem(`profmatch_user_name_${userKey}`);
+        if (savedName) {
+          senderName = savedName;
+        } else {
+          const profileJson = localStorage.getItem(`profmatch_user_profile_${userKey}`);
+          if (profileJson) {
+            try {
+              const p = JSON.parse(profileJson);
+              if (p.fullName) senderName = p.fullName;
+            } catch {}
+          }
+        }
+      }
+      if (!senderName && user?.email) {
+        const local = user.email.split('@')[0].replace(/[0-9_.-]+/g, ' ').trim();
+        if (local) {
+          senderName = local.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+        }
+      }
+      if (!senderName) senderName = 'Prospective Researcher';
+
+      let defaultBody = initialBody;
+      if (defaultBody) {
+        defaultBody = defaultBody
+          .replace(/\[Your Name\]/g, senderName)
+          .replace(/Alex Vance/g, senderName);
+      } else {
+        defaultBody = `Dear Professor ${professor.name},\n\nI hope this email finds you well.\n\nI have been closely following your research group's work in ${professor.primary_discipline || 'your department'} at ${professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university')}. I am writing to express my strong interest in joining your lab as a prospective graduate research assistant.\n\nMy academic background and research interests align strongly with your publications. I would appreciate the opportunity to discuss any open positions in your lab for the upcoming term.\n\nThank you for your time and consideration. I have attached my CV for your review.\n\nSincerely,\n${senderName}`;
+      }
       setBodyText(defaultBody);
 
       setDraftResult(null);
       checkConnectionStatus();
     }
-  }, [isOpen, professor, initialSubject, initialBody]);
+  }, [isOpen, professor, initialSubject, initialBody, user]);
 
   const checkConnectionStatus = async () => {
     setCheckingStatus(true);
@@ -150,8 +183,11 @@ export default function EmailReviewModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          professorEmail: toEmail,
           toEmail,
+          professorName: professor?.name || '',
           subject,
+          body: bodyText,
           bodyText,
         }),
       });
@@ -167,7 +203,7 @@ export default function EmailReviewModal({
       } else {
         setDraftResult({
           success: false,
-          error: data.error || 'Failed to create draft in Gmail.',
+          error: data.error || data.message || 'Failed to create draft in Gmail.',
         });
       }
     } catch (e: any) {

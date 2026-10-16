@@ -61,7 +61,28 @@ export default function DashboardPage() {
   const student = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
   const matches = mockDb.researchMatches;
 
-  const displayName = user?.full_name || 'Alex Vance';
+  const displayName = React.useMemo(() => {
+    if (user?.full_name) return user.full_name;
+    if (typeof window !== 'undefined') {
+      const userKey = user ? user.id : 'guest';
+      const savedName = localStorage.getItem(`profmatch_user_name_${userKey}`);
+      if (savedName) return savedName;
+      const profileJson = localStorage.getItem(`profmatch_user_profile_${userKey}`);
+      if (profileJson) {
+        try {
+          const p = JSON.parse(profileJson);
+          if (p.fullName) return p.fullName;
+        } catch {}
+      }
+    }
+    if (user?.email) {
+      const local = user.email.split('@')[0].replace(/[0-9_.-]+/g, ' ').trim();
+      if (local) {
+        return local.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+    }
+    return 'Academic Researcher';
+  }, [user]);
   const firstName = displayName.split(' ')[0];
 
   const loadUserData = React.useCallback(() => {

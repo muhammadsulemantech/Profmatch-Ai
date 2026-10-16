@@ -201,6 +201,10 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Signup & OTP: Scrypt hashing verified, 6-digit OTP delivered live via Google SMTP (250 2.0.0 OK).
   - Search Relevance: Real-time author/concept retrieval verified across Machine Learning, Bioinformatics, Quantum Computing.
   - AI Outreach Quality: Real-time generation verified with Gemini, automated fallback to gemini-flash-lite-latest added for 503 resilience, 100/100 EmailQualityAgent score.
+• Email Outreach & Personalization Remediation:
+  - Fixed Gmail Draft creation ("Failed to Create Draft: Required"): Aligned CreateDraftSchema in app/api/outreach/create-draft/route.ts to flexibly validate both professorEmail/toEmail and body/bodyText.
+  - Eliminated hardcoded "Alex Vance" demo persona: Replaced mock persona fallback with dynamic student name, degree, and university resolved from session and user profile.
+  - Added Full Name Profile Management: Researcher Profile (/profile) and components/profile/avatar-section.tsx now provide a direct editable input for full name that syncs across local storage, React context, and Supabase database.
 ====================================================================
 
 
