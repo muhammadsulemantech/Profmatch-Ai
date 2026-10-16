@@ -17,7 +17,7 @@ export default function NavbarAuthControls() {
       return;
     }
     const saved = getSavedAvatar(user.id);
-    setAvatarUrl(saved);
+    setAvatarUrl(saved || user.avatar_url || null);
   }, [user]);
 
   useEffect(() => {
@@ -50,9 +50,9 @@ export default function NavbarAuthControls() {
             href={user.role === 'ADMIN' ? '/admin' : '/dashboard'}
             className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-900/80 border border-slate-800 hover:border-emerald-500/30 text-xs font-medium text-slate-200 transition-colors"
           >
-            {avatarUrl ? (
+            {(avatarUrl || user.avatar_url) ? (
               <Image
-                src={avatarUrl}
+                src={avatarUrl || user.avatar_url!}
                 alt={user.full_name || 'Profile'}
                 width={20}
                 height={20}
