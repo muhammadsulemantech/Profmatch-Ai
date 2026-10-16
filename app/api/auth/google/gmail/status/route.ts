@@ -35,20 +35,21 @@ export async function GET(request: NextRequest) {
       } catch {}
     }
 
-    // If account not found in DB, restore it from cookies if present
-    if (!account && (parsedAccountCookie?.connected || parsedTokensCookie?.email)) {
-      const email = parsedAccountCookie?.email || parsedTokensCookie?.email;
+    // If account not found in DB, restore it from cookies only if tokens exist
+    if (!account && parsedTokensCookie?.email && (parsedTokensCookie?.access_token || parsedTokensCookie?.refresh_token)) {
       account = await saveConnectedEmailAccount({
         user_id: userId,
-        email: email,
-        access_token: parsedTokensCookie?.access_token || '',
-        refresh_token: parsedTokensCookie?.refresh_token || '',
-        token_expires_at: parsedTokensCookie?.token_expires_at || Date.now() + 3600000,
+        email: parsedTokensCookie.email,
+        access_token: parsedTokensCookie.access_token || '',
+        refresh_token: parsedTokensCookie.refresh_token || '',
+        token_expires_at: parsedTokensCookie.token_expires_at || Date.now() + 3600000,
         status: 'ACTIVE',
       });
     }
 
-    if (account && account.status === 'ACTIVE') {
+    const hasValidTokens = Boolean(account?.access_token || account?.refresh_token);
+
+    if (account && account.status === 'ACTIVE' && hasValidTokens) {
       const response = NextResponse.json({
         connected: true,
         isConnected: true,
@@ -61,38 +62,7 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      // Keep 1-year cookie refreshed
-      if (!accountCookie) {
-        response.cookies.set('profmatch_gmail_account', JSON.stringify({
-          connected: true,
-          email: account.email,
-          connected_at: account.connected_at,
-          user_id: userId,
-          provider: 'gmail'
-        }), {
-          path: '/',
-          maxAge: 31536000,
-          sameSite: 'lax',
-          secure: process.env.NODE_ENV === 'production',
-          httpOnly: false,
-        });
-      }
-
       return response;
-    }
-
-    if (parsedAccountCookie && parsedAccountCookie.connected) {
-      return NextResponse.json({
-        connected: true,
-        isConnected: true,
-        account: {
-          id: 'acc_gmail_cookie',
-          email: parsedAccountCookie.email,
-          provider: 'gmail',
-          connected_at: parsedAccountCookie.connected_at || new Date().toISOString(),
-          last_used_at: new Date().toISOString(),
-        },
-      });
     }
 
     return NextResponse.json({ connected: false, isConnected: false });
@@ -105,7 +75,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, connected_at } = body;
+    const { email, access_token, refresh_token, connected_at } = body;
 
     if (!email) {
       return NextResponse.json({ error: 'Email required' }, { status: 400 });
@@ -117,14 +87,41 @@ export async function POST(request: NextRequest) {
     }
     const userId = session.user.id;
 
+    // Check if an existing account with tokens already exists in database
+    const existing = await getConnectedEmailAccount(userId);
+    if (existing && (existing.access_token || existing.refresh_token)) {
+      return NextResponse.json({
+        success: true,
+        connected: true,
+        account: {
+          id: existing.id,
+          email: existing.email,
+          provider: 'gmail',
+          connected_at: existing.connected_at,
+        }
+      });
+    }
+
+    // Do NOT create an active account without real OAuth tokens
+    if (!access_token && !refresh_token) {
+      return NextResponse.json({
+        success: false,
+        connected: false,
+        error: 'Active OAuth tokens are required. Please connect your Gmail via Connectors.'
+      }, { status: 400 });
+    }
+
     const saved = await saveConnectedEmailAccount({
       user_id: userId,
       email: email.toLowerCase().trim(),
+      access_token,
+      refresh_token,
+      token_expires_at: Date.now() + 3600000,
       connected_at: connected_at || new Date().toISOString(),
       status: 'ACTIVE'
     });
 
-    const response = NextResponse.json({
+    return NextResponse.json({
       success: true,
       connected: true,
       account: {
@@ -134,23 +131,6 @@ export async function POST(request: NextRequest) {
         connected_at: saved.connected_at,
       }
     });
-
-    // Re-set the 1-year cookie
-    response.cookies.set('profmatch_gmail_account', JSON.stringify({
-      connected: true,
-      email: saved.email,
-      connected_at: saved.connected_at,
-      user_id: userId,
-      provider: 'gmail'
-    }), {
-      path: '/',
-      maxAge: 31536000,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      httpOnly: false,
-    });
-
-    return response;
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message }, { status: 500 });
   }

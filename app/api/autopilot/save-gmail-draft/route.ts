@@ -42,8 +42,9 @@ export async function POST(request: NextRequest) {
     } = parsed.data;
 
     const account = await getConnectedEmailAccount(session.user.id);
+    const hasTokens = Boolean(account?.access_token || account?.refresh_token);
 
-    if (account) {
+    if (account && hasTokens) {
       try {
         const result = await createOutreachDraft({
           userId: session.user.id,
@@ -64,6 +65,32 @@ export async function POST(request: NextRequest) {
         });
       } catch (gmailErr: any) {
         console.warn('[AUTOPILOT GMAIL DRAFT WARNING]', gmailErr.message);
+
+        const localDraftId = `draft_ap_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+        try {
+          await saveUserSyncedData(session.user.id, {
+            kanbanCards: [
+              {
+                id: localDraftId,
+                professor_name: professorName || 'Professor',
+                professor_email: recipientEmail,
+                university_name: universityName || 'University',
+                subject,
+                body: bodyText,
+                status: 'DRAFT',
+                created_at: new Date().toISOString(),
+              },
+            ],
+          });
+        } catch {}
+
+        return apiSuccess({
+          draftId: localDraftId,
+          draftUrl: null,
+          savedToGmail: false,
+          error: gmailErr.message,
+          message: `Gmail draft failed (${gmailErr.message}). Saved to local workspace only.`,
+        });
       }
     }
 
@@ -90,7 +117,7 @@ export async function POST(request: NextRequest) {
       draftId: localDraftId,
       draftUrl: null,
       savedToGmail: false,
-      message: 'Draft prepared and saved. Connect your Gmail in Connectors to sync live into Gmail.',
+      message: 'Draft prepared and saved in ProfMatch. Connect your Gmail in Connectors to sync live into Gmail.',
     });
   } catch (error: any) {
     console.error('[AUTOPILOT SAVE DRAFT ERROR]', error);
