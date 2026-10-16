@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSearchProvider } from '@/lib/providers/search';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { verifyAuthSession } from '@/lib/auth/server-auth';
-import { checkAndIncrementQuota } from '@/lib/services/quota-service';
+import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
+import { getUserPlanTier } from '@/lib/services/db-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +55,13 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // 2. Server-side Quota & Destination Access Guard
-    const quotaCheck = checkAndIncrementQuota(session.user.id, 'search', { country });
+    const tier = (session.user as any)?.tier || await getUserPlanTier(session.user.id);
+    const effectiveTier = (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) && tier === 'FREE' ? 'PRO' : tier;
+
+    const quotaCheck = await checkAndIncrementQuotaAsync(session.user.id, 'search', {
+      country,
+      tier: effectiveTier,
+    });
     if (!quotaCheck.allowed) {
       return NextResponse.json(
         {

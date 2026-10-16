@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { EmailQualityAgent } from '@/lib/agents';
-import { verifyAuthSession } from '@/lib/auth/server-auth';
-import { checkAndIncrementQuota } from '@/lib/services/quota-service';
+import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
+import { getUserPlanTier } from '@/lib/services/db-service';
 import { getStudentProfileByUserId } from '@/lib/services/user-service';
 import {
   cleanProfessorSalutation,
@@ -57,8 +58,15 @@ export async function POST(request: NextRequest) {
 
     const { professor, studentProfile } = parsed.data;
 
+    // Resolve authoritative tier from PostgreSQL/session
+    const tier = (session.user as any)?.tier || await getUserPlanTier(userId);
+    const effectiveTier = (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) && tier === 'FREE' ? 'PRO' : tier;
+
     // Strict AutoPilot quota enforcement based on active subscription cap
-    const autopilotQuota = checkAndIncrementQuota(userId, 'autopilot', { increment: true });
+    const autopilotQuota = await checkAndIncrementQuotaAsync(userId, 'autopilot', {
+      increment: true,
+      tier: effectiveTier,
+    });
     if (!autopilotQuota.allowed) {
       return apiError(autopilotQuota.message || autopilotQuota.error || 'AutoPilot cap reached', 403, autopilotQuota.error || 'QUOTA_EXCEEDED', {
         message: autopilotQuota.message,
@@ -68,7 +76,10 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const quotaCheck = checkAndIncrementQuota(userId, 'draft', { increment: true });
+    const quotaCheck = await checkAndIncrementQuotaAsync(userId, 'draft', {
+      increment: true,
+      tier: effectiveTier,
+    });
     if (!quotaCheck.allowed) {
       return apiError(quotaCheck.message || quotaCheck.error || 'Draft quota reached', 403, quotaCheck.error || 'QUOTA_EXCEEDED', {
         message: quotaCheck.message,

@@ -1,8 +1,9 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { discoverNextProfessor } from '@/lib/services/professor-service';
-import { verifyAuthSession } from '@/lib/auth/server-auth';
-import { checkAndIncrementQuota } from '@/lib/services/quota-service';
+import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
+import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
+import { getUserPlanTier } from '@/lib/services/db-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 
@@ -41,9 +42,14 @@ export async function POST(request: NextRequest) {
       alreadyContactedEmails,
     } = parsed.data;
 
-    const quotaCheck = checkAndIncrementQuota(session.user.id, 'autopilot', {
+    // Resolve authoritative tier from PostgreSQL/session
+    const tier = (session.user as any)?.tier || await getUserPlanTier(session.user.id);
+    const effectiveTier = (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) && tier === 'FREE' ? 'PRO' : tier;
+
+    const quotaCheck = await checkAndIncrementQuotaAsync(session.user.id, 'autopilot', {
       country: targetCountry,
       increment: false,
+      tier: effectiveTier,
     });
 
     if (!quotaCheck.allowed) {
