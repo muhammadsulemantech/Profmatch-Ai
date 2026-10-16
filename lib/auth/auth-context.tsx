@@ -9,8 +9,14 @@ export interface AuthUser {
   email: string;
   full_name: string;
   role: string;
+  avatar_url?: string | null;
   target_degree?: string;
   tier?: PlanTier;
+  plan_tier?: PlanTier;
+  subscription_status?: string;
+  subscription_start?: string | null;
+  subscription_end?: string | null;
+  is_expired?: boolean;
   usage?: any;
 }
 
