@@ -404,6 +404,7 @@ export default function AutoPilotPage() {
         const saveDraftData = await saveDraftRes.json();
         const savePayload = saveDraftData.data || saveDraftData;
         const draftUrl = savePayload?.draftUrl || saveDraftData.draftUrl;
+        const isSavedToGmail = Boolean(savePayload?.savedToGmail);
 
         completedCount += 1;
         setAutopilotUsed((prev) => prev + 1);
@@ -417,7 +418,7 @@ export default function AutoPilotPage() {
           email: discoveredProf.email,
           subject: generatedSubject,
           sentAt: new Date().toLocaleTimeString(),
-          sentVia: 'Gmail Drafts',
+          sentVia: isSavedToGmail ? 'Gmail Drafts' : 'Workspace Drafts',
           draftUrl,
           attachmentName: attachedDocument?.name,
         };
@@ -445,6 +446,7 @@ export default function AutoPilotPage() {
             created_at: new Date().toISOString(),
             status: 'DRAFT',
             draftUrl,
+            savedToGmail: isSavedToGmail,
           });
 
           localStorage.setItem(draftsKey, JSON.stringify(currentDrafts));
@@ -461,7 +463,9 @@ export default function AutoPilotPage() {
               country: discoveredProf.university_country || targetCountry,
               email: discoveredProf.email,
               stage: 'OUTREACH_DRAFT',
-              notes: `AutoPilot grounded draft: "${generatedSubject}"`,
+              notes: isSavedToGmail
+                ? `AutoPilot live Gmail draft: "${generatedSubject}"`
+                : `AutoPilot workspace draft (connect Gmail to sync): "${generatedSubject}"`,
               appliedDate: new Date().toISOString().split('T')[0],
             });
             localStorage.setItem(kanbanKey, JSON.stringify(cards));
@@ -470,7 +474,11 @@ export default function AutoPilotPage() {
           window.dispatchEvent(new Event('profmatch_messages_updated'));
         }
 
-        appendLog('SUCCESS', `📝 Draft saved to Gmail! Ready for your review (${completedCount}/${effectiveTargetBatch})`);
+        if (isSavedToGmail) {
+          appendLog('SUCCESS', `📝 Draft saved into your official Gmail Drafts! (${completedCount}/${effectiveTargetBatch})`);
+        } else {
+          appendLog('WARN', `⚠️ Saved locally in workspace only (${savePayload?.message || 'Gmail not connected'}). Reconnect Gmail in Connectors to sync live into Gmail.`);
+        }
       } catch (err: any) {
         appendLog('ERROR', `Draft creation failed for ${discoveredProf.email}: ${err.message}`);
       }

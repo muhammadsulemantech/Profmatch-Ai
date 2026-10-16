@@ -132,42 +132,14 @@ export default function EmailReviewModal({
           localStorage.setItem('profmatch_gmail_connection', JSON.stringify(state));
         }
       } else {
-        if (typeof window !== 'undefined') {
-          const saved = localStorage.getItem('profmatch_gmail_connection');
-          if (saved) {
-            try {
-              const parsed = JSON.parse(saved);
-              if (parsed && parsed.connected && parsed.account?.email) {
-                await fetch('/api/auth/google/gmail/status', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    email: parsed.account.email,
-                    connected_at: parsed.account.connected_at,
-                  }),
-                });
-                setConnectedStatus(parsed);
-                setCheckingStatus(false);
-                return;
-              }
-            } catch (err) {}
-          }
-        }
         setConnectedStatus({ connected: false, account: null });
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('profmatch_gmail_connection');
+        }
       }
     } catch (e) {
       console.error('Failed to check Gmail status:', e);
-      if (typeof window !== 'undefined') {
-        const saved = localStorage.getItem('profmatch_gmail_connection');
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            if (parsed && parsed.connected) {
-              setConnectedStatus(parsed);
-            }
-          } catch (err) {}
-        }
-      }
+      setConnectedStatus({ connected: false, account: null });
     } finally {
       setCheckingStatus(false);
     }
@@ -201,10 +173,26 @@ export default function EmailReviewModal({
           message: data.message || 'Draft successfully created in your Gmail account!',
         });
       } else {
+        const errorMsg = data.error || data.message || 'Failed to create draft in Gmail.';
         setDraftResult({
           success: false,
-          error: data.error || data.message || 'Failed to create draft in Gmail.',
+          error: errorMsg,
         });
+
+        // Invalidate stale connection state if credentials failed or expired
+        if (
+          errorMsg.toLowerCase().includes('credentials') ||
+          errorMsg.toLowerCase().includes('authenticate') ||
+          errorMsg.toLowerCase().includes('expired') ||
+          errorMsg.toLowerCase().includes('reconnect') ||
+          res.status === 401 ||
+          res.status === 502
+        ) {
+          setConnectedStatus({ connected: false, account: null });
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('profmatch_gmail_connection');
+          }
+        }
       }
     } catch (e: any) {
       setDraftResult({
@@ -217,7 +205,10 @@ export default function EmailReviewModal({
   };
 
   const handleConnectGmail = () => {
-    window.location.href = '/api/auth/google/gmail';
+    const returnPath = typeof window !== 'undefined'
+      ? `${window.location.pathname}${window.location.search}`
+      : '/dashboard';
+    window.location.href = `/api/auth/google/gmail?redirectTo=${encodeURIComponent(returnPath)}`;
   };
 
   const handleCopyContent = () => {
@@ -334,6 +325,25 @@ export default function EmailReviewModal({
                 >
                   Open Gmail Drafts Folder (1-Click) <ExternalLink className="w-3.5 h-3.5" />
                 </a>
+              </div>
+            )}
+
+            {!draftResult.success && (
+              <div className="pt-2 flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleConnectGmail}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs inline-flex items-center gap-1.5 transition-all shadow-md"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" /> Reconnect Gmail (1-Click)
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCopyContent}
+                  className="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-xs inline-flex items-center gap-1.5 transition-colors border border-slate-700"
+                >
+                  <Copy className="w-3.5 h-3.5" /> {copied ? 'Copied!' : 'Copy Draft'}
+                </button>
               </div>
             )}
           </div>

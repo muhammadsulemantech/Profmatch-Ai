@@ -1,5 +1,5 @@
 import { getConnectedEmailAccount } from './db-service';
-import { getFreshAccessToken, buildMimeMessage } from './gmail-service';
+import { getFreshAccessToken, refreshAccessTokenForce, buildMimeMessage } from './gmail-service';
 import { getEmailProvider } from '@/lib/providers/email';
 import { syncIncrementUsage } from './db-service';
 
@@ -42,8 +42,8 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
   // 1. Check for connected user-isolated Gmail account
   const account = await getConnectedEmailAccount(userId);
 
-  if (account && account.access_token) {
-    const accessToken = await getFreshAccessToken(account);
+  if (account && (account.access_token || account.refresh_token)) {
+    let accessToken = await getFreshAccessToken(account);
 
     if (accessToken) {
       const rawMime = buildMimeMessage({
@@ -53,7 +53,7 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
         body: bodyText,
       });
 
-      const sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      let sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${accessToken}`,
@@ -61,6 +61,21 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
         },
         body: JSON.stringify({ raw: rawMime }),
       });
+
+      if (sendRes.status === 401 && account.refresh_token) {
+        const refreshed = await refreshAccessTokenForce(account);
+        if (refreshed) {
+          accessToken = refreshed;
+          sendRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ raw: rawMime }),
+          });
+        }
+      }
 
       if (sendRes.ok) {
         const sendData = await sendRes.json();
@@ -104,13 +119,17 @@ export async function createOutreachDraft(params: CreateDraftParams): Promise<Cr
   const { userId, professorEmail, subject, body } = params;
 
   const account = await getConnectedEmailAccount(userId);
-  if (!account) {
-    throw new Error('No active Gmail account connected. Please connect your Gmail in Settings.');
+  if (!account || (!account.access_token && !account.refresh_token)) {
+    throw new Error('No active Gmail account connected. Please connect your Gmail in Connectors.');
   }
 
-  const accessToken = await getFreshAccessToken(account);
+  let accessToken = await getFreshAccessToken(account);
+  if (!accessToken && account.refresh_token) {
+    accessToken = await refreshAccessTokenForce(account);
+  }
+
   if (!accessToken) {
-    throw new Error('Unable to authenticate with Gmail. Please re-authenticate your Google account.');
+    throw new Error('Gmail session has expired. Please reconnect your Gmail account in Connectors.');
   }
 
   const rawMime = buildMimeMessage({
@@ -119,7 +138,7 @@ export async function createOutreachDraft(params: CreateDraftParams): Promise<Cr
     body,
   });
 
-  const draftRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+  let draftRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -132,8 +151,33 @@ export async function createOutreachDraft(params: CreateDraftParams): Promise<Cr
     }),
   });
 
+  // If 401 Unauthorized, token was revoked or expired — try immediate forced refresh & retry once
+  if (draftRes.status === 401 && account.refresh_token) {
+    const refreshed = await refreshAccessTokenForce(account);
+    if (refreshed) {
+      accessToken = refreshed;
+      draftRes = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/drafts', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: {
+            raw: rawMime,
+          },
+        }),
+      });
+    }
+  }
+
   if (!draftRes.ok) {
     const errorData = await draftRes.json().catch(() => ({}));
+    if (draftRes.status === 401) {
+      throw new Error(
+        'Gmail session has expired or credentials were rejected by Google. Please reconnect your Gmail account in Connectors.'
+      );
+    }
     throw new Error(
       errorData.error?.message || `Gmail API draft creation failed with HTTP ${draftRes.status}`
     );
