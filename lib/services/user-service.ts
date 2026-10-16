@@ -170,7 +170,8 @@ export async function getEnrichedUsers(options: GetUsersOptions = {}): Promise<{
     const isExpired = Boolean(
       sub && sub.plan_type !== 'FREE' && sub.current_period_end && new Date(sub.current_period_end).getTime() < Date.now()
     );
-    const hasActiveSub = sub && (sub.status === 'active' || sub.status === 'trialing') && !isExpired;
+    const subStatus = sub?.status?.toLowerCase();
+    const hasActiveSub = sub && (subStatus === 'active' || subStatus === 'trialing') && !isExpired;
     const currentPlan: PlanTier = hasActiveSub ? (sub.plan_type as PlanTier) : 'FREE';
     const isPaid = currentPlan !== 'FREE' && hasActiveSub;
 
@@ -235,9 +236,14 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
   const { userId, role, isSuspended, suspensionReason, planTier } = params;
 
   let profile = await getUserProfile(userId);
+  if (!profile && userId.includes('@')) {
+    const { getProfileByEmail } = await import('./db-service.ts');
+    profile = await getProfileByEmail(userId);
+  }
   if (!profile) {
     throw new Error('User not found.');
   }
+  const effectiveUserId = profile.id;
 
   if (planTier) {
     const validTiers = Object.keys(ACADEMIC_PLANS);
@@ -247,7 +253,7 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
   }
 
   const updatedProfileData: Partial<UserProfile> & { id: string; email: string } = {
-    id: userId,
+    id: effectiveUserId,
     email: profile.email,
     full_name: profile.full_name,
     avatar_url: profile.avatar_url,
@@ -266,7 +272,7 @@ export async function updateUser(params: UpdateUserParams): Promise<UserProfile>
 
     await saveUserSubscription(
       {
-        user_id: userId,
+        user_id: effectiveUserId,
         plan_type: planTier,
         status: 'active',
         current_period_start: now,

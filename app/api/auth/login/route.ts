@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { getUserProfile, saveUserProfile } from '@/lib/services/db-service';
+import { getUserProfile, saveUserProfile, getUserSubscription, getUserPlanTier, getUsageRecord } from '@/lib/services/db-service';
 import { createClient } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -99,20 +99,41 @@ export async function POST(request: NextRequest) {
       suspension_reason: existingProfile?.suspension_reason ?? null,
     });
 
+    // Fetch authoritative subscription and plan tier from database
+    const sub = await getUserSubscription(sanitizedUser.id);
+    const tier = await getUserPlanTier(sanitizedUser.id);
+    const usage = await getUsageRecord(sanitizedUser.id);
+    const isExpired = Boolean(
+      sub &&
+        sub.plan_type !== 'FREE' &&
+        sub.current_period_end &&
+        new Date(sub.current_period_end).getTime() < Date.now()
+    );
+
+    const fullUser = {
+      ...sanitizedUser,
+      tier,
+      plan_tier: tier,
+      subscription_status: isExpired ? 'expired' : (sub ? sub.status : 'free'),
+      subscription_start: sub ? (sub.current_period_start || sub.created_at) : null,
+      subscription_end: sub ? sub.current_period_end : null,
+      is_expired: isExpired,
+      usage,
+    };
 
     // Log security audit event
     await logAuditEvent({
       action: 'USER_LOGIN',
       resourceType: 'USER',
       resourceId: sanitizedUser.id,
-      metadata: { email: sanitizedUser.email, role: sanitizedUser.role },
+      metadata: { email: sanitizedUser.email, role: sanitizedUser.role, tier },
       ipAddress: ip,
     });
 
     return NextResponse.json({
       success: true,
       message: 'Signed in successfully.',
-      user: sanitizedUser,
+      user: fullUser,
     });
   } catch (err: any) {
     console.error('[LOGIN API ERROR]', err);

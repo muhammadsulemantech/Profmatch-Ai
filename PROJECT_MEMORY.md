@@ -371,3 +371,36 @@ profmatch-ai/
   - Gracefully falls back to storing the draft in the user's synced activity cache if Gmail is not yet connected, preventing pipeline crashes.
   - Verified with 70/70 Next.js production build routes and 84/84 unit tests.
 
+---
+
+## 11. Tier 11: Permanent Subscription Plan Persistence & Re-Login Protection (COMPLETED 2026-10-16)
+
+### 11.1 Problem Analysis & Multi-Vector Root Causes
+1. **Automated Test Mutating Live Accounts (`tests/admin-database-connectivity.test.mjs`):**
+   - In test #3, the connectivity suite looked up the user's real live account (`muhammadmun305@gmail.com`), updated them to `PRO`, and then immediately called `updateUser({ userId: targetUser.id, planTier: 'FREE' })`. Whenever `npm test` or automated build runs executed, the user was downgraded back to `FREE` directly in production Supabase PostgreSQL.
+2. **Missing Tier in Login Payload (`app/api/auth/login/route.ts`):**
+   - The `POST /api/auth/login` endpoint only returned `{ id, email, full_name, avatar_url, role }` without `tier` or `plan_tier`. Client-side `AuthContext.login()` passed this incomplete user to `handleAuthSuccess()`, causing `user.tier` to be `undefined` (defaulting to `FREE` across the entire UI) until a full page reload occurred.
+3. **Flawed Downgrade Guard in `lib/services/db-service.ts`:**
+   - In `saveUserSubscription()`, the guard protecting active paid plans from accidental `FREE` overwrites required `existing.current_period_end && new Date(existing.current_period_end).getTime() > Date.now()`. When `current_period_end` was null or not yet parsed, the guard evaluated to false, allowing accidental overwrites.
+4. **Google OAuth & Auth Callback Fragility:**
+   - `app/api/auth/google/callback/route.ts` generated mock IDs (`usr_google_${googleUser.id}`) instead of querying Supabase `profiles` by email to retrieve the real UUID, failing to link existing subscriptions and creating orphaned `FREE` rows.
+   - `app/api/auth/callback/route.ts` hardcoded `role: 'USER'` and overwrote subscriptions with `FREE` if `getUserSubscription` returned null.
+
+### 11.2 Permanent Solutions Implemented
+- **Test Isolation (`tests/admin-database-connectivity.test.mjs`):**
+  - Updated test #3 to target the dedicated test account (`test_candidate_1@gmail.com`), guaranteeing real registered accounts (`muhammadmun305@gmail.com`, `tonovoxtechnologies@gmail.com`) are never modified or reverted during tests.
+- **Login Endpoint Enrichment (`app/api/auth/login/route.ts`):**
+  - Enriched `POST /api/auth/login` to query `getUserPlanTier`, `getUserSubscription`, and `getUsageRecord`. Now returns `tier`, `plan_tier`, `subscription_status`, `subscription_start`, and `subscription_end` immediately upon login.
+  - In `lib/auth/auth-context.tsx`, added automatic background re-hydration via `/api/auth/me` on login.
+- **Database Service Protection (`lib/services/db-service.ts`):**
+  - Hardened `saveUserSubscription()`: If a user has an active non-expired paid plan, any attempt to overwrite with `FREE` without explicit `forceDowngrade: true` is strictly rejected. If `current_period_end` is null on a paid plan, it is protected as active.
+  - `getUserSubscription()` and `getUserPlanTier()` now resolve user emails to profile UUIDs transparently and support case-insensitive status checks (`active`, `trialing`).
+- **OAuth Callbacks Protected:**
+  - `app/api/auth/google/callback/route.ts` and `app/api/auth/callback/route.ts` now look up existing profiles by email, preserve real UUIDs, retain user roles, and respect active paid subscriptions.
+- **Live Supabase Data Restored:**
+  - `muhammadmun305@gmail.com` and `tonovoxtechnologies@gmail.com` verified on active `PRO` tier with 30-day validity in Supabase PostgreSQL (`public.subscriptions`).
+- **Verification:**
+  - `npm test`: 97/97 tests passing (0 failures).
+  - `npm run build`: Production Next.js compilation succeeded with 70/70 routes valid.
+
+

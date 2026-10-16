@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { getEnrichedUsers, updateUser } from '../lib/services/user-service.ts';
 import { getFeatureFlags, updateFeatureFlag, getAuditLogs } from '../lib/services/admin-service.ts';
 import { getPaymentMethods, getAdminPayments } from '../lib/services/payment-service.ts';
-import { getUserProfile, getUserPlanTier } from '../lib/services/db-service.ts';
+import { getUserProfile, getUserPlanTier, saveUserProfile } from '../lib/services/db-service.ts';
 
 test('Admin Panel Real Database Connectivity Suite', async (t) => {
   await t.test('1. getEnrichedUsers returns real users from database with correct plan tiers', async () => {
@@ -35,9 +35,13 @@ test('Admin Panel Real Database Connectivity Suite', async (t) => {
   });
 
   await t.test('3. updateUser persists plan changes and synchronizes with getUserPlanTier', async () => {
+    // Target the designated test candidate account (never real student accounts like muhammadmun305@gmail.com or tonovoxtechnologies)
     const users = await getEnrichedUsers();
-    const targetUser = users.users.find((u) => u.email === 'muhammadmun305@gmail.com');
-    assert.ok(targetUser, 'Target user must exist');
+    let targetUser = users.users.find((u) => u.email === 'test_candidate_1@gmail.com');
+    if (!targetUser) {
+      targetUser = users.users.find((u) => u.email.includes('test'));
+    }
+    assert.ok(targetUser, 'Dedicated test candidate user must exist');
 
     // Update plan to PRO
     await updateUser({ userId: targetUser.id, planTier: 'PRO' });
@@ -49,10 +53,11 @@ test('Admin Panel Real Database Connectivity Suite', async (t) => {
     // Verify in enriched users
     const updatedUsers = await getEnrichedUsers();
     const updatedTarget = updatedUsers.users.find((u) => u.id === targetUser.id);
+    assert.ok(updatedTarget, 'Test user must be found in enriched users');
     assert.equal(updatedTarget.plan_tier, 'PRO', 'Enriched users list must reflect PRO');
     assert.equal(updatedTarget.is_paid, true, 'is_paid must be true for PRO');
 
-    // Revert back to FREE
+    // Revert test candidate back to FREE
     await updateUser({ userId: targetUser.id, planTier: 'FREE' });
     const revertedTier = await getUserPlanTier(targetUser.id);
     assert.equal(revertedTier, 'FREE', 'User plan tier must revert to FREE');
