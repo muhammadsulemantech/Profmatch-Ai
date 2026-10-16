@@ -29,6 +29,8 @@ const envSchema = z.object({
   SEARCH_PROVIDER: z.enum(['tavily', 'openalex', 'serpapi', 'mock']).default('mock'),
   SEARCH_API_KEY: z.string().optional(),
   TAVILY_API_KEY: z.string().optional(),
+  OPENALEX_API_KEY: z.string().optional(),
+  ACADEMIC_DATA_PROVIDER: z.string().optional(),
   OPENALEX_EMAIL: z.string().email().optional().or(z.literal('')),
 
   // Email Delivery Configuration

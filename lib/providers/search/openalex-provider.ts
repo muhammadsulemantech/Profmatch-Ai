@@ -5,10 +5,10 @@ import {
   RecruitingStatus,
   ProfessorPublication,
   ProfessorSource,
-} from '@/types/database';
-import { SearchProvider, SearchFilters } from './search-provider.interface';
-import { getCountryIso2 } from '@/lib/geography/country-iso';
-import { UniversityVerificationEngine } from '@/lib/verification/university-verification';
+} from '../../../types/database.ts';
+import { SearchProvider, SearchFilters } from './search-provider.interface.ts';
+import { getCountryIso2 } from '../../geography/country-iso.ts';
+import { UniversityVerificationEngine } from '../../verification/university-verification.ts';
 
 // 15-minute search cache to prevent redundant API calls
 const openAlexCache = new Map<string, { timestamp: number; data: Professor[] }>();
@@ -214,3 +214,50 @@ export class OpenAlexProvider implements SearchProvider {
     };
   }
 }
+
+/**
+ * Fetches real top peer-reviewed works for an OpenAlex author entity
+ */
+export async function fetchAuthorTopWorks(
+  authorId: string,
+  limit: number = 3
+): Promise<ProfessorPublication[]> {
+  const cleanId = authorId.startsWith('http') ? authorId.split('/').pop() : authorId;
+  if (!cleanId || !cleanId.startsWith('A')) return [];
+
+  const apiKey = process.env.OPENALEX_API_KEY || process.env.SEARCH_API_KEY;
+  const url = new URL('https://api.openalex.org/works');
+  url.searchParams.append('filter', `author.id:${cleanId}`);
+  url.searchParams.append('sort', 'cited_by_count:desc');
+  url.searchParams.append('per_page', String(limit));
+  if (apiKey) url.searchParams.append('api_key', apiKey);
+
+  try {
+    const res = await fetch(url.toString(), {
+      headers: {
+        'User-Agent': 'ProfMatch-AI/1.0 (mailto:outreach@profmatch.ai; https://profmatch.ai)',
+        ...(apiKey ? { 'api-key': apiKey } : {}),
+      },
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return (data.results || []).map((w: any) => ({
+      id: w.id,
+      professor_id: authorId,
+      title: w.title || 'Scholarly Work',
+      year: w.publication_year || new Date().getFullYear(),
+      venue: w.primary_location?.source?.display_name || 'Academic Journal / Conference',
+      citations_count: w.cited_by_count || 0,
+      doi: w.doi,
+      abstract: w.abstract_inverted_index
+        ? Object.keys(w.abstract_inverted_index).slice(0, 50).join(' ')
+        : '',
+      url: w.doi || w.id,
+      source_provider: 'OpenAlex',
+      created_at: new Date().toISOString(),
+    }));
+  } catch {
+    return [];
+  }
+}
+

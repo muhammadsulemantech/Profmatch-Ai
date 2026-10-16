@@ -5,6 +5,7 @@ import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
 import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
 import { getUserPlanTier } from '@/lib/services/db-service';
 import { getProfessorById, saveResearchMatch } from '@/lib/services/professor-service';
+import { fetchAuthorTopWorks } from '@/lib/providers/search/openalex-provider';
 import { getStudentProfileByUserId } from '@/lib/services/user-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
@@ -113,6 +114,17 @@ export async function POST(request: NextRequest) {
         ? baseSkills.map((s) => s.skill_name)
         : ['Python', 'PyTorch', 'Data Analysis', 'Research Writing', 'Empirical Modeling'];
 
+    // If professor has no publications yet and is from OpenAlex, fetch top peer-reviewed works
+    let profPublications = prof.publications || [];
+    if (profPublications.length === 0 && (prof.id.includes('openalex') || prof.id.startsWith('http') || (prof as any).openalex_id)) {
+      try {
+        const liveWorks = await fetchAuthorTopWorks(prof.id, 3);
+        if (liveWorks.length > 0) {
+          profPublications = liveWorks;
+        }
+      } catch {}
+    }
+
     const prompt: ResearchMatchAnalysisPrompt = {
       studentProfile: {
         interests,
@@ -128,12 +140,12 @@ export async function POST(request: NextRequest) {
         name: prof.name,
         university: prof.university_name || (typeof (prof as any).university === 'string' ? (prof as any).university : 'Academic University'),
         interests: prof.research_interests || [prof.primary_discipline || 'Research'],
-        publications: (prof.publications || []).map((p: any) => ({
+        publications: profPublications.map((p: any) => ({
           title: p.title,
           abstract: p.abstract || '',
           year: p.year || new Date().getFullYear(),
         })),
-        recruitingStatus: (prof as any).recruiting_status || 'ACTIVELY_RECRUITING',
+        recruitingStatus: (prof as any).recruiting_status || 'UNKNOWN',
       },
     };
 
@@ -149,7 +161,7 @@ export async function POST(request: NextRequest) {
       project_score: result.projectScore,
       skills_score: result.skillsScore,
       publication_score: result.publicationScore,
-      explanation: result.explanation,
+      explanation: `${result.explanation}\n\n*Note: This research-match score evaluates scholarly topic alignment only and does not guarantee graduate admission or professor supervision availability.*`,
       breakdown: {
         matched_topics: result.breakdown.matchedTopics || [],
         relevant_student_projects: result.breakdown.relevantStudentProjects || [],

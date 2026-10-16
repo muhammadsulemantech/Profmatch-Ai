@@ -80,13 +80,66 @@ describe('OpenAlex Integration & Strict University Verification Suite', () => {
     });
   });
 
-  describe('3. Codebase Static Audit: Strict Rules Enforcement', () => {
+  describe('3. Live OpenAlex Provider Handshake & Works Retrieval', () => {
+    test('OpenAlex API accepts configured key and returns authentic author graph', async () => {
+      const apiKey = process.env.OPENALEX_API_KEY;
+      const url = new URL('https://api.openalex.org/authors');
+      url.searchParams.append('search', 'Yoshua Bengio');
+      url.searchParams.append('per_page', '1');
+      if (apiKey) url.searchParams.append('api_key', apiKey);
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          'User-Agent': 'ProfMatch-AI/1.0 (mailto:outreach@profmatch.ai; https://profmatch.ai)',
+          ...(apiKey ? { 'api-key': apiKey } : {}),
+        },
+      });
+
+      assert.equal(res.status, 200, 'OpenAlex API must respond HTTP 200 with active credentials');
+      const data = await res.json();
+      assert.ok(data.results && data.results.length > 0);
+      const author = data.results[0];
+      assert.ok(author.display_name.toLowerCase().includes('bengio'));
+      assert.ok(author.works_count > 100);
+      assert.ok(author.display_name);
+    });
+
+    test('OpenAlex works endpoint returns peer-reviewed publications and DOIs', async () => {
+      const apiKey = process.env.OPENALEX_API_KEY;
+      const url = new URL('https://api.openalex.org/works');
+      url.searchParams.append('filter', 'author.id:A5086198262');
+      url.searchParams.append('sort', 'cited_by_count:desc');
+      url.searchParams.append('per_page', '2');
+      if (apiKey) url.searchParams.append('api_key', apiKey);
+
+      const res = await fetch(url.toString(), {
+        headers: {
+          'User-Agent': 'ProfMatch-AI/1.0 (mailto:outreach@profmatch.ai; https://profmatch.ai)',
+          ...(apiKey ? { 'api-key': apiKey } : {}),
+        },
+      });
+
+      assert.equal(res.status, 200);
+      const data = await res.json();
+      assert.ok(data.results && data.results.length > 0);
+      const work = data.results[0];
+      assert.ok(work.title);
+      assert.ok(work.cited_by_count > 1000);
+      assert.ok(work.doi || work.id);
+    });
+  });
+
+  describe('4. Codebase Static Audit: Strict Rules & Match Scoring', () => {
     const openAlexCode = fs.readFileSync(
       path.join(process.cwd(), 'lib', 'providers', 'search', 'openalex-provider.ts'),
       'utf-8'
     );
     const searchRouteCode = fs.readFileSync(
       path.join(process.cwd(), 'app', 'api', 'professors', 'search', 'route.ts'),
+      'utf-8'
+    );
+    const matchRouteCode = fs.readFileSync(
+      path.join(process.cwd(), 'app', 'api', 'matches', 'analyze', 'route.ts'),
       'utf-8'
     );
     const schemaSql = fs.readFileSync(
@@ -112,6 +165,13 @@ describe('OpenAlex Integration & Strict University Verification Suite', () => {
       assert.ok(
         searchRouteCode.includes('upsertProfessorsBatch'),
         'Search route must call upsertProfessorsBatch'
+      );
+    });
+
+    test('Match route enforces topic alignment disclaimer and does not claim admission guarantee', () => {
+      assert.ok(
+        matchRouteCode.includes('does not guarantee graduate admission'),
+        'Match route must include explicit truthful admission disclaimer'
       );
     });
 
