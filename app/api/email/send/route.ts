@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { EmailSendSchema } from '@/lib/security/input-validation';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
 import { getEmailProvider } from '@/lib/providers/email';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rate Limiting
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
     const rl = checkRateLimit(`email_send:${ip}`, { limit: 20, windowMs: 24 * 60 * 60 * 1000 });
     if (!rl.success) {
       return NextResponse.json(

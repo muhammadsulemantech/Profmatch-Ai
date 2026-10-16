@@ -253,8 +253,13 @@ export function verifyPendingOtp(email: string, enteredCode: string): {
   }
 
   const cleanEntered = enteredCode.trim().replace(/\D/g, '');
+  const codeBuf = Buffer.from(record.code);
+  const enteredBuf = Buffer.from(cleanEntered);
+  const isMatch =
+    codeBuf.length === enteredBuf.length &&
+    crypto.timingSafeEqual(codeBuf, enteredBuf);
 
-  if (record.code !== cleanEntered) {
+  if (!isMatch) {
     record.attempts += 1;
     persistOtpsToDisk();
     const remaining = MAX_ATTEMPTS - record.attempts;

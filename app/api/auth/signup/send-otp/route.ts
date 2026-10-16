@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { getProfileByEmail } from '@/lib/services/db-service';
 import { createPendingRegistration } from '@/lib/auth/otp-store';
 import { sendSignupOtpEmail } from '@/lib/email/otp-email';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 const SendOtpSchema = z.object({
@@ -15,7 +15,7 @@ const SendOtpSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
     
     // Strict rate limit: max 5 requests per 10 minutes per IP
     const rl = checkRateLimit(`auth_send_otp:${ip}`, { limit: 5, windowMs: 10 * 60 * 1000 });

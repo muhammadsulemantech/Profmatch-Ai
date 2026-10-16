@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
+import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -361,6 +362,24 @@ function analyzeCvText(text: string, fileName: string): ParsedCvData {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip = getClientIp(req);
+    const rl = checkRateLimit(`parse_cv:${ip}`, RATE_LIMIT_PRESETS.CV_PARSE);
+    if (!rl.success) {
+      const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: 'Too many CV upload requests. Please wait a moment before trying again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': retryAfter.toString(),
+            'X-RateLimit-Limit': RATE_LIMIT_PRESETS.CV_PARSE.limit.toString(),
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(rl.reset / 1000).toString(),
+          },
+        }
+      );
+    }
+
     const formData = await req.formData();
     const file = formData.get('file') as File | null;
 

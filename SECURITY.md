@@ -69,6 +69,16 @@ Permissions-Policy: camera=(), microphone=(), geolocation=()
 Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'none';
 ```
 
+### 5.1 Global & Route-Level Rate Limiting
+To prevent Distributed Denial of Service (DDoS), credential brute-forcing, LLM quota exhaustion, and bot spam:
+- **Edge Middleware Rate Limiting (`middleware.ts`)**: Evaluates incoming `/api` traffic by verified client IP (`getClientIp`), protecting edge boundaries before handler invocation.
+- **Route-Level Defense-in-Depth**:
+  - `auth`: 15 requests / 15 minutes per IP (`/api/auth/login`, `/api/auth/signup`)
+  - `otp & reset`: 5 requests / 10-15 minutes per IP (`/api/auth/signup/send-otp`, `/api/auth/forgot-password`)
+  - `heavy compute & AI`: 10-20 requests / window (`/api/profile/parse-cv`, `/api/matches/analyze`, `/api/autopilot/*`, `/api/outreach/*`)
+  - `checkout`: 5 submissions / 15 minutes per user/IP (`/api/checkout/submit`)
+- **Standards-Compliant Throttling Headers**: On rate breach, endpoints reject requests with HTTP 429 and include `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
 ---
 
 ## 6. Automated Security Verification

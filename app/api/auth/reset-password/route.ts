@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { getProfileByEmail } from '@/lib/services/db-service';
 import { verifyPasswordResetToken } from '@/lib/auth/password-reset-store';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
 
     // Rate limiting: Max 10 reset attempts per 15 minutes per IP
     const rl = checkRateLimit(`auth_reset_password:${ip}`, { limit: 10, windowMs: 15 * 60 * 1000 });

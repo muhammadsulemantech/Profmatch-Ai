@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSearchProvider } from '@/lib/providers/search';
-import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 
@@ -15,10 +15,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ip = request.headers.get('x-forwarded-for') || 'anonymous';
+    const ip = getClientIp(request);
     const rl = checkRateLimit(`search:${ip}`, { limit: 60, windowMs: 60 * 1000 });
     if (!rl.success) {
-      return NextResponse.json({ error: 'Rate limit exceeded.' }, { status: 429 });
+      const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
+      return NextResponse.json(
+        { error: 'Rate limit exceeded. Please wait a moment before searching again.' },
+        {
+          status: 429,
+          headers: {
+            'Retry-After': retryAfter.toString(),
+            'X-RateLimit-Limit': '60',
+            'X-RateLimit-Remaining': '0',
+            'X-RateLimit-Reset': Math.ceil(rl.reset / 1000).toString(),
+          },
+        }
+      );
     }
 
     const body = await request.json();

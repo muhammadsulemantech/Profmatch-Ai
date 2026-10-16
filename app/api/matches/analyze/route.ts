@@ -6,6 +6,7 @@ import { checkAndIncrementQuota } from '@/lib/services/quota-service';
 import { getProfessorById, saveResearchMatch } from '@/lib/services/professor-service';
 import { getStudentProfileByUserId } from '@/lib/services/user-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 import type { Professor, ResearchMatch } from '@/types/database';
 
 const MatchAnalyzeSchema = z.object({
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest) {
       return apiError('Unauthorized: Authentication required.', 401);
     }
     const userId = session.user.id;
+
+    // Rate limiting defense against LLM API exhaustion
+    const rl = checkRateLimit(`match_analyze:${userId}`, RATE_LIMIT_PRESETS.AI_COMPUTE);
+    if (!rl.success) {
+      return apiError('Too many research match requests. Please slow down and try again shortly.', 429);
+    }
 
     const quotaCheck = checkAndIncrementQuota(userId, 'search');
     if (!quotaCheck.allowed) {

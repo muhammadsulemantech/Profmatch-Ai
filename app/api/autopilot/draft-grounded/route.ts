@@ -9,6 +9,7 @@ import {
   renderGroundedEmailTemplate,
 } from '@/lib/templates/email-templates';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { checkRateLimit, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
 
 const DraftGroundedSchema = z.object({
   professor: z.object({
@@ -41,6 +42,12 @@ export async function POST(request: NextRequest) {
       return apiError('Unauthorized: Authentication required.', 401);
     }
     const userId = session.user.id;
+
+    // Rate limiting defense against excessive LLM email generation
+    const rl = checkRateLimit(`autopilot_draft:${userId}`, { limit: 15, windowMs: 60 * 1000 });
+    if (!rl.success) {
+      return apiError('AutoPilot drafting rate limit reached. Please wait a moment before drafting more emails.', 429);
+    }
 
     const body = await request.json();
     const parsed = DraftGroundedSchema.safeParse(body);
