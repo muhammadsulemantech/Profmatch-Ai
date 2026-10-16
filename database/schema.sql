@@ -148,7 +148,9 @@ CREATE TABLE IF NOT EXISTS public.departments (
 -- 11. Professors
 CREATE TABLE IF NOT EXISTS public.professors (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    university_id UUID NOT NULL REFERENCES public.universities(id) ON DELETE CASCADE,
+    openalex_id TEXT UNIQUE,
+    orcid TEXT,
+    university_id UUID REFERENCES public.universities(id) ON DELETE SET NULL,
     department_id UUID REFERENCES public.departments(id) ON DELETE SET NULL,
     name TEXT NOT NULL,
     title TEXT,
@@ -170,7 +172,10 @@ CREATE TABLE IF NOT EXISTS public.professors (
     freshness_status TEXT DEFAULT 'FRESH', -- 'FRESH', 'VERIFIED_RECENTLY', 'STALE'
     confidence_score NUMERIC(5,2) DEFAULT 0.95,
     verification_status verification_status DEFAULT 'UNVERIFIED'::verification_status NOT NULL,
+    works_count INTEGER DEFAULT 0,
+    citations_count INTEGER DEFAULT 0,
     last_verified_at TIMESTAMPTZ,
+    last_synced_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()),
     created_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL
 );

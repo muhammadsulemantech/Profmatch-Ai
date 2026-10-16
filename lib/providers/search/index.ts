@@ -226,15 +226,19 @@ import { OpenAlexProvider } from './openalex-provider';
 import { TavilySearchProvider } from './tavily-provider';
 
 export function getSearchProvider(): SearchProvider {
-  const provider = process.env.SEARCH_PROVIDER || process.env.ACADEMIC_DATA_PROVIDER;
-  if (provider?.toLowerCase() === 'tavily' || process.env.TAVILY_API_KEY) {
+  const provider = (process.env.SEARCH_PROVIDER || process.env.ACADEMIC_DATA_PROVIDER || '').toLowerCase();
+  if (provider === 'openalex' || (process.env.OPENALEX_API_KEY && provider !== 'tavily')) {
+    return new OpenAlexProvider();
+  }
+  if (provider === 'tavily' || process.env.TAVILY_API_KEY) {
     return new TavilySearchProvider();
   }
-  if (provider?.toLowerCase() === 'openalex' || process.env.OPENALEX_API_KEY) {
+  if (process.env.OPENALEX_API_KEY) {
     return new OpenAlexProvider();
   }
   return new GlobalAcademicDiscoveryEngine();
 }
+
 
 export * from './search-provider.interface';
 export * from './openalex-provider';
