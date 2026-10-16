@@ -55,6 +55,7 @@ function getStoreCandidates(): string[] {
 
 function loadOtpsFromDisk() {
   const candidates = getStoreCandidates();
+  pendingOtpMap.clear();
   for (const storeFile of candidates) {
     try {
       if (fs.existsSync(storeFile)) {

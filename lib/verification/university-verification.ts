@@ -2,7 +2,7 @@ import type {
   VerificationStatus,
   EmailVerificationStatus,
   ProfessorSource,
-} from '@/types/database';
+} from '../../types/database.ts';
 
 export interface VerificationEvidence {
   fieldVerified: 'identity' | 'affiliation' | 'email' | 'designation';
