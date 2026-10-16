@@ -56,11 +56,11 @@ export function getClientIp(request: Request | { headers: Headers }): string {
  */
 function pruneExpiredRecords(now: number): void {
   if (rateLimitStore.size > 2000) {
-    for (const [key, record] of rateLimitStore.entries()) {
+    rateLimitStore.forEach((record, key) => {
       if (now > record.resetTime) {
         rateLimitStore.delete(key);
       }
-    }
+    });
   }
 }
 
@@ -135,21 +135,3 @@ export function rateLimitResponse(
   );
 }
 
-// Background cleanup timer for Node environments
-if (
-  typeof process !== 'undefined' &&
-  process.release?.name === 'node' &&
-  typeof setInterval !== 'undefined'
-) {
-  const timer = setInterval(() => {
-    const now = Date.now();
-    for (const [key, record] of rateLimitStore.entries()) {
-      if (now > record.resetTime) {
-        rateLimitStore.delete(key);
-      }
-    }
-  }, 10 * 60 * 1000);
-  if (typeof timer === 'object' && timer !== null && 'unref' in timer) {
-    (timer as any).unref();
-  }
-}
