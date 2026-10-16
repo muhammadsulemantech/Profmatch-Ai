@@ -68,11 +68,56 @@ export default function OutreachGeneratePage() {
   });
   const [sendSuccess, setSendSuccess] = useState(false);
 
+  const getStudentProfileOverrides = useCallback(() => {
+    let name = user?.full_name || '';
+    let currentDegree = '';
+    let university = '';
+    let targetDegree = '';
+    let interests: string[] = [];
+
+    if (typeof window !== 'undefined') {
+      const userKey = user ? user.id : 'guest';
+      const stored = localStorage.getItem(`profmatch_user_profile_${userKey}`);
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored);
+          if (parsed.fullName) name = parsed.fullName;
+          if (parsed.currentDegree) currentDegree = parsed.currentDegree;
+          if (parsed.university) university = parsed.university;
+          if (parsed.targetDegree) targetDegree = parsed.targetDegree;
+          if (Array.isArray(parsed.interests) && parsed.interests.length > 0) interests = parsed.interests;
+        } catch {}
+      }
+      if (!name) {
+        name = localStorage.getItem(`profmatch_user_name_${userKey}`) || '';
+      }
+    }
+
+    if (!name && user?.email) {
+      const local = user.email.split('@')[0].replace(/[0-9_.-]+/g, ' ').trim();
+      if (local) {
+        name = local.split(' ').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      }
+    }
+
+    return {
+      studentName: name || user?.full_name || 'Prospective Researcher',
+      studentDegree: currentDegree || 'Bachelor of Science',
+      studentUniversity: university || 'University',
+      targetDegree: targetDegree || 'PhD',
+      studentInterests: interests.length > 0 ? interests : undefined,
+    };
+  }, [user]);
+
   // Generate initial email on load
   const generateEmail = useCallback(async (selectedTone: 'academic' | 'formal' | 'direct' | 'concise' = 'academic') => {
     setIsGenerating(true);
     try {
-      const generated = await EmailPersonalizationAgent.generateEmail('usr_student_001', prof, { tone: selectedTone });
+      const overrides = getStudentProfileOverrides();
+      const generated = await EmailPersonalizationAgent.generateEmail(user?.id || 'usr_guest', prof, {
+        tone: selectedTone,
+        ...overrides,
+      });
       setSubject(generated.subject);
       setBodyText(generated.bodyText);
       setPersonalizationNotes(generated.personalizationNotes);
@@ -83,7 +128,7 @@ export default function OutreachGeneratePage() {
     } finally {
       setIsGenerating(false);
     }
-  }, [prof]);
+  }, [prof, user, getStudentProfileOverrides]);
 
   useEffect(() => {
     generateEmail(tone);
@@ -97,7 +142,8 @@ export default function OutreachGeneratePage() {
   const handleShorten = () => {
     const paragraphs = bodyText.split('\n\n');
     if (paragraphs.length > 2) {
-      setBodyText(paragraphs.slice(0, 3).join('\n\n') + '\n\nBest regards,\n[Your Name]');
+      const overrides = getStudentProfileOverrides();
+      setBodyText(paragraphs.slice(0, 3).join('\n\n') + `\n\nSincerely,\n${overrides.studentName}\n${overrides.studentDegree}, ${overrides.studentUniversity}`);
     }
   };
 

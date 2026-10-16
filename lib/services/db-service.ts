@@ -849,6 +849,7 @@ export async function saveUserSyncedData(
     kanbanCards?: any[];
     replies?: any[];
     avatarUrl?: string;
+    fullName?: string;
   }
 ): Promise<UserSyncedActivity> {
   mockDb.loadFromDisk();
@@ -912,6 +913,24 @@ export async function saveUserSyncedData(
         await supabase
           .from('profiles')
           .update({ avatar_url: payload.avatarUrl, updated_at: new Date().toISOString() })
+          .eq('id', userId);
+      } catch {}
+    }
+  }
+
+  if (payload.fullName) {
+    const trimmed = payload.fullName.trim();
+    const profile = mockDb.profiles.find((p) => p.id === userId);
+    if (profile) {
+      profile.full_name = trimmed;
+      profile.updated_at = new Date().toISOString();
+    }
+    const supabase = createAdminClient();
+    if (supabase) {
+      try {
+        await supabase
+          .from('profiles')
+          .update({ full_name: trimmed, updated_at: new Date().toISOString() })
           .eq('id', userId);
       } catch {}
     }

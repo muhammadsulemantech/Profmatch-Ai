@@ -7,6 +7,8 @@ import { User, Camera, Loader2 } from 'lucide-react';
 interface AvatarSectionProps {
   avatarUrl: string | null;
   userName?: string;
+  fullName?: string;
+  onFullNameChange?: (val: string) => void;
   isUploadingAvatar: boolean;
   onAvatarUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveAvatar: () => void;
@@ -16,6 +18,8 @@ interface AvatarSectionProps {
 export function AvatarSection({
   avatarUrl,
   userName,
+  fullName,
+  onFullNameChange,
   isUploadingAvatar,
   onAvatarUpload,
   onRemoveAvatar,
@@ -25,16 +29,16 @@ export function AvatarSection({
     <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-4">
       <div className="flex items-center gap-2 border-b border-slate-800 pb-3">
         <User className="w-5 h-5 text-emerald-400" />
-        <h2 className="text-base font-bold text-white">Researcher Profile Photo &amp; Avatar</h2>
+        <h2 className="text-base font-bold text-white">Researcher Profile Identity &amp; Avatar</h2>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-6 pt-2">
+      <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pt-2">
         <div className="relative group shrink-0">
           <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-emerald-500/40 bg-slate-950 flex items-center justify-center shadow-xl relative">
             {avatarUrl ? (
               <Image
                 src={avatarUrl}
-                alt={userName || 'Researcher'}
+                alt={(fullName || userName) || 'Researcher'}
                 width={80}
                 height={80}
                 unoptimized
@@ -42,7 +46,7 @@ export function AvatarSection({
               />
             ) : (
               <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-500 text-slate-950 flex items-center justify-center font-black text-2xl">
-                {userName?.charAt(0).toUpperCase() || 'K'}
+                {(fullName || userName)?.charAt(0).toUpperCase() || 'R'}
               </div>
             )}
 
@@ -71,10 +75,21 @@ export function AvatarSection({
           />
         </div>
 
-        <div className="space-y-1.5 text-center sm:text-left flex-1">
-          <h3 className="text-sm font-bold text-white">
-            {userName || 'Academic Researcher'}
-          </h3>
+        <div className="space-y-3 text-center sm:text-left flex-1 w-full">
+          <div>
+            <label htmlFor="user-fullname-field" className="block text-xs font-semibold text-slate-300 mb-1.5">
+              Your Full Name <span className="text-emerald-400 font-normal">(Used at the end of every outreach email &amp; signature)</span>
+            </label>
+            <input
+              id="user-fullname-field"
+              type="text"
+              value={fullName !== undefined ? fullName : (userName || '')}
+              onChange={(e) => onFullNameChange?.(e.target.value)}
+              placeholder="e.g. Muhammad Suleman"
+              className="w-full max-w-md px-3.5 py-2.5 rounded-xl bg-slate-950/80 border border-slate-700/80 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 text-sm text-white placeholder-slate-500 transition-all font-medium"
+            />
+          </div>
+
           <p className="text-xs text-slate-400 leading-relaxed max-w-md">
             Upload your picture from your PC, laptop, or mobile device. It will appear on your workspace dashboard and header navigation pill.
           </p>

@@ -140,7 +140,7 @@ const KEYWORD_SUGGESTIONS = Array.from(
 );
 
 export default function ProfilePage() {
-  const { user } = useAuth();
+  const { user, setAuthenticatedUser } = useAuth();
   const student = mockDb.studentProfiles[0];
   const academic = mockDb.academicProfiles[0];
   const research = mockDb.researchProfiles[0];
@@ -149,6 +149,21 @@ export default function ProfilePage() {
   const countries = useMemo(() => getAllCountries(), []);
 
   const [saved, setSaved] = useState(false);
+  const [fullName, setFullName] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const userKey = user ? user.id : 'guest';
+      const storedName = localStorage.getItem(`profmatch_user_name_${userKey}`);
+      if (storedName) return storedName;
+      const storedProfile = localStorage.getItem(`profmatch_user_profile_${userKey}`);
+      if (storedProfile) {
+        try {
+          const p = JSON.parse(storedProfile);
+          if (p.fullName) return p.fullName;
+        } catch {}
+      }
+    }
+    return user?.full_name || '';
+  });
   const [targetDegree, setTargetDegree] = useState(student.target_degree || 'PhD');
   const [targetCountry, setTargetCountry] = useState(student.target_country || 'United States');
   const [targetRegion, setTargetRegion] = useState(student.target_region || student.target_state || 'Texas');
@@ -246,6 +261,7 @@ export default function ProfilePage() {
       const storedProfile = localStorage.getItem(profileKey);
       if (storedProfile) {
         const p = JSON.parse(storedProfile);
+        if (p.fullName) setFullName(p.fullName);
         if (p.targetDegree) setTargetDegree(p.targetDegree);
         if (p.targetCountry) setTargetCountry(p.targetCountry);
         if (p.targetRegion) setTargetRegion(p.targetRegion);
@@ -274,6 +290,14 @@ export default function ProfilePage() {
         }
       }
     } catch {}
+
+    // Load stored name if not dirty
+    const storedName = localStorage.getItem(`profmatch_user_name_${userKey}`);
+    if (storedName) {
+      setFullName(storedName);
+    } else if (user?.full_name) {
+      setFullName(user.full_name);
+    }
 
     // Load Avatar
     const savedAvatar = getSavedAvatar(userKey);
@@ -520,9 +544,11 @@ export default function ProfilePage() {
     research.academic_domain = academicDomain;
     research.primary_discipline = desiredField;
 
+    const trimmedName = fullName.trim();
     if (typeof window !== 'undefined') {
       const userKey = user ? user.id : 'guest';
       const fullProfile = {
+        fullName: trimmedName,
         targetDegree,
         targetCountry,
         targetRegion,
@@ -540,6 +566,30 @@ export default function ProfilePage() {
         interests,
       };
       localStorage.setItem(`profmatch_user_profile_${userKey}`, JSON.stringify(fullProfile));
+      if (trimmedName) {
+        localStorage.setItem(`profmatch_user_name_${userKey}`, trimmedName);
+      }
+    }
+
+    if (user && trimmedName) {
+      setAuthenticatedUser({
+        ...user,
+        full_name: trimmedName,
+      });
+
+      // Sync name to server & database
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.id,
+          fullName: trimmedName,
+        }),
+      }).catch(() => {});
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('profmatch_user_name_updated', { detail: trimmedName }));
     }
 
     setSaved(true);
@@ -583,6 +633,8 @@ export default function ProfilePage() {
         <AvatarSection
           avatarUrl={avatarUrl}
           userName={user?.full_name}
+          fullName={fullName}
+          onFullNameChange={setFullName}
           isUploadingAvatar={isUploadingAvatar}
           onAvatarUpload={handleAvatarUpload}
           onRemoveAvatar={handleRemoveAvatar}
