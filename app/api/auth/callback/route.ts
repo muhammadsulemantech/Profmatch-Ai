@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
-import { saveUserProfile, saveUserSubscription, getUserSubscription } from '@/lib/services/db-service';
+import { saveUserProfile, saveUserSubscription, getUserSubscription, getUserProfile } from '@/lib/services/db-service';
+import { isAdminEmail } from '@/lib/auth/server-auth';
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -22,11 +23,16 @@ export async function GET(request: NextRequest) {
   if (code) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
     if (!error && data?.user) {
+      const existingProfile = await getUserProfile(data.user.id);
+      const isSystemAdmin = isAdminEmail(data.user.email);
       await saveUserProfile({
         id: data.user.id,
         email: data.user.email || '',
-        full_name: data.user.user_metadata?.full_name || '',
-        role: 'USER',
+        full_name: data.user.user_metadata?.full_name || existingProfile?.full_name || '',
+        avatar_url: data.user.user_metadata?.avatar_url || existingProfile?.avatar_url || null,
+        role: isSystemAdmin ? 'ADMIN' : (existingProfile?.role || 'USER'),
+        is_suspended: existingProfile?.is_suspended ?? false,
+        suspension_reason: existingProfile?.suspension_reason ?? null,
       });
 
       const existingSub = await getUserSubscription(data.user.id);
@@ -49,11 +55,16 @@ export async function GET(request: NextRequest) {
       type: type as any,
     });
     if (!error && data?.user) {
+      const existingProfile = await getUserProfile(data.user.id);
+      const isSystemAdmin = isAdminEmail(data.user.email);
       await saveUserProfile({
         id: data.user.id,
         email: data.user.email || '',
-        full_name: data.user.user_metadata?.full_name || '',
-        role: 'USER',
+        full_name: data.user.user_metadata?.full_name || existingProfile?.full_name || '',
+        avatar_url: data.user.user_metadata?.avatar_url || existingProfile?.avatar_url || null,
+        role: isSystemAdmin ? 'ADMIN' : (existingProfile?.role || 'USER'),
+        is_suspended: existingProfile?.is_suspended ?? false,
+        suspension_reason: existingProfile?.suspension_reason ?? null,
       });
 
       const existingSub = await getUserSubscription(data.user.id);

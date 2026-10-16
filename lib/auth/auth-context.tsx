@@ -107,6 +107,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       handleAuthSuccess(data.user);
+
+      // Immediately refresh server session to guarantee full entitlements, tier, and quotas
+      try {
+        const meRes = await fetch('/api/auth/me');
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.authenticated && meData.user) {
+            setUser(meData.user);
+          }
+        }
+      } catch {}
+
       return { success: true };
     } catch {
       return { success: false, error: 'Connection failed during sign in.' };

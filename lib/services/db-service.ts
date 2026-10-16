@@ -136,6 +136,14 @@ export async function saveUserProfile(
 // --- SUBSCRIPTIONS & TIERS ---
 
 export async function getUserSubscription(userId: string): Promise<SubscriptionRecord | null> {
+  if (!userId) return null;
+
+  let effectiveUserId = userId;
+  if (userId.includes('@')) {
+    const prof = await getProfileByEmail(userId);
+    if (prof) effectiveUserId = prof.id;
+  }
+
   const supabase = createAdminClient();
   let sub: SubscriptionRecord | null = null;
 
@@ -144,13 +152,13 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
-        .eq('user_id', userId)
+        .eq('user_id', effectiveUserId)
         .maybeSingle();
 
       if (!error && data) {
         sub = data as SubscriptionRecord;
         mockDb.loadFromDisk();
-        const idx = mockDb.subscriptions.findIndex((s) => s.user_id === userId);
+        const idx = mockDb.subscriptions.findIndex((s) => s.user_id === effectiveUserId);
         if (idx >= 0) mockDb.subscriptions[idx] = sub;
         else mockDb.subscriptions.push(sub);
       }
@@ -161,7 +169,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
 
   if (!sub) {
     mockDb.loadFromDisk();
-    const found = mockDb.subscriptions.find((s) => s.user_id === userId);
+    const found = mockDb.subscriptions.find((s) => s.user_id === effectiveUserId || (userId && s.user_id === userId));
     sub = found ? ({ ...found } as SubscriptionRecord) : null;
   }
 
@@ -176,11 +184,11 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
           await supabase
             .from('subscriptions')
             .update({ status: 'expired', updated_at: new Date().toISOString() })
-            .eq('user_id', userId);
+            .eq('user_id', effectiveUserId);
         } catch {}
       }
       mockDb.loadFromDisk();
-      const idx = mockDb.subscriptions.findIndex((s) => s.user_id === userId);
+      const idx = mockDb.subscriptions.findIndex((s) => s.user_id === effectiveUserId);
       if (idx >= 0) {
         mockDb.subscriptions[idx].status = 'expired' as any;
         mockDb.persist();
@@ -192,8 +200,12 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
 }
 
 export async function getUserPlanTier(userId: string): Promise<PlanTier> {
+  if (!userId) return 'FREE';
   const sub = await getUserSubscription(userId);
-  if (sub && sub.status === 'active' && sub.plan_type !== 'FREE') {
+  const status = sub?.status?.toLowerCase();
+  const isActive = status === 'active' || status === 'trialing';
+
+  if (sub && isActive && sub.plan_type !== 'FREE') {
     if (sub.current_period_end && new Date(sub.current_period_end).getTime() < Date.now()) {
       return 'FREE';
     }
@@ -212,14 +224,20 @@ export async function saveUserSubscription(
   // Guard: Never unintentionally overwrite an active non-expired paid plan with FREE
   if (data.plan_type === 'FREE' && !options?.forceDowngrade) {
     const existing = await getUserSubscription(data.user_id);
-    if (
+    const existingStatus = existing?.status?.toLowerCase();
+    const existingIsActive =
       existing &&
       existing.plan_type !== 'FREE' &&
-      existing.status === 'active' &&
-      existing.current_period_end &&
-      new Date(existing.current_period_end).getTime() > Date.now()
-    ) {
-      return existing;
+      (existingStatus === 'active' || existingStatus === 'trialing');
+
+    if (existingIsActive) {
+      const isExpired = existing.current_period_end
+        ? new Date(existing.current_period_end).getTime() <= Date.now()
+        : false;
+
+      if (!isExpired) {
+        return existing;
+      }
     }
   }
 

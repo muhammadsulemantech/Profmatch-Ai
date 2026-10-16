@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveUserProfile, saveUserSubscription, getUserSubscription } from '@/lib/services/db-service';
+import { saveUserProfile, saveUserSubscription, getUserSubscription, getProfileByEmail } from '@/lib/services/db-service';
 import { isAdminEmail } from '@/lib/auth/server-auth';
 import { validateSafeRedirect } from '@/lib/security/url-validation';
 
@@ -65,12 +65,18 @@ export async function GET(request: NextRequest) {
     const cleanEmail = googleUser.email.toLowerCase().trim();
     const isSystemAdmin = isAdminEmail(cleanEmail);
 
+    // Look up existing persistent profile by email to preserve real UUID
+    const existingProfile = await getProfileByEmail(cleanEmail);
+    const userId = existingProfile ? existingProfile.id : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `usr_google_${Date.now()}`);
+
     const user = await saveUserProfile({
-      id: googleUser.id ? `usr_google_${googleUser.id}` : `usr_google_${Date.now()}`,
+      id: userId,
       email: cleanEmail,
-      full_name: googleUser.name || googleUser.email.split('@')[0],
-      avatar_url: googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-      role: isSystemAdmin ? 'ADMIN' : 'USER',
+      full_name: existingProfile?.full_name || googleUser.name || googleUser.email.split('@')[0],
+      avatar_url: existingProfile?.avatar_url || googleUser.picture || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
+      role: isSystemAdmin ? 'ADMIN' : (existingProfile?.role || 'USER'),
+      is_suspended: existingProfile?.is_suspended ?? false,
+      suspension_reason: existingProfile?.suspension_reason ?? null,
     });
 
     try {
