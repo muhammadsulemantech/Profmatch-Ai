@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ProfMatch AI — Brand Logo Export</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@700;800&family=Inter:wght@500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080B11;
+      color: #FFFFFF;
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+    }
+    .card {
+      background: #0F1420;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 48px;
+      margin-bottom: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .logo-container {
+      width: 800px;
+      height: 200px;
+    }
+    .page-title {
+      font-size: 28px;
+      font-weight: 800;
+      margin-bottom: 8px;
+      color: #FFFFFF;
+      text-align: center;
+    }
+    .page-sub {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 36px;
+      text-align: center;
+    }
+    @media print {
+      body {
+        background: #080B11 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .card {
+        border: none;
+        box-shadow: none;
+        background: #080B11 !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1 class="page-title">ProfMatch AI Brand Identity</h1>
+  <p class="page-sub">Official Vector Asset &bull; Academic Research Platform</p>
+
+  <div class="card">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" width="800" height="213">
+      <defs>
+        <linearGradient id="logoEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#10b981" />
+          <stop offset="100%" stop-color="#0d9488" />
+        </linearGradient>
+        <linearGradient id="textAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#34d399" />
+          <stop offset="100%" stop-color="#10b981" />
+        </linearGradient>
+        <filter id="logoShadow" x="-10%" y="-10%" width="120%" height="120%">
+          <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#10b981" flood-opacity="0.3" />
+        </filter>
+      </defs>
+      
+      <!-- Icon (Left) -->
+      <g transform="translate(40, 40)">
+        <rect width="160" height="160" rx="40" fill="url(#logoEmeraldGrad)" filter="url(#logoShadow)" />
+        <path d="M80 40 L135 68 L80 96 L25 68 Z" fill="#080B11" />
+        <path d="M52 82 V106 C52 116 65 124 80 124 C95 124 108 116 108 106 V82" fill="none" stroke="#080B11" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M122 75 V110" stroke="#080B11" stroke-width="7" stroke-linecap="round" />
+        <circle cx="122" cy="115" r="4.5" fill="#080B11" />
+      </g>
+      
+      <!-- Text: ProfMatch AI -->
+      <text x="235" y="132" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" font-size="76" font-weight="800" fill="#FFFFFF" letter-spacing="-1.5">
+        ProfMatch <tspan fill="url(#textAiGrad)">AI</tspan>
+      </text>
+      
+      <!-- Subtitle -->
+      <text x="238" y="174" font-family="'Plus Jakarta Sans', 'Inter', sans-serif" font-size="19" font-weight="700" fill="#34d399" letter-spacing="4">
+        ACADEMIC RESEARCH PLATFORM
+      </text>
+    </svg>
+  </div>
+</body>
+</html>

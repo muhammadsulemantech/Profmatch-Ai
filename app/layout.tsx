@@ -9,6 +9,7 @@ import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
 import MobileNav from '@/components/navigation/mobile-nav';
 import CookieConsent from '@/components/ui/cookie-consent';
+import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { SITE_URL, getOrganizationJsonLd, getWebSiteJsonLd, getSoftwareApplicationJsonLd } from '@/lib/seo/site-config';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
@@ -101,9 +102,10 @@ export default async function RootLayout({
       </head>
       <body className={`${inter.variable} ${plusJakartaSans.variable} ${inter.className} min-h-screen flex flex-col bg-[#080B11] text-slate-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-300`}>
         <AuthProvider>
-          <AuthModal />
+          <PostHogProvider>
+            <AuthModal />
 
-          {/* Top Announcement Banner (CMS Controlled) */}
+            {/* Top Announcement Banner (CMS Controlled) */}
           {settings.announcement?.enabled && (
             <div className="bg-emerald-950/40 border-b border-emerald-800/30 px-4 py-2 text-center text-xs font-medium text-emerald-300 flex items-center justify-center gap-2">
               <BookOpen className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
@@ -177,10 +179,11 @@ export default async function RootLayout({
             </div>
           </header>
 
-          {/* Main Body */}
-          <main className="flex-1 flex flex-col">
-            {children}
-          </main>
+            {/* Main Body */}
+            <main className="flex-1 flex flex-col">
+              {children}
+            </main>
+          </PostHogProvider>
         </AuthProvider>
 
         {/* Global Footer */}

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 240" width="900" height="240">
+  <defs>
+    <linearGradient id="logoEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#0d9488" />
+    </linearGradient>
+    <linearGradient id="textAiGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <filter id="logoShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#10b981" flood-opacity="0.25" />
+    </filter>
+  </defs>
+  
+  <!-- Icon (Left) -->
+  <g transform="translate(40, 40)">
+    <rect width="160" height="160" rx="40" fill="url(#logoEmeraldGrad)" filter="url(#logoShadow)" />
+    <!-- Cap Rhombus Top -->
+    <path d="M80 40 L135 68 L80 96 L25 68 Z" fill="#080B11" />
+    <!-- Cap Skull Base -->
+    <path d="M52 82 V106 C52 116 65 124 80 124 C95 124 108 116 108 106 V82" fill="none" stroke="#080B11" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" />
+    <!-- Tassel Cord -->
+    <path d="M122 75 V110" stroke="#080B11" stroke-width="7" stroke-linecap="round" />
+    <!-- Tassel Bob -->
+    <circle cx="122" cy="115" r="4.5" fill="#080B11" />
+  </g>
+  
+  <!-- Text: ProfMatch AI -->
+  <text x="235" y="132" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="76" font-weight="800" fill="#FFFFFF" letter-spacing="-1.5">
+    ProfMatch <tspan fill="url(#textAiGrad)">AI</tspan>
+  </text>
+  
+  <!-- Subtitle -->
+  <text x="238" y="174" font-family="'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="19" font-weight="700" fill="#34d399" letter-spacing="4">
+    ACADEMIC RESEARCH PLATFORM
+  </text>
+</svg>
