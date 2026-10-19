@@ -349,10 +349,10 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
               <button
                 type="button"
                 onClick={() => setIsEmailModalOpen(true)}
-                className="flex-1 md:flex-none px-4.5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
               >
                 <Mail className="w-4 h-4" />
-                Generate Email &amp; Create Gmail Draft
+                Create Gmail Draft
               </button>
 
               <Link
