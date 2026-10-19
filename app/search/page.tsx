@@ -38,6 +38,7 @@ import {
   isCountryUnlockedForTier,
   getPlanConfig,
 } from '@/lib/services/usage-service';
+import CVUploadMatchModal from '@/components/search/cv-upload-match-modal';
 import { SearchFilters } from '@/components/search/search-filters';
 import { ProfessorCard } from '@/components/search/professor-card';
 import { PaywallBanner } from '@/components/search/paywall-banner';
@@ -59,6 +60,7 @@ export default function SearchPage() {
   const currentTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
   const [usage, setUsage] = useState(() => getSearchUsage(user?.id, currentTier));
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [isCvModalOpen, setIsCvModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -429,16 +431,27 @@ export default function SearchPage() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8 bg-[#080B11] text-slate-100 min-h-screen selection:bg-emerald-500/25 selection:text-emerald-300">
       {/* Editorial Search Header */}
       <div className="space-y-4">
-        <div className="space-y-1.5">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
-            <Globe className="w-3.5 h-3.5" /> Universal Faculty Directory &bull; 190+ Countries
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold tracking-wider uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+              <Globe className="w-3.5 h-3.5" /> Universal Faculty Directory &bull; 190+ Countries
+            </div>
+            <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-white">
+              Professor Discovery &amp; Research Verification
+            </h1>
+            <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
+              Discover relevant faculty across accredited universities, understand their published research, and find verified institutional emails.
+            </p>
           </div>
-          <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-white">
-            Professor Discovery &amp; Research Verification
-          </h1>
-          <p className="text-xs sm:text-sm text-slate-400 max-w-3xl leading-relaxed">
-            Discover relevant faculty across accredited universities, understand their published research, and find verified institutional emails.
-          </p>
+
+          <button
+            type="button"
+            onClick={() => setIsCvModalOpen(true)}
+            className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs sm:text-sm shadow-lg shadow-emerald-500/25 hover:shadow-emerald-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all shrink-0 cursor-pointer self-start md:self-center"
+          >
+            <Sparkles className="w-4 h-4 text-slate-950" />
+            <span>Match with My CV (Instant)</span>
+          </button>
         </div>
 
         {/* Real-time Usage & Plan Tracker Bar */}
@@ -854,6 +867,12 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+
+      {/* CV Instant Matchmaker Modal */}
+      <CVUploadMatchModal
+        isOpen={isCvModalOpen}
+        onClose={() => setIsCvModalOpen(false)}
+      />
     </div>
   );
 }

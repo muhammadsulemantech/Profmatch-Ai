@@ -28,6 +28,8 @@ import {
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import EmailReviewModal from '@/components/outreach/email-review-modal';
+import GrantFundingBadge from '@/components/professors/grant-funding-badge';
+import LabTeamSection from '@/components/professors/lab-team-section';
 import { formatCleanProfessorEmail } from '@/lib/utils/email-resolver';
 import { MatchAnalysisModal } from '@/components/professors/match-analysis-modal';
 import {
@@ -321,6 +323,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
                   <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
                     {prof.recruiting_status === 'ACTIVELY_RECRUITING' ? 'Actively Recruiting' : 'Recruiting Status Unknown'}
                   </span>
+                  <GrantFundingBadge profName={prof.name} institutionName={prof.university_name} />
                 </div>
                 <p className="text-xs sm:text-sm text-slate-400 font-medium">{prof.title} &bull; {prof.position}</p>
                 <p className="text-xs sm:text-sm font-semibold text-emerald-400">
@@ -539,6 +542,13 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
                 )}
               </div>
             </div>
+
+            {/* Discovered Lab Members & Postdoctoral Researchers */}
+            <LabTeamSection
+              profName={prof.name}
+              openAlexId={(prof as any).openalex_id || prof.id}
+              onOpenOutreachModal={() => setIsEmailModalOpen(true)}
+            />
           </div>
 
           {/* Right Column: Lab Info & Official Sources (4 cols) */}

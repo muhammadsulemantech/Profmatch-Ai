@@ -268,3 +268,35 @@ export async function discoverNextProfessor(
 
   return null;
 }
+
+/**
+ * Universal faculty discovery by query / keywords across OpenAlex and local cache
+ */
+export async function discoverFacultyByKeywords(
+  query: string,
+  options?: { limit?: number; countries?: string[] }
+): Promise<Professor[]> {
+  const searchProvider = getSearchProvider();
+  try {
+    const results = await searchProvider.searchProfessors(query, {
+      country: options?.countries?.[0],
+      limit: options?.limit || 10,
+    });
+    if (results && results.length > 0) {
+      return results as Professor[];
+    }
+  } catch (err) {
+    console.warn('[FACULTY DISCOVERY WARNING]', err);
+  }
+
+  mockDb.loadFromDisk();
+  const lowerQ = query.toLowerCase();
+  return mockDb.professors
+    .filter(
+      (p) =>
+        p.name.toLowerCase().includes(lowerQ) ||
+        (p.primary_discipline && p.primary_discipline.toLowerCase().includes(lowerQ)) ||
+        (p.keywords && p.keywords.some((k) => k.toLowerCase().includes(lowerQ)))
+    )
+    .slice(0, options?.limit || 10);
+}

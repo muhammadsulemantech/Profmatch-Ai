@@ -54,6 +54,17 @@ const envSchema = z.object({
   STRIPE_PUBLISHABLE_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
 
+  // QStash Background Queue
+  QSTASH_URL: z.string().optional(),
+  QSTASH_TOKEN: z.string().optional(),
+  QSTASH_CURRENT_SIGNING_KEY: z.string().optional(),
+  QSTASH_NEXT_SIGNING_KEY: z.string().optional(),
+
+  // PostHog Analytics
+  NEXT_PUBLIC_POSTHOG_KEY: z.string().optional(),
+  NEXT_PUBLIC_POSTHOG_HOST: z.string().optional(),
+  POSTHOG_PROJECT_ID: z.string().optional(),
+
   // Security & Authentication
   SESSION_SECRET: z.string().min(16).default('profmatch-ai-default-jwt-session-secret-change-in-prod'),
   ADMIN_SECRET_PASSPHRASE: z.string().optional().default('admin-dev-passphrase'),

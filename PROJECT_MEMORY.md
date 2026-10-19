@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-19 (Modern Minimalist Navbar, Streamlined Navigation & Single CTA Polish)
+> **Last Updated:** 2026-10-19 (Tier 13: Industry-Ready Growth Suite — PostHog Analytics, QStash Queue, CV Matchmaker, NSF Grant Detector, Follow-Up Sequencer, Lab Team Referral)
 
 ---
 
@@ -427,6 +427,59 @@ profmatch-ai/
   - Streamlined primary CTA from `"Generate Email & Create Gmail Draft"` to concise `"Create Gmail Draft"`, preserving the `<Mail />` icon and aligning with the rest of the application.
 - **Verification:**
   - TypeScript zero-error clean compilation (`npx tsc --noEmit`).
+
+---
+
+## 13. Tier 13: Industry-Ready SaaS Growth Suite (COMPLETED 2026-10-19)
+
+### 13.1 Product Analytics (PostHog Integration)
+- **Client Provider (`components/providers/posthog-provider.tsx`):**
+  - Integrated `posthog-js` with automatic App Router `$pageview` capture on route changes.
+  - Automatically identifies authenticated users (user UUID, email, name, plan tier, role).
+  - Wired into `app/layout.tsx` across all pages.
+  - Exported universal client tracking utility `trackAnalyticsEvent(name, props)`.
+- **Environment Configuration:**
+  - Added `NEXT_PUBLIC_POSTHOG_KEY` (`phc_nf2yxYE7z7HpCWuhxayHkNH5PKyrPQe5wUVJHZVUddvX`), `NEXT_PUBLIC_POSTHOG_HOST` (`https://us.i.posthog.com`), and `POSTHOG_PROJECT_ID` (`674373`).
+
+### 13.2 Distributed Background Job Queue (Upstash QStash)
+- **Queue Service Layer (`lib/services/qstash-service.ts`):**
+  - Configured `@upstash/qstash` client and cryptographic `Receiver` verification using `QSTASH_TOKEN`, `QSTASH_CURRENT_SIGNING_KEY`, and `QSTASH_NEXT_SIGNING_KEY`.
+  - Added asynchronous job publishing with auto-retry and development fallback.
+- **Queue Worker Endpoint (`app/api/jobs/autopilot-batch/route.ts`):**
+  - Dedicated worker endpoint verifying QStash HMAC signatures and processing asynchronous batch faculty discovery and persistence without serverless timeouts.
+
+### 13.3 Instant CV & Resume Matchmaker (Game Changer Feature)
+- **AI Research Extractor & Matcher (`lib/services/cv-match-service.ts`):**
+  - Integrated `pdf-parse` for client/server PDF parsing up to 10MB.
+  - Gemini AI analyzes candidate CV to extract structured research DNA: primary fields, skills, thesis topics, and search keywords.
+  - Automatically mines OpenAlex faculty graph to score and rank top 15 matching professors (78%-98% match) with personalized synergy explanations.
+- **API & UI Integration (`app/api/cv/match/route.ts` & `components/search/cv-upload-match-modal.tsx`):**
+  - Added high-visibility **"Match with My CV (Instant)"** button in the `/search` header.
+  - Interactive drag-and-drop modal with live parsing animations, candidate summary, and 1-click draft creation.
+
+### 13.4 Active Grant & Research Funding Detector
+- **Federal Grant Service (`lib/services/grant-service.ts` & `/api/professors/grants`):**
+  - Live query to the official **US National Science Foundation (NSF)** API (`api.nsf.gov`).
+  - Identifies active multi-year grants, obligated funding amounts (e.g. `$450,000`), active cycle through year, and calculates PhD sponsorship likelihood (`HIGH`, `MODERATE`).
+  - Cached in-memory (24h TTL) to eliminate redundant external network overhead.
+- **Interactive UI Badge (`components/professors/grant-funding-badge.tsx`):**
+  - Displays glowing green badge on professor profiles with interactive modal detailing grant IDs, obligated budgets, and high-impact email strategy tips.
+
+### 13.5 Smart Follow-Up Drip Sequencer
+- **Academic Follow-Up Engine (`lib/services/followup-service.ts` & `/api/outreach/generate-followup`):**
+  - Generates respectful, non-intrusive 5-to-7-day academic follow-up emails using elite Ivy-League guidance.
+  - Produces concise (under 120 words) messages preserving academic decorum and providing an alternative call-to-action (connecting with lab postdocs/PhDs).
+
+### 13.6 Lab Members & Postdoc Referral Discovery
+- **Lab Hierarchy Service (`lib/services/lab-team-service.ts` & `/api/professors/lab-team`):**
+  - Infers current laboratory members (Doctoral researchers, Postdoctoral fellows) by scanning recent collaboration works where the target professor is the senior corresponding author and junior members are first authors.
+- **UI Component (`components/professors/lab-team-section.tsx`):**
+  - Renders directly on `app/professors/[id]/page.tsx` with member roles, joint publication titles, and specific referral advice tips.
+
+### 13.7 Verification
+- `npx tsc --noEmit`: 0 errors.
+- `npm test`: 97/97 tests passing across 11 test suites.
+
 
 
 

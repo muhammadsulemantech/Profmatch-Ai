@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ProfMatch AI — Icon Export</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      background: #080B11;
+      width: 512px;
+      height: 512px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    svg {
+      width: 512px;
+      height: 512px;
+    }
+  </style>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+    <defs>
+      <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#10b981" />
+        <stop offset="100%" stop-color="#0d9488" />
+      </linearGradient>
+      <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+        <feDropShadow dx="0" dy="16" stdDeviation="20" flood-color="#10b981" flood-opacity="0.3" />
+      </filter>
+    </defs>
+    <rect x="32" y="32" width="448" height="448" rx="112" fill="url(#emeraldGrad)" filter="url(#shadow)" />
+    <path d="M256 128 L432 216 L256 304 L80 216 Z" fill="#080B11" />
+    <path d="M168 262 V336 C168 368 208 392 256 392 C304 392 344 368 344 336 V262" fill="none" stroke="#080B11" stroke-width="28" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M392 236 V344" stroke="#080B11" stroke-width="22" stroke-linecap="round" />
+    <circle cx="392" cy="358" r="14" fill="#080B11" />
+  </svg>
+</body>
+</html>
