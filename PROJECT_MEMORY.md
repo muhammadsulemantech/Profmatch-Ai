@@ -423,6 +423,8 @@ profmatch-ai/
   - Retained a single, prominent `Get Started` button styled with glowing emerald gradients and micro-interactions. Clicking opens the universal auth modal allowing immediate access to both Sign In and Sign Up.
 - **Harmonious Visual Iconography:**
   - Added matching, uniformly styled icons (3.5x3.5, subtle slate-to-emerald transition) for each of the 4 pillars: `Search` (Find Professors), `Rocket` (AutoPilot), `LayoutDashboard` (Workspace), and `CreditCard` (Pricing).
+- **Professor Detail Action Button Clean-Up (`app/professors/[id]/page.tsx`):**
+  - Streamlined primary CTA from `"Generate Email & Create Gmail Draft"` to concise `"Create Gmail Draft"`, preserving the `<Mail />` icon and aligning with the rest of the application.
 - **Verification:**
   - TypeScript zero-error clean compilation (`npx tsc --noEmit`).
 
