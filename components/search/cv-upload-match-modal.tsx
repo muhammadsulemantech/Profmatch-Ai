@@ -242,7 +242,7 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
                 <span className="text-slate-400">Candidate: <strong className="text-white">{matchData.profile.candidateName}</strong></span>
                 <span className="text-slate-400">Target Degree: <strong className="text-emerald-400">{matchData.profile.targetDegree}</strong></span>
               </div>
-              <p className="text-xs text-slate-300 italic">"{matchData.profile.profileSummary}"</p>
+              <p className="text-xs text-slate-300 italic">&ldquo;{matchData.profile.profileSummary}&rdquo;</p>
               <div className="flex flex-wrap gap-1.5 pt-1">
                 {matchData.profile.keyResearchTopics.map((topic, i) => (
                   <span key={i} className="px-2 py-0.5 rounded text-[10px] bg-slate-900 border border-slate-700 text-slate-300">
