@@ -3,7 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { getSiteSettings } from '@/lib/cms/settings-service';
 import Link from 'next/link';
-import { GraduationCap, Search, ShieldCheck, Lock, BookOpen, Rocket } from 'lucide-react';
+import { GraduationCap, ShieldCheck, BookOpen } from 'lucide-react';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
@@ -117,7 +117,7 @@ export default async function RootLayout({
           )}
 
           {/* Global Navigation Bar */}
-          <header className="sticky top-0 z-50 w-full border-b border-slate-800/80 bg-[#080B11]/95 backdrop-blur-md">
+          <header className="sticky top-0 z-50 w-full border-b border-white/[0.08] bg-[#080B11]/90 backdrop-blur-xl">
             <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
               {/* Logo */}
               <Link href="/" aria-label={`${settings.siteName} Home`} className="flex items-center gap-2.5 sm:gap-3 group shrink-0 min-w-0">
@@ -135,31 +135,33 @@ export default async function RootLayout({
               </Link>
 
               {/* Nav Links */}
-              <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-7 text-sm font-medium text-slate-300">
-                <Link href="/search" className="hover:text-emerald-400 flex items-center gap-1.5 transition-colors">
-                  <Search className="w-4 h-4 text-emerald-400" />
+              <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-8 text-[13.5px] font-medium">
+                <Link
+                  href="/search"
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
                   Find Professors
                 </Link>
-                <Link href="/dashboard" className="hover:text-white transition-colors">
+                <Link
+                  href="/autopilot"
+                  className="text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1.5 group"
+                >
+                  <span>AutoPilot</span>
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 group-hover:bg-emerald-500/25 transition-colors">
+                    AI
+                  </span>
+                </Link>
+                <Link
+                  href="/dashboard"
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
                   Workspace
                 </Link>
-                <Link href="/campaigns" className="hover:text-white transition-colors">
-                  Campaigns
-                </Link>
-                <Link href="/autopilot" className="hover:text-emerald-400 flex items-center gap-1 transition-colors text-emerald-300">
-                  <Rocket className="w-3.5 h-3.5 text-emerald-400" />
-                  AutoPilot
-                </Link>
-                <Link href="/pricing" className="hover:text-white transition-colors">
+                <Link
+                  href="/pricing"
+                  className="text-slate-300 hover:text-white transition-colors"
+                >
                   Pricing
-                </Link>
-                <Link href="/tracker" className="hover:text-emerald-400 font-semibold transition-colors flex items-center gap-1 text-emerald-300">
-                  <GraduationCap className="w-4 h-4 text-emerald-400" />
-                  Tracker
-                </Link>
-                <Link href="/responsible-outreach" className="hover:text-white flex items-center gap-1 transition-colors">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                  Ethical Outreach
                 </Link>
               </nav>
 
