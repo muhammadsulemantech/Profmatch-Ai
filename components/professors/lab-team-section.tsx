@@ -101,7 +101,7 @@ export default function LabTeamSection({ profName, openAlexId, onOpenOutreachMod
                 <p className="text-xs text-slate-400 line-clamp-1 flex items-center gap-1.5">
                   <BookOpen className="w-3.5 h-3.5 text-slate-500 shrink-0" />
                   <span>Joint Paper ({member.paperYear}):</span>
-                  <span className="text-slate-300 italic">"{member.recentJointPaper}"</span>
+                  <span className="text-slate-300 italic">&ldquo;{member.recentJointPaper}&rdquo;</span>
                 </p>
                 <p className="text-[11px] text-teal-400/90 font-medium pt-0.5">
                   💡 Tip: {member.referralAngle}

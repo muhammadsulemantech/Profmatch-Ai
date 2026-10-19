@@ -143,7 +143,7 @@ export default function GrantFundingBadge({ profName, institutionName }: GrantFu
                 <div className="space-y-1">
                   <span className="text-slate-400 font-medium">Award Title / Research Scope:</span>
                   <p className="text-slate-300 italic p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
-                    "{grant.awardTitle}"
+                    &ldquo;{grant.awardTitle}&rdquo;
                   </p>
                 </div>
               )}
