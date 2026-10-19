@@ -3,7 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
 import './globals.css';
 import { getSiteSettings } from '@/lib/cms/settings-service';
 import Link from 'next/link';
-import { GraduationCap, ShieldCheck, BookOpen } from 'lucide-react';
+import { GraduationCap, ShieldCheck, BookOpen, Search, Rocket, LayoutDashboard, CreditCard } from 'lucide-react';
 import { AuthProvider } from '@/lib/auth/auth-context';
 import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
@@ -135,17 +135,19 @@ export default async function RootLayout({
               </Link>
 
               {/* Nav Links */}
-              <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-8 text-[13.5px] font-medium">
+              <nav aria-label="Main Navigation" className="hidden md:flex items-center gap-7 text-[13.5px] font-medium">
                 <Link
                   href="/search"
-                  className="text-slate-300 hover:text-white transition-colors"
+                  className="text-slate-300 hover:text-white inline-flex items-center gap-1.5 transition-colors group"
                 >
-                  Find Professors
+                  <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                  <span>Find Professors</span>
                 </Link>
                 <Link
                   href="/autopilot"
-                  className="text-slate-300 hover:text-white transition-colors inline-flex items-center gap-1.5 group"
+                  className="text-slate-300 hover:text-white inline-flex items-center gap-1.5 transition-colors group"
                 >
+                  <Rocket className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
                   <span>AutoPilot</span>
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 group-hover:bg-emerald-500/25 transition-colors">
                     AI
@@ -153,15 +155,17 @@ export default async function RootLayout({
                 </Link>
                 <Link
                   href="/dashboard"
-                  className="text-slate-300 hover:text-white transition-colors"
+                  className="text-slate-300 hover:text-white inline-flex items-center gap-1.5 transition-colors group"
                 >
-                  Workspace
+                  <LayoutDashboard className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                  <span>Workspace</span>
                 </Link>
                 <Link
                   href="/pricing"
-                  className="text-slate-300 hover:text-white transition-colors"
+                  className="text-slate-300 hover:text-white inline-flex items-center gap-1.5 transition-colors group"
                 >
-                  Pricing
+                  <CreditCard className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-400 transition-colors" />
+                  <span>Pricing</span>
                 </Link>
               </nav>
 

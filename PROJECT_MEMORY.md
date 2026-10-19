@@ -421,6 +421,8 @@ profmatch-ai/
 - **Single High-Contrast Action CTA (`components/navigation/navbar-auth-controls.tsx`):**
   - Removed redundant `Sign In` text link from the top navigation.
   - Retained a single, prominent `Get Started` button styled with glowing emerald gradients and micro-interactions. Clicking opens the universal auth modal allowing immediate access to both Sign In and Sign Up.
+- **Harmonious Visual Iconography:**
+  - Added matching, uniformly styled icons (3.5x3.5, subtle slate-to-emerald transition) for each of the 4 pillars: `Search` (Find Professors), `Rocket` (AutoPilot), `LayoutDashboard` (Workspace), and `CreditCard` (Pricing).
 - **Verification:**
   - TypeScript zero-error clean compilation (`npx tsc --noEmit`).
 

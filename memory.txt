@@ -206,7 +206,8 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Eliminated hardcoded "Alex Vance" demo persona: Replaced mock persona fallback with dynamic student name, degree, and university resolved from session and user profile.
   - Added Full Name Profile Management: Researcher Profile (/profile) and components/profile/avatar-section.tsx now provide a direct editable input for full name that syncs across local storage, React context, and Supabase database.
 • Navigation Modernization & Minimalist SaaS Aesthetic (2026-10-19):
-  - Streamlined desktop navigation bar in app/layout.tsx down to 4 focused items (Find Professors, AutoPilot [AI], Workspace, Pricing) eliminating icon inconsistency and clutter.
+  - Streamlined desktop navigation bar in app/layout.tsx down to 4 focused items (Find Professors, AutoPilot [AI], Workspace, Pricing) eliminating clutter.
+  - Added cohesive, uniformly styled signs/icons for all 4 items (Search, Rocket, LayoutDashboard, CreditCard).
   - Removed redundant "Sign In" link in components/navigation/navbar-auth-controls.tsx, retaining single high-contrast "Get Started" CTA button.
   - Header updated with sleek glassmorphism border and blur backdrop-blur-xl.
 ====================================================================
