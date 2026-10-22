@@ -1,4 +1,5 @@
-import { discoverFacultyByKeywords } from '@/lib/services/professor-service';
+import { discoverFacultyByKeywords, upsertProfessorsBatch } from '@/lib/services/professor-service';
+import { mockDb } from '@/lib/supabase/mock-db';
 
 export interface ExtractedCVProfile {
   candidateName: string;
@@ -33,11 +34,81 @@ export interface CVMatchResponse {
 }
 
 /**
+ * Heuristic fallback parser when AI is unreachable
+ */
+function extractProfileHeuristically(cvText: string): ExtractedCVProfile {
+  const lines = cvText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  
+  // Extract candidate name from top lines (skip generic title lines)
+  let candidateName = 'Applicant Researcher';
+  const ignoredHeaderWords = ['resume', 'curriculum', 'vitae', 'cv', 'page', 'email', 'phone', 'contact'];
+  for (const line of lines.slice(0, 5)) {
+    const lower = line.toLowerCase();
+    if (!ignoredHeaderWords.some(w => lower.includes(w)) && /^[A-Z][a-zA-Z\s\-'.]{2,40}$/.test(line)) {
+      candidateName = line;
+      break;
+    }
+  }
+
+  // Detect target degree
+  let targetDegree = 'PhD';
+  const lowerText = cvText.toLowerCase();
+  if (lowerText.includes('postdoc') || lowerText.includes('post-doc') || lowerText.includes('postdoctoral')) {
+    targetDegree = 'Postdoc';
+  } else if (lowerText.includes('master') || lowerText.includes('m.s.') || lowerText.includes('msc')) {
+    targetDegree = "Master's";
+  }
+
+  // Detect technical skills
+  const commonSkills = [
+    'Python', 'PyTorch', 'TensorFlow', 'C++', 'Java', 'R', 'MATLAB', 'SQL',
+    'Git', 'Docker', 'Kubernetes', 'Linux', 'React', 'Node.js', 'Next.js',
+    'TypeScript', 'JavaScript', 'AWS', 'GCP', 'Azure', 'ROS', 'OpenCV',
+    'Keras', 'Scikit-Learn', 'Pandas', 'NumPy', 'Jupyter', 'Linux'
+  ];
+  const matchedSkills = commonSkills.filter(s => {
+    const reg = new RegExp(`\\b${s.replace('+', '\\+')}\\b`, 'i');
+    return reg.test(cvText);
+  });
+  const technicalSkills = matchedSkills.length >= 3 ? matchedSkills.slice(0, 8) : ['Python', 'PyTorch', 'Data Analysis', 'Git'];
+
+  // Detect academic fields
+  const commonFields = [
+    'Artificial Intelligence', 'Machine Learning', 'Computer Science', 'Computer Vision',
+    'Natural Language Processing', 'Data Science', 'Bioinformatics', 'Robotics',
+    'Cybersecurity', 'Software Engineering', 'Quantum Computing', 'Information Systems'
+  ];
+  const matchedFields = commonFields.filter(f => lowerText.includes(f.toLowerCase()));
+  const primaryResearchFields = matchedFields.length > 0 ? matchedFields.slice(0, 4) : ['Computer Science', 'Artificial Intelligence'];
+
+  const keyResearchTopics = primaryResearchFields.length > 0
+    ? primaryResearchFields.slice(0, 3)
+    : ['Machine Learning', 'Computational Analysis'];
+
+  return {
+    candidateName,
+    targetDegree,
+    currentDegree: 'Degree Candidate',
+    primaryResearchFields,
+    technicalSkills,
+    keyResearchTopics,
+    searchKeywords: primaryResearchFields.slice(0, 3),
+    profileSummary: `Researcher with background in ${primaryResearchFields.join(', ')} and expertise in ${technicalSkills.slice(0, 3).join(', ')} seeking academic mentorship.`
+  };
+}
+
+/**
  * Extracts student profile from CV text using Google Gemini
  */
 async function extractProfileWithGemini(cvText: string): Promise<ExtractedCVProfile> {
   const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
-  const candidateModels = [process.env.AI_MODEL || 'gemini-1.5-pro', 'gemini-flash-latest'];
+  const candidateModels = [
+    process.env.AI_MODEL || 'gemini-3.5-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+    'gemini-flash-lite-latest',
+  ];
 
   const prompt = `You are an expert Ivy-League and global academic admissions evaluator. Analyze this student CV / Resume text and extract a structured researcher profile in JSON:
 
@@ -86,17 +157,8 @@ ${cvText.slice(0, 7000)}`;
     }
   }
 
-  // Fallback profile extractor
-  return {
-    candidateName: 'Graduate Researcher',
-    targetDegree: 'PhD',
-    currentDegree: 'Bachelor of Science in Engineering',
-    primaryResearchFields: ['Artificial Intelligence', 'Computer Science', 'Machine Learning'],
-    technicalSkills: ['Python', 'PyTorch', 'TensorFlow', 'Data Analysis', 'Git'],
-    keyResearchTopics: ['Deep Learning', 'Neural Networks', 'Empirical Research'],
-    searchKeywords: ['Machine Learning', 'Computer Science', 'Artificial Intelligence'],
-    profileSummary: 'Motivated researcher with strong foundation in computational methodologies seeking doctoral research mentorship.',
-  };
+  // Fallback heuristic profile extractor
+  return extractProfileHeuristically(cvText);
 }
 
 /**
@@ -150,7 +212,30 @@ export async function matchProfessorsFromCV(
     }
   }
 
-  const allFaculty = Array.from(mergedProfs.values());
+  let allFaculty = Array.from(mergedProfs.values());
+
+  // Fallback to local verified registry if live search returned 0 items
+  if (allFaculty.length === 0) {
+    mockDb.loadFromDisk();
+    const fallbackList = mockDb.professors.filter((p) => {
+      const pText = `${p.name} ${p.primary_discipline || ''} ${p.department_name || ''} ${(p.research_interests || []).join(' ')}`.toLowerCase();
+      return (
+        profile.primaryResearchFields.some((f) => pText.includes(f.toLowerCase())) ||
+        profile.searchKeywords.some((k) => pText.includes(k.toLowerCase()))
+      );
+    });
+    const pool = fallbackList.length > 0 ? fallbackList : mockDb.professors;
+    allFaculty = pool.slice(0, limit);
+  }
+
+  // CRITICAL: Persist all matched faculty into mockDb and Supabase PostgreSQL
+  if (allFaculty.length > 0) {
+    try {
+      await upsertProfessorsBatch(allFaculty);
+    } catch (upsertErr) {
+      console.warn('[CV MATCH FACULTY PERSIST NOTICE]', upsertErr);
+    }
+  }
 
   // 4. Calculate research alignment score and reasoning for each professor
   const matches: MatchedProfessorResult[] = allFaculty.map((prof, index) => {
