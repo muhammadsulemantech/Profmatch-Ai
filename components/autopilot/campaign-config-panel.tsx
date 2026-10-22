@@ -19,6 +19,8 @@ import {
   Zap,
   Lock,
   AlertTriangle,
+  Minus,
+  Plus,
 } from 'lucide-react';
 
 interface CountryOption {
@@ -117,6 +119,10 @@ export function CampaignConfigPanel({
 }: CampaignConfigPanelProps) {
   const [isDragging, setIsDragging] = useState(false);
   const remainingQuota = Math.max(0, maxBatchCap - usedCount);
+  const isQuotaExhausted = maxBatchCap > 0 && remainingQuota <= 0;
+  const effectiveIsLocked = isLocked || maxBatchCap <= 0 || isQuotaExhausted;
+  const effectiveMax = effectiveIsLocked ? 0 : Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap));
+
   return (
     <div className="space-y-6">
       {/* Campaign Configuration Form */}
@@ -130,7 +136,7 @@ export function CampaignConfigPanel({
 
         <div className="space-y-4 text-xs">
           {/* Active Subscription & Entitlements Badge */}
-          {isLocked ? (
+          {maxBatchCap <= 0 ? (
             <div className="p-3.5 bg-amber-500/10 border border-amber-500/30 rounded-xl space-y-2">
               <div className="flex items-center justify-between">
                 <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5">
@@ -165,9 +171,39 @@ export function CampaignConfigPanel({
                 </span>
               </div>
               <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                <span>Drafted This Cycle: <strong className="text-white">{usedCount}</strong> / {maxBatchCap}</span>
-                <span>Remaining: <strong className={remainingQuota > 0 ? 'text-emerald-400' : 'text-rose-400'}>{remainingQuota} Emails</strong></span>
+                <span>
+                  Drafted This Cycle: <strong className="text-white">{usedCount}</strong> / {maxBatchCap}
+                </span>
+                <span>
+                  Remaining:{' '}
+                  <strong className={remainingQuota > 0 ? 'text-emerald-400' : 'text-rose-400'}>
+                    {remainingQuota} Emails{remainingQuota <= 0 ? ' (Limit Reached)' : ''}
+                  </strong>
+                </span>
               </div>
+            </div>
+          )}
+
+          {/* Locked Notification when Plan Cap Reached */}
+          {isQuotaExhausted && (
+            <div className="p-3.5 bg-rose-500/10 border border-rose-500/30 rounded-xl space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-rose-400 text-xs flex items-center gap-1.5">
+                  <Lock className="w-3.5 h-3.5" /> AutoPilot Locked — Plan Limit Reached
+                </span>
+                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/15 text-rose-300 border border-rose-500/30 font-mono">
+                  {usedCount} / {maxBatchCap} Used
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                You have reached your limit of {maxBatchCap} AutoPilot emails for this cycle on the {planName} plan. AutoPilot is now locked to protect your account. Upgrade your subscription to unlock additional emails.
+              </p>
+              <Link
+                href="/pricing"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs transition-colors"
+              >
+                <Zap className="w-3 h-3" /> Upgrade Plan to Unlock More Emails
+              </Link>
             </div>
           )}
 
@@ -189,7 +225,7 @@ export function CampaignConfigPanel({
             </label>
             <select
               value={targetCountry}
-              disabled={isRunning}
+              disabled={isRunning || effectiveIsLocked}
               onChange={(e) => setTargetCountry(e.target.value)}
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
             >
@@ -209,7 +245,7 @@ export function CampaignConfigPanel({
               </label>
               <select
                 value={targetDegree}
-                disabled={isRunning}
+                disabled={isRunning || effectiveIsLocked}
                 onChange={(e) => setTargetDegree(e.target.value)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               >
@@ -220,19 +256,62 @@ export function CampaignConfigPanel({
               </select>
             </div>
 
+            {/* Batch Limit Number Stepper (Second Circle) */}
             <div>
-              <label className="block text-slate-300 font-semibold mb-1">Batch Limit</label>
-              <select
-                value={batchLimit}
-                disabled={isRunning}
-                onChange={(e) => setBatchLimit(Number(e.target.value))}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-emerald-400" /> Batch Limit
+                </label>
+                <span className="text-[10px] text-slate-400 font-mono">
+                  Max: <strong className={effectiveIsLocked ? 'text-slate-500' : 'text-emerald-400'}>{effectiveIsLocked ? 0 : effectiveMax}</strong>
+                </span>
+              </div>
+              <div
+                className={`flex items-center bg-slate-950 border rounded-xl overflow-hidden transition-colors ${
+                  effectiveIsLocked
+                    ? 'border-slate-800 opacity-50'
+                    : 'border-slate-800 focus-within:border-emerald-500'
+                }`}
               >
-                <option value={5}>5 Professors (Test Run)</option>
-                <option value={10}>10 Professors (Standard)</option>
-                <option value={20}>20 Professors (Targeted)</option>
-                <option value={35}>35 Professors (Aggressive)</option>
-              </select>
+                <button
+                  type="button"
+                  disabled={isRunning || effectiveIsLocked || batchLimit <= 1}
+                  onClick={() => setBatchLimit(Math.max(1, batchLimit - 1))}
+                  className="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  title="Decrease batch limit"
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  max={effectiveMax}
+                  value={effectiveIsLocked ? 0 : batchLimit}
+                  disabled={isRunning || effectiveIsLocked || effectiveMax <= 0}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (isNaN(val)) {
+                      setBatchLimit(1);
+                    } else if (val > effectiveMax) {
+                      setBatchLimit(effectiveMax);
+                    } else if (val < 1) {
+                      setBatchLimit(1);
+                    } else {
+                      setBatchLimit(val);
+                    }
+                  }}
+                  className="w-full py-2 text-center bg-transparent text-xs text-emerald-400 font-bold focus:outline-none disabled:opacity-50 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  type="button"
+                  disabled={isRunning || effectiveIsLocked || batchLimit >= effectiveMax}
+                  onClick={() => setBatchLimit(Math.min(effectiveMax, batchLimit + 1))}
+                  className="px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-800 transition-colors disabled:opacity-30 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                  title="Increase batch limit"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
           </div>
 
@@ -241,7 +320,7 @@ export function CampaignConfigPanel({
             <input
               type="text"
               value={discipline}
-              disabled={isRunning}
+              disabled={isRunning || effectiveIsLocked}
               onChange={(e) => setDiscipline(e.target.value)}
               placeholder="e.g. Artificial Intelligence, Bioinformatics, Quantum Physics"
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
@@ -255,42 +334,21 @@ export function CampaignConfigPanel({
             <textarea
               rows={2}
               value={keywordsText}
-              disabled={isRunning}
+              disabled={isRunning || effectiveIsLocked}
               onChange={(e) => setKeywordsText(e.target.value)}
               placeholder="e.g. LLM Reasoning, Graph Neural Networks, Multi-Hop QA"
               className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 leading-relaxed disabled:opacity-50"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-slate-300 font-semibold mb-1 flex items-center justify-between">
-                <span className="flex items-center gap-1.5">
-                  <Zap className="w-3.5 h-3.5 text-emerald-400" /> Batch Emails
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono">Plan Cap: {maxBatchCap}</span>
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap))}
-                value={batchLimit}
-                disabled={isRunning || isLocked || remainingQuota <= 0}
-                onChange={(e) => {
-                  const val = Math.max(1, Math.min(Number(e.target.value), Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap))));
-                  setBatchLimit(val);
-                }}
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-emerald-400 font-bold focus:outline-none focus:border-emerald-500 disabled:opacity-50"
-              />
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
                 <Clock className="w-3.5 h-3.5 text-emerald-400" /> Anti-Spam Delay
               </label>
               <select
                 value={cooldownSec}
-                disabled={isRunning || isLocked}
+                disabled={isRunning || effectiveIsLocked}
                 onChange={(e) => setCooldownSec(Number(e.target.value))}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               >
@@ -304,7 +362,7 @@ export function CampaignConfigPanel({
               <label className="block text-slate-300 font-semibold mb-1">Outreach Tone</label>
               <select
                 value={tone}
-                disabled={isRunning || isLocked}
+                disabled={isRunning || effectiveIsLocked}
                 onChange={(e) => setTone(e.target.value as any)}
                 className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
               >
@@ -453,8 +511,8 @@ export function CampaignConfigPanel({
               type="checkbox"
               checked={hasAuthorized}
               onChange={(e) => setHasAuthorized(e.target.checked)}
-              disabled={isRunning}
-              className="mt-0.5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 shrink-0"
+              disabled={isRunning || effectiveIsLocked}
+              className="mt-0.5 rounded border-slate-700 bg-slate-900 text-emerald-500 focus:ring-emerald-500 shrink-0 disabled:opacity-50"
             />
             <span className="text-slate-300 leading-relaxed text-[11px]">
               <strong className="text-white">One-Time Safeguard Consent:</strong> I authorize ProfMatch AI to
@@ -467,7 +525,7 @@ export function CampaignConfigPanel({
         {/* Action Trigger Buttons */}
         <div className="pt-2">
           {engineStatus === 'IDLE' || engineStatus === 'COMPLETED' ? (
-            isLocked ? (
+            maxBatchCap <= 0 ? (
               <Link
                 href="/pricing"
                 className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
@@ -475,27 +533,24 @@ export function CampaignConfigPanel({
                 <Lock className="w-4 h-4" />
                 Upgrade to Unlock AutoPilot Engine
               </Link>
-            ) : remainingQuota <= 0 ? (
+            ) : effectiveIsLocked ? (
               <div className="space-y-2">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full py-3 rounded-xl bg-slate-800 text-slate-400 font-extrabold text-xs flex items-center justify-center gap-2 cursor-not-allowed opacity-60"
+                <Link
+                  href="/pricing"
+                  className="w-full py-3 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                 >
-                  <AlertTriangle className="w-4 h-4 text-amber-400" />
-                  AutoPilot Limit Reached ({usedCount}/{maxBatchCap} Emails)
-                </button>
-                <div className="text-center">
-                  <Link href="/pricing" className="text-emerald-400 text-xs font-semibold hover:underline">
-                    Upgrade Subscription for Additional AutoPilot Emails &rarr;
-                  </Link>
-                </div>
+                  <Lock className="w-4 h-4" />
+                  AutoPilot Locked ({usedCount}/{maxBatchCap} Emails Used) — Upgrade Plan
+                </Link>
+                <p className="text-[11px] text-center text-slate-400">
+                  You have drafted all {maxBatchCap} allowed emails for this cycle. Upgrade plan to unlock more.
+                </p>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={onLaunch}
-                disabled={!hasAuthorized || batchLimit <= 0}
+                disabled={!hasAuthorized || batchLimit <= 0 || effectiveIsLocked}
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02] disabled:opacity-40 disabled:hover:scale-100 cursor-pointer"
               >
                 <FileText className="w-4 h-4 text-slate-950" />

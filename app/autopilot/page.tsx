@@ -30,11 +30,20 @@ export default function AutoPilotPage() {
 
   const userTier = (user?.tier || (user as any)?.plan_tier || 'FREE') as PlanTier;
   const [planConfig, setPlanConfig] = useState<PlanConfig>(() => getPlanConfig(userTier));
-  const [autopilotUsed, setAutopilotUsed] = useState<number>(() => Number(user?.usage?.autopilot_count || 0));
+  const [autopilotUsed, setAutopilotUsed] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const cached = localStorage.getItem(`profmatch_autopilot_count_${userId}`);
+      if (cached !== null) {
+        const val = parseInt(cached, 10);
+        if (!isNaN(val) && val >= 0) return val;
+      }
+    }
+    return Number(user?.usage?.autopilot_count || 0);
+  });
 
   const maxAllowedCap = Number(planConfig?.autopilotBatchLimit !== undefined ? planConfig.autopilotBatchLimit : 0);
-  const isLocked = maxAllowedCap <= 0;
   const remainingQuota = Math.max(0, maxAllowedCap - autopilotUsed);
+  const isLocked = maxAllowedCap <= 0 || remainingQuota <= 0;
 
   const countries = React.useMemo(() => getAllCountries(), []);
 
@@ -43,7 +52,11 @@ export default function AutoPilotPage() {
   const [targetDegree, setTargetDegree] = useState('PhD');
   const [discipline, setDiscipline] = useState('Artificial Intelligence & NLP');
   const [keywordsText, setKeywordsText] = useState('Large Language Models, AI Reasoning, Multi-Agent Systems');
-  const [batchLimit, setBatchLimit] = useState<number>(() => (maxAllowedCap > 0 ? Math.min(10, maxAllowedCap) : 5));
+  const [batchLimit, setBatchLimit] = useState<number>(() => {
+    const rem = Math.max(0, maxAllowedCap - autopilotUsed);
+    if (rem > 0) return Math.min(10, rem);
+    return maxAllowedCap > 0 ? Math.min(10, maxAllowedCap) : 5;
+  });
   const [cooldownSec, setCooldownSec] = useState<number>(60);
   const [tone, setTone] = useState<'academic' | 'concise' | 'inquisitive'>('academic');
 
@@ -107,9 +120,15 @@ export default function AutoPilotPage() {
             setPlanConfig(freshCfg);
             const used = Number(data.user.usage?.autopilot_count || 0);
             setAutopilotUsed(used);
+            if (typeof window !== 'undefined') {
+              localStorage.setItem(`profmatch_autopilot_count_${userId}`, String(used));
+            }
             const cap = Number(freshCfg.autopilotBatchLimit !== undefined ? freshCfg.autopilotBatchLimit : 0);
-            if (cap > 0) {
-              setBatchLimit((prev) => Math.min(prev, cap));
+            const rem = Math.max(0, cap - used);
+            if (rem > 0) {
+              setBatchLimit((prev) => Math.max(1, Math.min(prev, rem)));
+            } else {
+              setBatchLimit(1);
             }
           }
         }
@@ -119,7 +138,7 @@ export default function AutoPilotPage() {
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user, userId]);
 
   // Load profile defaults & saved CV from localStorage
   useEffect(() => {
@@ -407,7 +426,13 @@ export default function AutoPilotPage() {
         const isSavedToGmail = Boolean(savePayload?.savedToGmail);
 
         completedCount += 1;
-        setAutopilotUsed((prev) => prev + 1);
+        setAutopilotUsed((prev) => {
+          const next = prev + 1;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(`profmatch_autopilot_count_${userId}`, String(next));
+          }
+          return next;
+        });
         setCurrentProgress(completedCount);
 
         const newRecord: ContactedProfRecord = {
