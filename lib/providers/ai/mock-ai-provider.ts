@@ -6,6 +6,7 @@ import {
   ResearchMatchAnalysisOutput,
   ReplyAnalysisOutput,
 } from './ai-provider.interface';
+import { cleanProfessorSalutation } from '@/lib/templates/email-templates';
 
 export class MockAIProvider implements AIProvider {
   name = 'Global Academic AI Engine (Field-Agnostic & Source-Grounded)';
@@ -16,8 +17,8 @@ export class MockAIProvider implements AIProvider {
     const topProject = prompt.studentProjects[0]?.title ||
       (prompt.studentThesis ? `Thesis: ${prompt.studentThesis}` : `Research Investigation in ${prompt.studentInterests[0] || 'Advanced Studies'}`);
 
-    const cleanTitle = prompt.professorTitle || 'Professor';
-    const cleanLastName = prompt.professorName.replace(/^(Dr\.|Prof\.|Professor)\s+/i, '');
+    const cleanTitle = 'Professor';
+    const { lastName: cleanLastName } = cleanProfessorSalutation(prompt.professorName);
     const cleanDept = prompt.professorDepartment || 'Graduate Faculty';
 
     // Detect academic discipline context

@@ -1,6 +1,7 @@
 import { getAIProvider, GroundedEmailPrompt, ResearchMatchAnalysisPrompt } from '@/lib/providers/ai';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { Professor, ResearchMatch } from '@/types/database';
+import { cleanProfessorSalutation } from '@/lib/templates/email-templates';
 
 // 1. Global University Discovery Agent
 export class UniversityDiscoveryAgent {
@@ -251,9 +252,9 @@ export class EmailQualityAgent {
 // 8. Polite Follow-up Agent
 export class FollowUpAgent {
   static generateFollowUp(professorName: string, originalSubject: string, stage: number = 1) {
-    const cleanName = professorName.replace(/^(Dr\.|Prof\.|Professor)\s+/i, '');
+    const { salutation } = cleanProfessorSalutation(professorName);
     const subject = `Re: ${originalSubject}`;
-    const body = `Dear Professor ${cleanName},\n\nI hope this brief note finds you well amid the semester.\n\nI am following up on my previous inquiry regarding prospective graduate supervision for the upcoming admissions cycle. I remain very eager about the opportunity to contribute to your ongoing research initiatives.\n\nPlease let me know if any additional materials or project summaries would be helpful.\n\nThank you very much for your time.\n\nSincerely,`;
+    const body = `${salutation}\n\nI hope this brief note finds you well amid the semester.\n\nI am following up on my previous inquiry regarding prospective graduate supervision for the upcoming admissions cycle. I remain very eager about the opportunity to contribute to your ongoing research initiatives.\n\nPlease let me know if any additional materials or project summaries would be helpful.\n\nThank you very much for your time.\n\nSincerely,`;
     return { subject, body };
   }
 }

@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         : research?.research_interests || ['Artificial Intelligence', 'Computational Methods'];
     const studentUni = academic?.university || 'my undergraduate institution';
 
-    const { salutation, cleanName } = cleanProfessorSalutation(professor.name);
+    const { salutation, cleanName, lastName } = cleanProfessorSalutation(professor.name);
     const profUni = professor.university_name || 'your institution';
     const profDept = professor.primary_discipline || professor.department_name || 'your research group';
     const profInterests =
@@ -115,10 +115,10 @@ export async function POST(request: NextRequest) {
     // 1. Attempt generation via Live Google Gemini API with model fallback
     const geminiApiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY || '';
     const candidateModels = [
-      process.env.AI_MODEL || 'gemini-flash-latest',
-      'gemini-flash-latest',
+      process.env.AI_MODEL || 'gemini-3.5-flash',
+      'gemini-3.5-flash',
       'gemini-3.5-flash-lite',
-      'gemini-2.5-flash',
+      'gemini-3.8-flash',
     ].filter((m, i, arr) => m && arr.indexOf(m) === i);
 
     let generatedSubject = '';
@@ -134,7 +134,7 @@ Student's Specific Keywords & Background: ${researchKeywords.join(', ')}
 Student University Background: ${studentUni}
 
 CRITICAL RULES:
-1. Address the professor respectfully as "${salutation}".
+1. Academic Salutation: You MUST open with "${salutation}". In global academic convention, professors are addressed by their family/last name ("Dear Professor ${lastName},"). Never address them casually, by first name, or as "Dear Professor ${cleanName},".
 2. Do NOT use generic template wording. Write a genuine, engaging, human email tailored specifically to this professor's field.
 3. Reference the professor's research topics (${profInterests}) and paper/focus ("${profPaper}") naturally.
 4. Show how the student's interest in ${researchKeywords.join(', ')} directly aligns with this professor's work.

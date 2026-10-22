@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import { useAuth } from '@/lib/auth/auth-context';
+import { cleanProfessorSalutation } from '@/lib/templates/email-templates';
 
 interface EmailReviewModalProps {
   isOpen: boolean;
@@ -68,6 +69,7 @@ export default function EmailReviewModal({
   } | null>(null);
 
   const [copied, setCopied] = useState(false);
+  const [isAiPersonalizing, setIsAiPersonalizing] = useState(false);
 
   // Initialize data on modal open
   useEffect(() => {
@@ -75,7 +77,13 @@ export default function EmailReviewModal({
       const cleanProfEmail = professor.email || 'faculty@university.edu';
       setToEmail(cleanProfEmail);
 
-      const defaultSubject = initialSubject || `Prospective MS/PhD Research Student — Interested in ${professor.primary_discipline || 'Academic Research'}`;
+      const { salutation, cleanName, lastName } = cleanProfessorSalutation(professor?.name);
+      const profUni = professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university');
+      const profDept = professor.primary_discipline || professor.department_name || 'your research department';
+      const topPaper = professor.publications?.[0]?.title || (professor as any).recent_papers?.[0]?.title;
+      const interests = (professor.research_interests || []).slice(0, 3).join(', ');
+
+      const defaultSubject = initialSubject || `Prospective MS/PhD Research Student — Alignment with your work in ${interests.split(',')[0] || profDept}`;
       setSubject(defaultSubject);
 
       let senderName = user?.full_name || '';
@@ -107,8 +115,16 @@ export default function EmailReviewModal({
         defaultBody = defaultBody
           .replace(/\[Your Name\]/g, senderName)
           .replace(/Alex Vance/g, senderName);
+        // Standardize any salutation to Dear Professor [LastName],
+        if (/^Dear\s+Professor\b/i.test(defaultBody)) {
+          defaultBody = defaultBody.replace(/^Dear\s+Professor[^,\n]*[,:]/i, salutation);
+        }
       } else {
-        defaultBody = `Dear Professor ${professor.name},\n\nI hope this email finds you well.\n\nI have been closely following your research group's work in ${professor.primary_discipline || 'your department'} at ${professor.university_name || (typeof professor.university === 'string' ? professor.university : 'your university')}. I am writing to express my strong interest in joining your lab as a prospective graduate research assistant.\n\nMy academic background and research interests align strongly with your publications. I would appreciate the opportunity to discuss any open positions in your lab for the upcoming term.\n\nThank you for your time and consideration. I have attached my CV for your review.\n\nSincerely,\n${senderName}`;
+        const paperCitation = topPaper
+          ? `Having closely reviewed your recent contributions, particularly "${topPaper}," I was deeply impressed by your lab's methodologies in ${interests || profDept}.`
+          : `I have been following your scholarly work in ${interests || profDept} at ${profUni} with great admiration.`;
+
+        defaultBody = `${salutation}\n\nI hope this email finds you having a productive semester amid your teaching and research responsibilities at ${profUni}.\n\nI am writing to express my strong interest in joining your research group as a prospective graduate research assistant. ${paperCitation}\n\nMy research background focuses on computational methodologies and empirical problem-solving, and I am very keen to direct my graduate studies toward the questions your lab is actively investigating.\n\nI have attached my academic CV and summary of research for your review. Would you have 10-15 minutes in the coming weeks for a brief introductory conversation regarding prospective student advising in your lab?\n\nThank you very much for your time, scholarship, and consideration.\n\nSincerely,\n${senderName}`;
       }
       setBodyText(defaultBody);
 
@@ -116,6 +132,61 @@ export default function EmailReviewModal({
       checkConnectionStatus();
     }
   }, [isOpen, professor, initialSubject, initialBody, user]);
+
+  const handleAiPersonalize = async () => {
+    setIsAiPersonalizing(true);
+    try {
+      let clientInterests: string[] = [];
+      let targetDegree = 'PhD';
+      if (typeof window !== 'undefined') {
+        const userKey = user ? user.id : 'guest';
+        const profileJson = localStorage.getItem(`profmatch_user_profile_${userKey}`);
+        const interestsJson = localStorage.getItem(`profmatch_user_interests_${userKey}`);
+        if (profileJson) {
+          try {
+            const p = JSON.parse(profileJson);
+            if (p.targetDegree) targetDegree = p.targetDegree;
+          } catch {}
+        }
+        if (interestsJson) {
+          try {
+            const arr = JSON.parse(interestsJson);
+            if (Array.isArray(arr)) clientInterests = arr;
+          } catch {}
+        }
+      }
+
+      const res = await fetch('/api/autopilot/draft-grounded', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          professor: {
+            name: professor.name,
+            university_name: professor.university_name,
+            primary_discipline: professor.primary_discipline,
+            department_name: professor.department_name,
+            research_interests: professor.research_interests,
+            publications: professor.publications || (professor as any).recent_papers,
+          },
+          studentProfile: {
+            targetDegree,
+            researchInterests: clientInterests,
+          },
+          tone: 'academic',
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data?.data?.bodyText) {
+        if (data.data.subject) setSubject(data.data.subject);
+        setBodyText(data.data.bodyText);
+      }
+    } catch (e) {
+      console.warn('AI personalization warning:', e);
+    } finally {
+      setIsAiPersonalizing(false);
+    }
+  };
 
   const checkConnectionStatus = async () => {
     setCheckingStatus(true);
@@ -375,8 +446,29 @@ export default function EmailReviewModal({
 
           {/* Body Field */}
           <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-400 font-semibold">Email Body:</label>
+            <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <label className="text-slate-400 font-semibold">Email Body:</label>
+                <button
+                  type="button"
+                  onClick={handleAiPersonalize}
+                  disabled={isAiPersonalizing}
+                  className="px-2.5 py-0.5 rounded-md bg-emerald-500/15 border border-emerald-500/30 hover:bg-emerald-500/25 text-emerald-300 font-bold text-[10px] flex items-center gap-1 transition-all disabled:opacity-50 shadow-sm"
+                  title="Craft custom outreach email grounded in this professor's research"
+                >
+                  {isAiPersonalizing ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin text-emerald-400" />
+                      <span>Generating with Gemini...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-emerald-400" />
+                      <span>Personalize with AI</span>
+                    </>
+                  )}
+                </button>
+              </div>
               <span className="text-[11px] text-slate-500">
                 {bodyText.trim().split(/\s+/).filter(Boolean).length} words
               </span>

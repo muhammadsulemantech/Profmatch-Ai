@@ -5,6 +5,8 @@
  * when a faculty member has not replied within 5-7 days.
  */
 
+import { cleanProfessorSalutation } from '@/lib/templates/email-templates';
+
 export interface FollowUpRequest {
   professorName: string;
   originalSubject?: string;
@@ -35,17 +37,25 @@ export async function generateSmartFollowUp(
     daysPassed = 6,
   } = params;
 
+  const { salutation, cleanName, lastName } = cleanProfessorSalutation(professorName);
   const apiKey = process.env.AI_API_KEY || process.env.GEMINI_API_KEY;
+  const candidateModels = [
+    process.env.AI_MODEL || 'gemini-3.5-flash',
+    'gemini-3.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
+  ];
 
-  const prompt = `You are an elite academic admissions advisor at MIT/Stanford. Write a polite, gentle, and highly respectful academic follow-up email from a student to a professor.
+  const prompt = `You are an elite academic admissions advisor at MIT/Stanford. Write a polite, gentle, and highly respectful academic follow-up email from a student to Professor ${cleanName}.
 The student sent an initial email ${daysPassed} days ago about potential graduate/PhD advisorship.
 
-Professor: ${professorName}
+Professor: ${cleanName}
 Student: ${studentName} (${studentDegree}, ${studentUniversity})
 Research Topic: ${researchFocus}
 Original Subject: ${originalSubject}
 
-Guidelines:
+CRITICAL RULES:
+- SALUTATION: Always open the email with "${salutation}". In global academia, professors are addressed by their family/last name ("Dear Professor ${lastName},"). Never address them casually or as "Dear Professor ${cleanName},".
 - Length: Concise, under 120 words.
 - Tone: Humble, respectful of professor's busy schedule, not pushy.
 - Mention: Briefly re-iterate specific passion for their lab's research in ${researchFocus}.
@@ -58,43 +68,45 @@ Return ONLY a JSON object:
 }`;
 
   if (apiKey) {
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: prompt }] }],
-            generationConfig: {
-              responseMimeType: 'application/json',
-              temperature: 0.2,
-            },
-          }),
-        }
-      );
+    for (const model of candidateModels) {
+      try {
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              generationConfig: {
+                responseMimeType: 'application/json',
+                temperature: 0.2,
+              },
+            }),
+          }
+        );
 
-      if (response.ok) {
-        const data = await response.json();
-        const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (jsonText) {
-          const parsed = JSON.parse(jsonText);
-          return {
-            subject: parsed.subject || `Re: ${originalSubject}`,
-            bodyText: parsed.bodyText,
-            followUpStep: 1,
-            recommendation: 'Professors typically respond to polite 1st follow-ups within 48 hours.',
-          };
+        if (response.ok) {
+          const data = await response.json();
+          const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (jsonText) {
+            const parsed = JSON.parse(jsonText);
+            return {
+              subject: parsed.subject || `Re: ${originalSubject}`,
+              bodyText: parsed.bodyText,
+              followUpStep: 1,
+              recommendation: 'Professors typically respond to polite 1st follow-ups within 48 hours.',
+            };
+          }
         }
+      } catch {
+        // Fall through to next model or grounded fallback
       }
-    } catch {
-      // Fall through to grounded fallback
     }
   }
 
   // High-standard academic follow-up template fallback
   const cleanSubject = originalSubject.startsWith('Re:') ? originalSubject : `Re: ${originalSubject}`;
-  const fallbackBody = `Dear Professor ${professorName.replace(/^(Dr\.|Prof\.|Professor)\s+/i, '')},
+  const fallbackBody = `${salutation}
 
 I hope this message finds you having a productive week.
 

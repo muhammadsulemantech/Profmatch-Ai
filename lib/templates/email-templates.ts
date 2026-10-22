@@ -5,12 +5,22 @@
 export interface SalutationResult {
   salutation: string;
   cleanName: string;
+  firstName: string;
+  lastName: string;
 }
 
 export function cleanProfessorSalutation(rawName?: string | null): SalutationResult {
-  if (!rawName) return { salutation: 'Dear Professor,', cleanName: 'Professor' };
+  if (!rawName) {
+    return {
+      salutation: 'Dear Professor,',
+      cleanName: 'Professor',
+      firstName: 'Professor',
+      lastName: 'Professor',
+    };
+  }
 
   let clean = rawName.trim();
+  // Strip academic titles and honorific prefixes
   clean = clean
     .replace(
       /^(Full\s+Professor|Associate\s+Professor|Assistant\s+Professor|Distinguished\s+Professor|Chair\s+Professor|Prof\.\s*Dr\.|Professor\s+Dr\.|Prof\.|Dr\.|Professor)\s*/i,
@@ -18,6 +28,9 @@ export function cleanProfessorSalutation(rawName?: string | null): SalutationRes
     )
     .trim();
   clean = clean.replace(/^(&\s*Chair|Chair\s*of|Head\s*of)\s*/i, '').trim();
+
+  // Strip academic suffixes e.g. ", PhD", ", MD", " PhD", " FRS"
+  clean = clean.replace(/,\s*(PhD|Ph\.D\.|MD|M\.D\.|MS|M\.S\.|FRS|O\.B\.E\.|OBE|ScD|DSc)\b/gi, '').trim();
 
   const isDepartmentString =
     clean.toLowerCase().includes('intelligence') ||
@@ -28,19 +41,42 @@ export function cleanProfessorSalutation(rawName?: string | null): SalutationRes
     clean.length > 35;
 
   if (isDepartmentString) {
-    return { salutation: 'Dear Professor,', cleanName: 'Professor' };
+    return {
+      salutation: 'Dear Professor,',
+      cleanName: 'Professor',
+      firstName: 'Professor',
+      lastName: 'Professor',
+    };
   }
 
   const parts = clean.split(/\s+/).filter(Boolean);
   if (parts.length === 1) {
-    return { salutation: `Dear Professor ${parts[0]},`, cleanName: parts[0] };
-  }
-  if (parts.length >= 2) {
-    const lastName = parts[parts.length - 1];
-    return { salutation: `Dear Professor ${lastName},`, cleanName: `${parts[0]} ${lastName}` };
+    return {
+      salutation: `Dear Professor ${parts[0]},`,
+      cleanName: parts[0],
+      firstName: parts[0],
+      lastName: parts[0],
+    };
   }
 
-  return { salutation: 'Dear Professor,', cleanName: 'Professor' };
+  if (parts.length >= 2) {
+    const firstName = parts[0];
+    // In global academia, addressing by family/last name is the gold standard (e.g. "Dear Professor Ng,")
+    const lastName = parts[parts.length - 1];
+    return {
+      salutation: `Dear Professor ${lastName},`,
+      cleanName: `${firstName} ${lastName}`,
+      firstName,
+      lastName,
+    };
+  }
+
+  return {
+    salutation: 'Dear Professor,',
+    cleanName: 'Professor',
+    firstName: 'Professor',
+    lastName: 'Professor',
+  };
 }
 
 export interface GroundedTemplateParams {

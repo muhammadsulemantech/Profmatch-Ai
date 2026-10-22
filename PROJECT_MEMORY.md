@@ -522,10 +522,23 @@ profmatch-ai/
   - **Authentic Faculty Name Validation:** Implemented `isLegitimateFacultyName()` in `tavily-provider.ts` to strictly reject non-person academic terms (machine learning, computer science, department, school, etc.) and scan web snippets for authentic faculty names (`Prof. <Name>`, `Dr. <Name>`), skipping pages where no real person is identified.
   - **Automatic Batch Persistence:** `matchProfessorsFromCV()` now invokes `await upsertProfessorsBatch(allFaculty)` to persist discovered professors in Supabase and local cache.
   - **Session Storage Cache:** `cv-upload-match-modal.tsx` caches all matched faculty in `sessionStorage` on results arrival and upon clicking "View & Draft".
-  - **New API Route & Async Fallback:** Created `app/api/professors/[id]/route.ts` with `getProfessorById` and OpenAlex live lookup fallback, and updated `app/professors/[id]/page.tsx` to query the server before ever setting `isNotFound(true)`.
+### 14.3 Email Personalization & Standard Academic Salutation (`Dear Professor [LastName],`)
+- **Academic Name Resolution (`lib/templates/email-templates.ts`):**
+  - Enhanced `cleanProfessorSalutation()` to extract `firstName` and `lastName` after stripping honorific titles (`Prof.`, `Dr.`, `Professor`, `Distinguished Professor`) and academic suffixes (`, PhD`, `, MD`, `, FRS`).
+  - Formats the universal global academic standard salutation: **`Dear Professor [LastName],`** (e.g. "Dear Professor Ng,", "Dear Professor Jordan,") avoiding awkward greetings like "Dear Professor Andrew Ng," or informal first names.
+- **AI Email Personalization Engine (`app/api/autopilot/draft-grounded/route.ts` & `lib/providers/ai/gemini-provider.ts`):**
+  - Updated candidate models to `gemini-3.5-flash` and `gemini-3.5-flash-lite`.
+  - Added strict prompt rules requiring Gemini to open with `Dear Professor [LastName],` and deeply personalize each email with the professor's specific university, department, publications/paper titles, and research topics.
+  - Automatically correlates the student's project and skills with the professor's ongoing research.
+- **Interactive Review Modal (`components/outreach/email-review-modal.tsx`):**
+  - Replaced generic static 3-sentence template with an automatic personalized draft grounded in the professor's papers, university, department, and student details.
+  - Added a 1-click **"✨ Personalize with AI"** button allowing students to dynamically regenerate a 100% custom Gemini email draft inside the modal anytime.
+- **Follow-up & Agents (`lib/services/followup-service.ts`, `lib/agents/index.ts`, `lib/providers/ai/mock-ai-provider.ts`):**
+  - Standardized all follow-ups and mock generators to use `cleanProfessorSalutation()` and address professors by their last name.
 - **Verification:**
-  - `npm test`: 97/97 tests passing across 11 suites.
-  - `npm run build`: Compiled successfully (75/75 pages and routes generated).
+  - `npm test`: 97/97 tests passing across 11 test suites.
+  - `npm run build`: Successful production build (75/75 routes).
+
 
 
 
