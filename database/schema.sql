@@ -390,6 +390,7 @@ CREATE TABLE IF NOT EXISTS public.usage_records (
     searches_count INTEGER DEFAULT 0 NOT NULL,
     ai_generations_count INTEGER DEFAULT 0 NOT NULL,
     emails_sent_count INTEGER DEFAULT 0 NOT NULL,
+    autopilot_count INTEGER DEFAULT 0 NOT NULL,
     updated_at TIMESTAMPTZ DEFAULT timezone('utc'::text, now()) NOT NULL,
     UNIQUE(user_id, month_year)
 );

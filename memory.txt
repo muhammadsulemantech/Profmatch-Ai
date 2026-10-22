@@ -218,6 +218,11 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Active Grant Detector: Integrated US National Science Foundation (NSF) API (grant-service.ts) and interactive GrantFundingBadge on professor profiles.
   - Smart Follow-Ups: Built Ivy-League follow-up sequencer (followup-service.ts & /api/outreach/generate-followup).
   - Lab Team Discovery: Built lab-team-service.ts and LabTeamSection displaying active PhD and postdoc researchers for inside referrals.
+• AutoPilot Persistent Usage Sync, Quota Lock & Dynamic Batch Stepper (2026-10-22):
+  - Database Schema & Sync: Added autopilot_count to Supabase public.usage_records via DDL migration and schema.sql. Updated incrementUsage in lib/services/db-service.ts to persist autopilot counts to Supabase on draft creation.
+  - Zero-Reset Usage Retention: Synchronized /api/auth/me and app/autopilot/page.tsx with data.user.usage.autopilot_count + client-side cache so counts never reset across logins/refreshes. Set user autopilot_count to 5.
+  - Automatic Quota Lock: AutoPilot automatically freezes and locks when monthly limit is exhausted (remainingQuota <= 0 or usedCount >= maxBatchCap); displays high-visibility rose lock badge and direct /pricing upgrade CTA.
+  - Interactive Number Stepper: Replaced fixed <select> dropdown with [-] / [+] numeric stepper capped strictly at user plan limits (Max: {effectiveMax}), preventing users from setting batches larger than their allowed quota. Removed duplicate batch input in sub-row.
 ====================================================================
 
 

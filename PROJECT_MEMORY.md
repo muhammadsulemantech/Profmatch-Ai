@@ -238,6 +238,26 @@
   - Production build (`npm run build`) compiles cleanly across 69/69 dynamic and static routes with 0 errors.
   - TypeScript types verified (`npx tsc --noEmit`) with 0 errors.
 
+### 💎 Tier 8: AutoPilot Persistent Usage Sync, Quota Lock & Dynamic Batch Stepper (COMPLETED 2026-10-22)
+- **Supabase Database Schema Expansion (`public.usage_records`):**
+  - Executed migration `ALTER TABLE public.usage_records ADD COLUMN IF NOT EXISTS autopilot_count INTEGER DEFAULT 0 NOT NULL;` in Supabase Postgres.
+  - Updated `database/schema.sql` to permanently declare `autopilot_count` in table definitions.
+- **Persistent Server-Side Usage Tracking & Zero-Reset Guarantee:**
+  - Upgraded `incrementUsage` in `lib/services/db-service.ts` to include `autopilot_count` in the live Supabase upsert payload.
+  - Synchronized `/api/auth/me` with `data.user.usage.autopilot_count` so AutoPilot counts never reset on user login, logout, or page refresh.
+  - Reconciled existing user usage records in live Supabase database with previous drafting activity (`autopilot_count = 5`).
+- **Autonomous AutoPilot Quota Lock Guard:**
+  - Enforced rigorous quota locking in `app/autopilot/page.tsx` and `components/autopilot/campaign-config-panel.tsx`: when `usedCount >= maxBatchCap` or `remainingQuota <= 0`, the AutoPilot engine automatically locks.
+  - Form parameters (country, degree, discipline, keywords, anti-spam delay, attachments) are frozen/disabled.
+  - Displays high-visibility rose lock banner (`AutoPilot Locked — Plan Limit Reached`) with direct `/pricing` upgrade button.
+- **Dynamic Batch Limit Number Stepper with Strict Plan Ceiling:**
+  - Replaced static `<select>` dropdown (`10 Professors (Standard)`) with an interactive numeric stepper with `-` decrement, direct numerical input, and `+` increment controls.
+  - Displays dynamic `Max: {effectiveMax}` ceiling strictly bound to the active plan cap and remaining cycle quota (e.g. 120 / 125, or 150 max).
+  - Automatically clamps direct numerical input so users cannot enter or submit a batch size higher than their allowed plan capacity.
+  - Cleaned redundant duplicate input in parameter card, reducing the following row to a 2-column layout (`Anti-Spam Delay` & `Outreach Tone`).
+- **Production Build & Verification:**
+  - Verified full production build (`npm run build`) passing with Exit Code 0 across all 75 static and dynamic pages.
+
 ---
 
 ## 2. Core Credentials & Admin Auth

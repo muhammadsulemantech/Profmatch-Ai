@@ -371,6 +371,7 @@ export async function incrementUsage(
           searches_count: newCounts.searches_count,
           ai_generations_count: newCounts.ai_generations_count,
           emails_sent_count: newCounts.emails_sent_count,
+          autopilot_count: newCounts.autopilot_count,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,month_year' }
