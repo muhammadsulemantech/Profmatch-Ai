@@ -7,6 +7,7 @@ import {
   ReplyAnalysisOutput,
 } from './ai-provider.interface';
 import { MockAIProvider } from './mock-ai-provider';
+import { cleanProfessorSalutation } from '@/lib/templates/email-templates';
 
 export class GeminiProvider implements AIProvider {
   name = 'Google Gemini LLM Engine';
@@ -62,15 +63,19 @@ export class GeminiProvider implements AIProvider {
       throw new Error('AI Provider unconfigured: A valid Gemini API key is required. Please check AI_API_KEY in configuration.');
     }
 
+    const { salutation, cleanName, lastName } = cleanProfessorSalutation(prompt.professorName);
+
     try {
-      const systemInstruction = `You are a Senior Academic Outreach Specialist and Graduate Admissions Advisor.
-Your job is to generate a highly personalized, respectful, research-grounded outreach email from a prospective graduate student to a professor.
-Rules:
-- NEVER hallucinate fake papers, fake citations, or fake degrees.
-- ONLY reference papers provided in the prompt.
-- Connect the student's actual background/projects with the professor's research topics.
-- Keep tone professional, concise, and academic (no spam clichés or flattery).
-- Return valid JSON matching the GroundedEmailOutput interface with fields: subject, bodyText, personalizationNotes (array of strings), sourceReferences (array of {type, title, url, context}).`;
+      const systemInstruction = `You are a Senior Academic Outreach Specialist and Ivy-League Graduate Admissions Advisor.
+Your job is to generate a deeply personalized, respectful, research-grounded outreach email from a prospective graduate student to Professor ${cleanName} at ${prompt.professorUniversity}.
+
+CRITICAL ACADEMIC PROTOCOLS:
+1. FORMAL SALUTATION: Always open the email with "${salutation}". In global academic convention, professors are addressed by their family/last name ("Dear Professor ${lastName},"). Never address them casually, by first name alone, or with generic greetings.
+2. HYPER-PERSONALIZATION: Deeply customize the email to Professor ${cleanName}'s specific research focus in ${prompt.professorDepartment || 'their academic department'} at ${prompt.professorUniversity}.
+3. GROUNDED CITATION: If papers or research publications are provided, reference them naturally (e.g. "Your recent work on..."). NEVER hallucinate fake papers or false citations.
+4. STUDENT-FACULTY SYNERGY: Specifically connect the student's background, thesis, and technical projects to the professor's ongoing research direction.
+5. CONCISE & RESPECTFUL: Keep the tone polite, humble, and concise (under 220 words). Inquire politely about prospective student advising capacity for ${prompt.targetIntake || 'the upcoming academic intake'}.
+6. OUTPUT FORMAT: Return valid JSON matching the GroundedEmailOutput interface with fields: subject, bodyText, personalizationNotes (array of strings explaining how the email was personalized), sourceReferences (array of {type, title, url, context}).`;
 
       const promptText = `${systemInstruction}\n\nStudent Profile:\n${JSON.stringify(prompt, null, 2)}\n\nGenerate outreach email JSON:`;
       const text = await this.callGeminiApi(promptText, 0.3);

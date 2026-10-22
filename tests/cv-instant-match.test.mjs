@@ -40,4 +40,17 @@ test('CV Instant Match & Faculty Retrieval Integrity Suite', async (t) => {
     assert.ok(modalCode.includes('profmatch_current_prof_'), 'Modal must cache individual professors for direct lookup');
     assert.ok(modalCode.includes('profmatch_search_state'), 'Modal must update search state');
   });
+
+  await t.test('6. Email generation standardizes salutation to Dear Professor [LastName] and enforces personalization', () => {
+    const templateCode = fs.readFileSync(path.join(process.cwd(), 'lib', 'templates', 'email-templates.ts'), 'utf-8');
+    const autopilotCode = fs.readFileSync(path.join(process.cwd(), 'app', 'api', 'autopilot', 'draft-grounded', 'route.ts'), 'utf-8');
+    const modalCode = fs.readFileSync(path.join(process.cwd(), 'components', 'outreach', 'email-review-modal.tsx'), 'utf-8');
+
+    assert.ok(templateCode.includes('Dear Professor ${lastName},'), 'Template must use family/last name by default');
+    assert.ok(autopilotCode.includes('cleanProfessorSalutation'), 'AutoPilot must use cleanProfessorSalutation');
+    assert.ok(autopilotCode.includes('lastName'), 'AutoPilot must pass last name in critical rules');
+    assert.ok(modalCode.includes('cleanProfessorSalutation'), 'Email review modal must use cleanProfessorSalutation');
+    assert.ok(modalCode.includes('handleAiPersonalize'), 'Email modal must support AI personalization');
+  });
 });
+
