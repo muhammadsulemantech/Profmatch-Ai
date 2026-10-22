@@ -125,11 +125,65 @@ export async function getProfessorById(id: string): Promise<Professor | null> {
 
   // Fallback to in-memory/local store
   mockDb.loadFromDisk();
-  return (
-    mockDb.professors.find(
-      (p) => p.id === id || p.id.includes(id) || id.includes(p.id) || (p.orcid && id.includes(p.orcid))
-    ) || null
+  const localFound = mockDb.professors.find(
+    (p) => p.id === id || p.id.includes(id) || id.includes(p.id) || (p.orcid && id.includes(p.orcid))
   );
+  if (localFound) return localFound;
+
+  // Live OpenAlex author lookup fallback if ID has OpenAlex author signature
+  const openAlexMatch = id.match(/(?:https:\/\/openalex\.org\/)?(A\d+)/i);
+  if (openAlexMatch) {
+    try {
+      const cleanAuthorId = openAlexMatch[1];
+      const res = await fetch(`https://api.openalex.org/authors/${cleanAuthorId}`, {
+        headers: { 'User-Agent': 'ProfMatch-AI/1.0 (mailto:outreach@profmatch.ai)' },
+      });
+      if (res.ok) {
+        const author = await res.json();
+        const lastInst = author.last_known_institutions?.[0] || {};
+        const concepts = (author.x_concepts || []).slice(0, 5).map((c: any) => c.display_name).filter(Boolean);
+        const topics = (author.topics || []).slice(0, 5).map((t: any) => t.display_name).filter(Boolean);
+        const combinedInterests = Array.from(new Set([...concepts, ...topics]));
+        const academicTitle = (author.works_count || 0) > 50 ? 'Senior Faculty Researcher' : 'Academic Researcher';
+
+        const fetchedProf: Professor = {
+          id: author.id || `https://openalex.org/${cleanAuthorId}`,
+          university_id: lastInst.id || 'univ-unknown',
+          name: author.display_name || 'Academic Faculty Member',
+          title: academicTitle,
+          position: academicTitle,
+          university_name: lastInst.display_name || 'Global Research University',
+          university_country: lastInst.country_code ? lastInst.country_code.toUpperCase() : 'International',
+          university_region: lastInst.geo?.region || 'Academic Region',
+          university_city: lastInst.geo?.city || undefined,
+          email: null,
+          email_verification_status: 'UNVERIFIED',
+          verification_status: 'UNVERIFIED',
+          confidence_score: (author.works_count || 0) > 10 ? 65 : 45,
+          recruiting_status: 'UNKNOWN',
+          recruiting_notes: 'Academic author indexed in OpenAlex graph.',
+          academic_domain: combinedInterests[0] || 'STEM & Technology',
+          primary_discipline: combinedInterests[0] || 'Computer Science & AI',
+          interdisciplinary_tags: combinedInterests.slice(1, 4),
+          research_interests: combinedInterests,
+          lab_url: author.id,
+          google_scholar_url: author.orcid,
+          orcid: author.orcid,
+          profile_url: author.id,
+          keywords: combinedInterests,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        await upsertProfessor(fetchedProf);
+        return fetchedProf;
+      }
+    } catch (openAlexErr) {
+      console.warn('[OPENALEX LIVE FETCH NOTICE]', openAlexErr);
+    }
+  }
+
+  return null;
 }
 
 export async function getAllProfessors(): Promise<Professor[]> {

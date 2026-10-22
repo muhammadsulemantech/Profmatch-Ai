@@ -96,6 +96,21 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
       setMatchData(json.data);
       setStage('results');
 
+      // Cache matched faculty in sessionStorage for instant loading in professor detail view
+      if (typeof window !== 'undefined' && json.data?.matches) {
+        try {
+          json.data.matches.forEach((prof: MatchedProfessorResult) => {
+            sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+          });
+          const searchStateStr = sessionStorage.getItem('profmatch_search_state');
+          const searchState = searchStateStr ? JSON.parse(searchStateStr) : {};
+          searchState.professorsList = [...(searchState.professorsList || []), ...json.data.matches];
+          sessionStorage.setItem('profmatch_search_state', JSON.stringify(searchState));
+        } catch (storageErr) {
+          console.warn('[CV MODAL STORAGE CACHE NOTICE]', storageErr);
+        }
+      }
+
       trackAnalyticsEvent('cv_match_success', {
         candidateName: json.data?.profile?.candidateName,
         matchesCount: json.data?.matches?.length || 0,
@@ -288,8 +303,17 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
 
                   <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
                     <Link
-                      href={`/professors/${prof.id}`}
-                      onClick={onClose}
+                      href={`/professors/${encodeURIComponent(prof.id)}`}
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          try {
+                            sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
+                          } catch (e) {
+                            console.warn('Storage set error:', e);
+                          }
+                        }
+                        onClose();
+                      }}
                       className="flex-1 sm:flex-none px-3.5 py-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition-colors text-center"
                     >
                       View &amp; Draft

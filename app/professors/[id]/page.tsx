@@ -107,8 +107,38 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
       setProf(found);
       setIsNotFound(false);
     } else {
-      setProf(null);
-      setIsNotFound(true);
+      let isMounted = true;
+      fetch(`/api/professors/${encodeURIComponent(profId)}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Not found');
+          return res.json();
+        })
+        .then((data) => {
+          if (isMounted) {
+            if (data?.success && data?.professor) {
+              setProf(data.professor);
+              setIsNotFound(false);
+              if (typeof window !== 'undefined') {
+                try {
+                  sessionStorage.setItem(`profmatch_current_prof_${profId}`, JSON.stringify(data.professor));
+                } catch (e) {}
+              }
+            } else {
+              setProf(null);
+              setIsNotFound(true);
+            }
+          }
+        })
+        .catch(() => {
+          if (isMounted) {
+            setProf(null);
+            setIsNotFound(true);
+          }
+        });
+
+      return () => {
+        isMounted = false;
+      };
     }
   }, [profId]);
 

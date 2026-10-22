@@ -40,6 +40,41 @@ function detectRecruitingStatus(snippet: string): { status: RecruitingStatus; no
   };
 }
 
+function isLegitimateFacultyName(name: string): boolean {
+  if (!name) return false;
+  const cleaned = name.replace(/^(?:Prof\.|Professor|Dr\.)\s+/i, '').trim();
+  const words = cleaned.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 4) return false;
+
+  const forbiddenTerms = [
+    'computer', 'science', 'sciences', 'machine', 'learning', 'artificial', 'intelligence',
+    'deep', 'data', 'software', 'engineering', 'electrical', 'biomedical', 'robotics',
+    'cybersecurity', 'information', 'systems', 'school', 'schools', 'college', 'colleges',
+    'department', 'departments', 'dept', 'center', 'centers', 'institute', 'institutes',
+    'division', 'program', 'programs', 'laboratory', 'laboratories', 'lab', 'labs',
+    'university', 'universities', 'curriculum', 'course', 'courses', 'undergraduate',
+    'graduate', 'phd', 'master', 'masters', 'bachelor', 'bachelors', 'fellowship',
+    'scholarship', 'opportunities', 'syllabus', 'publication', 'publications',
+    'events', 'seminar', 'colloquium', 'workshop', 'conference', 'news', 'about',
+    'contact', 'homepage', 'portal', 'announcements', 'research', 'specialization',
+    'degree', 'degrees', 'admissions', 'faculty', 'staff', 'directory', 'people',
+    'overview', 'search', 'index', 'welcome', 'jobs', 'experts', 'members', 'students',
+    'postdocs', 'alumni', 'hall', 'building', 'campus', 'society', 'foundation', 'group',
+    'network', 'technologies', 'studies', 'affairs', 'office', 'services'
+  ];
+
+  const lower = cleaned.toLowerCase();
+  for (const term of forbiddenTerms) {
+    const regex = new RegExp(`\\b${term}\\b`, 'i');
+    if (regex.test(lower)) {
+      return false;
+    }
+  }
+
+  // Ensure each word starts with a capital letter and only has valid name characters
+  return words.every((w) => /^[A-Z][a-zA-Z\-'.]+$/.test(w));
+}
+
 export class TavilySearchProvider implements SearchProvider {
   name = 'Tavily Live Web & Academic Search Provider';
   private apiKey: string;
@@ -146,29 +181,31 @@ export class TavilySearchProvider implements SearchProvider {
 
         // Extract faculty name from page title or snippet
         const rawTitleSegment = title.split('|')[0].split('-')[0].split(':')[0].trim();
-        const genericKeywords = [
-          'faculty', 'staff', 'department', 'directory', 'home', 'profile',
-          'welcome', 'jobs', 'experts', 'role', 'people', 'overview',
-          'search', 'index', 'admissions', 'academics', 'research lab'
-        ];
-        const isGenericTitle = !rawTitleSegment ||
-          genericKeywords.some(kw => rawTitleSegment.toLowerCase() === kw || rawTitleSegment.toLowerCase().includes(kw)) ||
-          rawTitleSegment.split(/\s+/).length < 2 ||
-          rawTitleSegment.length > 50;
 
         let cleanName = '';
-        if (!isGenericTitle) {
+        if (isLegitimateFacultyName(rawTitleSegment)) {
           cleanName = rawTitleSegment.startsWith('Dr.') || rawTitleSegment.startsWith('Prof.')
             ? rawTitleSegment
             : `Prof. ${rawTitleSegment}`;
         } else {
-          // Attempt extraction of a person name from the snippet
-          const namePattern = /(?:Prof\.|Professor|Dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/;
-          const match = snippet.match(namePattern);
-          if (match && match[1]) {
-            cleanName = `Prof. ${match[1]}`;
+          // Attempt extraction of a person name from the snippet or full title
+          const namePattern = /(?:Prof(?:essor)?\.|Dr\.)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+){1,2})/g;
+          const textToScan = `${title} ${snippet}`;
+          let match: RegExpExecArray | null;
+          let foundName = '';
+
+          while ((match = namePattern.exec(textToScan)) !== null) {
+            const candidate = match[1];
+            if (isLegitimateFacultyName(candidate)) {
+              foundName = candidate;
+              break;
+            }
+          }
+
+          if (foundName) {
+            cleanName = `Prof. ${foundName}`;
           } else {
-            // Cannot identify a specific faculty member — do NOT invent a persona, skip this item
+            // Cannot identify an authentic individual faculty member — do NOT invent a persona, skip this item
             continue;
           }
         }

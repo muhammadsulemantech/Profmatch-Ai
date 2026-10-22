@@ -500,6 +500,34 @@ profmatch-ai/
 - `npx tsc --noEmit`: 0 errors.
 - `npm test`: 97/97 tests passing across 11 test suites.
 
+---
+
+## 14. Tier 14: AutoPilot Usage Persistence & CV Instant Match Fixes (COMPLETED 2026-10-22)
+
+### 14.1 AutoPilot Persistent Usage Count & Plan-Tier Stepper
+- **Database & Usage Persistence:**
+  - Added dedicated `autopilot_count` column to `usage_records` in Supabase PostgreSQL and synced across `lib/services/db-service.ts` and `mockDb`.
+  - AutoPilot usage is permanently tracked and never resets on re-login.
+  - Automatically locks AutoPilot generation when user reaches their plan tier limit.
+- **Batch Stepper:**
+  - Replaced arbitrary numeric inputs with an intuitive interactive increment/decrement stepper bounded strictly by the user's plan allocation (e.g. max 150 for PRO).
+
+### 14.2 CV Instant Matchmaker & Faculty Detail Resolution
+- **Root Cause Analysis:**
+  1. **AI Model Deprecation:** `cv-match-service.ts` was invoking obsolete models (`gemini-1.5-pro` 404, `gemini-flash-latest` 503 high demand), silently falling back to a static "Graduate Researcher" profile.
+  2. **Academic Title Misclassification:** `tavily-provider.ts` lacked discipline/department exclusion keywords, causing university department and program headings (e.g. "Machine Learning", "Computer Science Rachel") to be erroneously prepended with "Prof." into fake personas.
+  3. **Discovered Faculty Persistence Gap:** `cv-match-service.ts` did not persist discovered faculty to the database, `cv-upload-match-modal.tsx` did not cache results in `sessionStorage`, and `app/professors/[id]/page.tsx` had no server-side API fallback route, immediately displaying "Faculty Profile Not Found" (404).
+- **Implemented Fixes:**
+  - **Gemini Model Upgrade:** Updated to high-throughput `gemini-3.5-flash`, `gemini-3.5-flash-lite`, and added a dynamic heuristic CV text fallback extractor to guarantee candidate details (name, degree, fields, skills) are always accurately parsed.
+  - **Authentic Faculty Name Validation:** Implemented `isLegitimateFacultyName()` in `tavily-provider.ts` to strictly reject non-person academic terms (machine learning, computer science, department, school, etc.) and scan web snippets for authentic faculty names (`Prof. <Name>`, `Dr. <Name>`), skipping pages where no real person is identified.
+  - **Automatic Batch Persistence:** `matchProfessorsFromCV()` now invokes `await upsertProfessorsBatch(allFaculty)` to persist discovered professors in Supabase and local cache.
+  - **Session Storage Cache:** `cv-upload-match-modal.tsx` caches all matched faculty in `sessionStorage` on results arrival and upon clicking "View & Draft".
+  - **New API Route & Async Fallback:** Created `app/api/professors/[id]/route.ts` with `getProfessorById` and OpenAlex live lookup fallback, and updated `app/professors/[id]/page.tsx` to query the server before ever setting `isNotFound(true)`.
+- **Verification:**
+  - `npm test`: 97/97 tests passing across 11 suites.
+  - `npm run build`: Compiled successfully (75/75 pages and routes generated).
+
+
 
 
 
