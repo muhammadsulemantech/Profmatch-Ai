@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-11-01 (Tier 15: Global Countries API Integration & Strict Public Security Audit)
+Last Updated: 2026-11-01 (Tier 15: Global Countries API Integration, Security Audit & LLMs.txt AI Discovery)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -227,6 +227,7 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Dedicated API Route: Created GET /api/countries with query search (?q=), code lookup (?code=), and 24h edge revalidation.
   - UI Upgrades: Enriched dropdowns with flag emojis across /search, /profile, /onboarding, and /checkout.
   - Strict Public Security Audit: Verified public/ directory contains only brand assets; .env.local, database/persistent_store.json, and OTP stores are strictly gitignored and never committed; confirmed zero leaks of server secrets (AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, RESEND_API_KEY, SMTP_PASS, GOOGLE_CLIENT_SECRET) in client bundles.
+  - LLMs.txt Standard File & AI Discovery: Implemented public/llms.txt adhering to the official specification for AI search engines & crawlers (ChatGPT, Claude, Perplexity, Gemini); whitelisted /llms.txt in app/robots.ts.
 ====================================================================
 
 

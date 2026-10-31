@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-11-01 (Tier 15: Global Countries API Integration & Strict Public Security Audit)
+> **Last Updated:** 2026-11-01 (Tier 15: Global Countries API Integration, Security Audit & LLMs.txt AI Discovery)
 
 ---
 
@@ -569,6 +569,15 @@ profmatch-ai/
 - **Client Bundle Isolation (`NEXT_PUBLIC_`):**
   - Audited all `NEXT_PUBLIC_` variables: Only public URLs, public OAuth client IDs, and analytics write tokens are exposed to the browser.
   - Master server secrets (`SUPABASE_SERVICE_ROLE_KEY`, `AI_API_KEY`, `STRIPE_SECRET_KEY`, `RESEND_API_KEY`, `SMTP_PASS`, `GOOGLE_CLIENT_SECRET`, `ADMIN_SECRET_PASSPHRASE`) remain 100% isolated to server-side handlers.
+
+### 15.3 LLMs.txt AI Readiness & Web Crawler Integration
+- **LLMs.txt Standard File (`public/llms.txt`):**
+  - Implemented the official `llms.txt` standard specification providing structured markdown context for AI search engines, agents, and LLM web crawlers (ChatGPT, Claude, Perplexity, Cursor, Gemini).
+  - Outlines platform mission, 250 countries discovery, truthful faculty verification, CV matchmaker, NSF grant detection, AutoPilot outreach engine, human-in-the-loop safeguards, and plan tiers.
+- **Search Engine & Robot Policy (`app/robots.ts`):**
+  - Confirmed `app/sitemap.ts` dynamically generates `sitemap.xml` for all static pages and verified faculty.
+  - Added `/llms.txt` to the explicit `allow:` array in `app/robots.ts` ensuring transparent indexing for AI agents and LLM crawlers.
+
 
 
 
