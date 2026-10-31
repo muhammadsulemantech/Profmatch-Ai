@@ -800,8 +800,26 @@ export function syncIncrementUsage(
   metric: 'searches_count' | 'ai_generations_count' | 'emails_sent_count' | 'autopilot_count',
   amount: number = 1
 ): { searches_count: number; ai_generations_count: number; emails_sent_count: number; autopilot_count: number } {
+  const currentMonth = new Date().toISOString().substring(0, 7);
   mockDb.loadFromDisk();
-  mockDb.incrementUsage(userId, metric, amount);
+  const existing = mockDb.usageRecords.find((u) => u.user_id === userId && u.month_year === currentMonth);
+  if (existing) {
+    existing[metric] = (existing[metric] || 0) + amount;
+    existing.updated_at = new Date().toISOString();
+  } else {
+    mockDb.usageRecords.push({
+      id: `usage_${Date.now()}`,
+      user_id: userId,
+      month_year: currentMonth,
+      searches_count: metric === 'searches_count' ? amount : 0,
+      ai_generations_count: metric === 'ai_generations_count' ? amount : 0,
+      emails_sent_count: metric === 'emails_sent_count' ? amount : 0,
+      autopilot_count: metric === 'autopilot_count' ? amount : 0,
+      updated_at: new Date().toISOString(),
+    });
+  }
+  mockDb.persist();
+
   // Fire-and-forget sync to Supabase Postgres
   incrementUsage(userId, metric, amount).catch(() => {});
   return syncGetUsageRecord(userId);
