@@ -9,7 +9,7 @@ import { PlanTier } from '@/types/database';
 export interface SearchFiltersProps {
   country: string;
   onCountryChange: (val: string) => void;
-  countries: Array<{ name: string; code: string }>;
+  countries: Array<{ name: string; code: string; flag?: string }>;
   selectedCountryObj: any;
   region: string;
   onRegionChange: (val: string) => void;
@@ -91,13 +91,13 @@ export function SearchFilters({
           className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
         >
           <option value="Global (All Countries)">
-            Global (All 190+ Countries) {userTier === 'ELITE' ? '✅' : '🔒 Elite'}
+            🌐 Global (All 250 Countries & Territories) {userTier === 'ELITE' ? '✅' : '🔒 Elite'}
           </option>
           {countries.map(c => {
             const isUnlocked = isCountryUnlockedForTier(userTier, c.name);
             return (
               <option key={c.code} value={c.name}>
-                {c.name} {isUnlocked ? '✅' : '🔒 Pro'}
+                {c.flag ? `${c.flag} ` : ''}{c.name} {isUnlocked ? '✅' : '🔒 Pro'}
               </option>
             );
           })}

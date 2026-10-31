@@ -321,13 +321,13 @@ function CheckoutContent() {
                 onChange={e => setSelectedCountry(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-xs text-slate-100 focus:outline-none focus:border-emerald-500 transition-colors"
               >
-                <option value="Pakistan">Pakistan (Local PKR Accounts)</option>
-                <option value="Global">International / Worldwide (USD Accounts)</option>
+                <option value="Pakistan">🇵🇰 Pakistan (Local PKR Accounts)</option>
+                <option value="Global">🌐 International / Worldwide (USD Accounts)</option>
                 {allCountries
                   .filter(c => c.name !== 'Pakistan')
                   .map(c => (
                     <option key={c.code} value={c.name} className="bg-slate-900 text-slate-100">
-                      {c.name} ({c.regionLabel})
+                      {c.flag ? `${c.flag} ` : ''}{c.name} ({c.continent})
                     </option>
                   ))}
               </select>

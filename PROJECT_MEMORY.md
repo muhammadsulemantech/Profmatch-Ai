@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-10-19 (Tier 13: Industry-Ready Growth Suite — PostHog Analytics, QStash Queue, CV Matchmaker, NSF Grant Detector, Follow-Up Sequencer, Lab Team Referral)
+> **Last Updated:** 2026-11-01 (Tier 15: Global Countries API Integration & Strict Public Security Audit)
 
 ---
 
@@ -538,6 +538,38 @@ profmatch-ai/
 - **Verification:**
   - `npm test`: 97/97 tests passing across 11 test suites.
   - `npm run build`: Successful production build (75/75 routes).
+
+---
+
+## 15. Tier 15: Global Countries API Integration & Strict Public Security Audit (COMPLETED 2026-11-01)
+
+### 15.1 Global Countries Architecture Upgrade (`countries.dev/countries`)
+- **API & Data Layer:**
+  - Integrated `https://countries.dev/countries` into `lib/geography/global-geography.ts`.
+  - Generated pure TypeScript dataset `lib/geography/countries-data.ts` containing all **250 sovereign countries and territories**, eliminating previous 37-country hardcoded limitation.
+  - Merged existing academic subdivision hubs (US States, German Bundeslands, Pakistan Provinces, etc.) with the 250 countries dataset to ensure zero breakage of state-level faculty filtering.
+  - Added native Unicode flag emojis (🇺🇸, 🇬🇧, 🇵🇰, 🇩🇪, etc.), SVG/PNG flag URLs, ISO 3166-1 alpha-2/alpha-3 codes, currencies, capitals, and subregions.
+  - Implemented `fetchCountriesFromApi()` with 24-hour edge cache revalidation and instant fallback to embedded `COUNTRIES_DATA`.
+- **Dedicated Route Endpoint (`app/api/countries/route.ts`):**
+  - Created `GET /api/countries` supporting query searches (`?q=`), direct code lookup (`?code=`), and live refresh (`?live=true`).
+- **UI Enhancements Across Discovery & Billing:**
+  - `components/search/search-filters.tsx`: Search filter dropdown now displays native flag emojis for all 250 countries with tier lock badges.
+  - `components/profile/target-destination-section.tsx`: Profile destination selector shows flag emojis and continents.
+  - `app/onboarding/page.tsx`: Student onboarding destination select shows flag emojis.
+  - `app/checkout/page.tsx`: Billing country select renders flags and all 250 options.
+
+### 15.2 Strict Public Security & Secret Isolation Audit
+- **Public Folder (`public/`):**
+  - Confirmed only 9 brand assets (logos, icons, vector graphics, HTML preview) exist. Zero API keys, database dumps, credentials, or `.env` files.
+- **Git & Environmental Security:**
+  - `.env.local` strictly ignored by `.gitignore` (line 26: `.env*.local`) and confirmed never committed to Git history.
+  - Git history (`git log -S`) audited: No occurrences of private credentials (Gemini, Supabase Service Role, Resend, SMTP, Tavily, Google OAuth secret).
+  - `.env.example` verified to contain purely harmless placeholder values.
+  - Local database stores (`database/persistent_store.json`, `pending_otps.json`, `pending_password_resets.json`) confirmed completely ignored by `.gitignore` and unreachable via HTTP routes.
+- **Client Bundle Isolation (`NEXT_PUBLIC_`):**
+  - Audited all `NEXT_PUBLIC_` variables: Only public URLs, public OAuth client IDs, and analytics write tokens are exposed to the browser.
+  - Master server secrets (`SUPABASE_SERVICE_ROLE_KEY`, `AI_API_KEY`, `STRIPE_SECRET_KEY`, `RESEND_API_KEY`, `SMTP_PASS`, `GOOGLE_CLIENT_SECRET`, `ADMIN_SECRET_PASSPHRASE`) remain 100% isolated to server-side handlers.
+
 
 
 

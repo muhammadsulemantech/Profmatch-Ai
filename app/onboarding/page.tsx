@@ -231,7 +231,7 @@ export default function OnboardingPage() {
                 >
                   {countries.map(c => (
                     <option key={c.code} value={c.name}>
-                      {c.name} ({c.continent})
+                      {c.flag ? `${c.flag} ` : ''}{c.name} ({c.continent})
                     </option>
                   ))}
                 </select>

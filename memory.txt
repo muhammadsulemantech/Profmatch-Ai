@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-10-19 (Modern Minimalist Navbar, Streamlined Navigation & Single CTA Polish)
+Last Updated: 2026-11-01 (Tier 15: Global Countries API Integration & Strict Public Security Audit)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -222,7 +222,11 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Database Schema & Sync: Added autopilot_count to Supabase public.usage_records via DDL migration and schema.sql. Updated incrementUsage in lib/services/db-service.ts to persist autopilot counts to Supabase on draft creation.
   - Zero-Reset Usage Retention: Synchronized /api/auth/me and app/autopilot/page.tsx with data.user.usage.autopilot_count + client-side cache so counts never reset across logins/refreshes. Set user autopilot_count to 5.
   - Automatic Quota Lock: AutoPilot automatically freezes and locks when monthly limit is exhausted (remainingQuota <= 0 or usedCount >= maxBatchCap); displays high-visibility rose lock badge and direct /pricing upgrade CTA.
-  - Interactive Number Stepper: Replaced fixed <select> dropdown with [-] / [+] numeric stepper capped strictly at user plan limits (Max: {effectiveMax}), preventing users from setting batches larger than their allowed quota. Removed duplicate batch input in sub-row.
+• Tier 15: Global Countries API Integration & Strict Public Security Audit (2026-11-01):
+  - Global Coverage (250 Countries): Integrated https://countries.dev/countries, generated lib/geography/countries-data.ts, and upgraded lib/geography/global-geography.ts to support 250 sovereign countries and territories with native flag emojis, ISO codes, currencies, and retained academic subdivisions.
+  - Dedicated API Route: Created GET /api/countries with query search (?q=), code lookup (?code=), and 24h edge revalidation.
+  - UI Upgrades: Enriched dropdowns with flag emojis across /search, /profile, /onboarding, and /checkout.
+  - Strict Public Security Audit: Verified public/ directory contains only brand assets; .env.local, database/persistent_store.json, and OTP stores are strictly gitignored and never committed; confirmed zero leaks of server secrets (AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, RESEND_API_KEY, SMTP_PASS, GOOGLE_CLIENT_SECRET) in client bundles.
 ====================================================================
 
 
