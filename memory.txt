@@ -235,6 +235,9 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Application Tracker CSV Export: Added UTF-8 CSV download (handleExportCsv) in tracker header (app/tracker/page.tsx) exporting all saved applications.
   - CV Match Progressive Step Indicator: Added 3-step progress bar (33% -> 68% -> 94%) with live animated checklist (PDF text parsing, Gemini research extraction, lab matching) in components/search/cv-upload-match-modal.tsx.
   - Smart Follow-up Reminders: Added amber "Follow-up Recommended" badges on cards in OUTREACH_SENT stage (app/tracker/page.tsx) for 7+ day follow-up cadence.
+• Tier 15.5: Transactional Email Dynamic Base URL & NXDOMAIN Elimination (2026-11-01):
+  - Fixed NXDOMAIN Error on Password Reset: Replaced static profmatch.ai domain fallback with dynamic request origin resolution (requestOrigin from headers/host/origin) in app/api/auth/forgot-password/route.ts.
+  - Added resolveAppBaseUrl(origin) in lib/email/reset-password-email.ts, lib/email/welcome-email.ts, and lib/email/payment-admin-alert.ts, resolving to active localhost (dev) or live deployment URL (prod/Vercel) automatically.
 ====================================================================
 
 

@@ -610,6 +610,22 @@ profmatch-ai/
   - `npx tsc --noEmit`: 0 errors.
   - `node --test tests/db-service.test.mjs`: 6/6 tests passing (100%).
 
+### 15.5 Transactional Email Dynamic Base URL & NXDOMAIN Elimination (COMPLETED 2026-11-01)
+- **Problem Diagnosed:**
+  - When users requested password resets from local development (`http://localhost:3000`) or staging environments without a configured `NEXT_PUBLIC_APP_URL`, the email link defaulted to hardcoded `https://profmatch.ai`.
+  - Because `profmatch.ai` is not yet configured in public DNS, clicking the reset link caused browser `DNS_PROBE_FINISHED_NXDOMAIN` ("This site can't be reached").
+- **Permanent Dynamic Base URL Resolution:**
+  - Upgraded `app/api/auth/forgot-password/route.ts` to dynamically resolve the client's incoming request origin (`request.headers.get('origin')`, `x-forwarded-host`/`x-forwarded-proto`, `host`, or `nextUrl.origin`).
+  - Added `resolveAppBaseUrl(origin)` in `lib/email/reset-password-email.ts` with strict priority:
+    1. Active HTTP request origin (localhost:3000, Vercel preview, or live custom domain).
+    2. `process.env.NEXT_PUBLIC_APP_URL` (if configured and valid).
+    3. `process.env.VERCEL_URL` (if hosted on Vercel).
+    4. Safe fallback to `http://localhost:3000` (eliminating broken fallback to unresolvable domains).
+  - Updated `lib/email/welcome-email.ts` and `lib/email/payment-admin-alert.ts` to employ the same dynamic URL resolution for dashboard and checkout status URLs.
+- **Verification:**
+  - `tests/password-reset.test.mjs`: All 6 tests passing.
+  - `npx tsc --noEmit`: 0 errors.
+
 
 
 

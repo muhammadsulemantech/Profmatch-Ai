@@ -127,10 +127,21 @@ export async function POST(request: NextRequest) {
 
     // 5. Send Welcome Email
     try {
+      const requestOrigin =
+        request.headers.get('origin') ||
+        (request.headers.get('x-forwarded-host')
+          ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host')}`
+          : undefined) ||
+        (request.headers.get('host')
+          ? `${request.headers.get('host')?.includes('localhost') ? 'http' : 'https'}://${request.headers.get('host')}`
+          : undefined) ||
+        request.nextUrl?.origin;
+
       await sendWelcomeEmail({
         email: newUser.email,
         userName: newUser.full_name || 'Researcher',
         ipAddress: ip,
+        origin: requestOrigin,
       });
     } catch (emailErr) {
       console.error('[WELCOME EMAIL BACKGROUND ERROR]', emailErr);

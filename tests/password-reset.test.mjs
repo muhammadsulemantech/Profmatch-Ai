@@ -46,6 +46,7 @@ test('ProfMatch AI — Password Reset Feature Test Suite', async (t) => {
     const emailContent = fs.readFileSync(emailPath, 'utf-8');
 
     assert.match(emailContent, /export async function sendPasswordResetEmail/);
+    assert.match(emailContent, /export function resolveAppBaseUrl/);
     assert.match(emailContent, /Reset your ProfMatch password/);
     assert.match(emailContent, /\/reset-password\?token=/);
   });

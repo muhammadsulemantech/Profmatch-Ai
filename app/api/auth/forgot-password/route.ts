@@ -63,6 +63,17 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Extract active request origin (protocol + host) to ensure email link uses the exact server address
+    const requestOrigin =
+      request.headers.get('origin') ||
+      (request.headers.get('x-forwarded-host')
+        ? `${request.headers.get('x-forwarded-proto') || 'https'}://${request.headers.get('x-forwarded-host')}`
+        : undefined) ||
+      (request.headers.get('host')
+        ? `${request.headers.get('host')?.includes('localhost') ? 'http' : 'https'}://${request.headers.get('host')}`
+        : undefined) ||
+      request.nextUrl?.origin;
+
     // If account exists, issue secure token and dispatch email
     if (userExists) {
       const { token, expiresAt } = createPasswordResetToken(email);
@@ -72,6 +83,7 @@ export async function POST(request: NextRequest) {
         email,
         fullName: userFullName,
         token,
+        origin: requestOrigin,
       });
 
       if (!emailResult.success) {

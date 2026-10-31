@@ -4,6 +4,25 @@ export interface SendPasswordResetEmailParams {
   email: string;
   fullName?: string;
   token: string;
+  origin?: string;
+}
+
+/**
+ * Resolves the appropriate base URL for links in transactional emails.
+ * Prioritizes the active HTTP request origin (localhost, custom domain, Vercel preview)
+ * to avoid linking to unconfigured or dead domains (e.g. NXDOMAIN).
+ */
+export function resolveAppBaseUrl(origin?: string): string {
+  if (origin && origin.trim()) {
+    return origin.trim().replace(/\/$/, '');
+  }
+  if (process.env.NEXT_PUBLIC_APP_URL && process.env.NEXT_PUBLIC_APP_URL.trim()) {
+    return process.env.NEXT_PUBLIC_APP_URL.trim().replace(/\/$/, '');
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL.trim()}`.replace(/\/$/, '');
+  }
+  return 'http://localhost:3000';
 }
 
 /**
@@ -15,10 +34,11 @@ export async function sendPasswordResetEmail({
   email,
   fullName,
   token,
+  origin,
 }: SendPasswordResetEmailParams): Promise<{ success: boolean; messageId?: string; error?: string }> {
   const normalizedEmail = email.trim().toLowerCase();
   const firstName = fullName?.split(' ')[0] || 'Researcher';
-  const baseUrl = (process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai').replace(/\/$/, '');
+  const baseUrl = resolveAppBaseUrl(origin);
   const resetUrl = `${baseUrl}/reset-password?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
   const subject = 'Reset your ProfMatch password';

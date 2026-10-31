@@ -1,5 +1,6 @@
 import { getEmailProvider } from '@/lib/providers/email';
 import { logAuditEvent } from '@/lib/security/audit';
+import { resolveAppBaseUrl } from '@/lib/email/reset-password-email';
 
 // In-memory set to prevent duplicate welcome emails within the runtime session
 const sentWelcomeEmails = new Set<string>();
@@ -8,6 +9,7 @@ export interface WelcomeEmailParams {
   email: string;
   userName: string;
   ipAddress?: string;
+  origin?: string;
 }
 
 /**
@@ -18,8 +20,10 @@ export async function sendWelcomeEmail({
   email,
   userName,
   ipAddress = 'anonymous',
+  origin,
 }: WelcomeEmailParams): Promise<{ success: boolean; messageId?: string; alreadySent?: boolean }> {
   const normalizedEmail = email.trim().toLowerCase();
+  const baseUrl = resolveAppBaseUrl(origin);
 
   // Deduplication check: Do not send repeatedly
   if (sentWelcomeEmails.has(normalizedEmail)) {
@@ -38,7 +42,7 @@ Your researcher account has been successfully created.
 With ProfMatch, you can explore faculty across top global universities, review verified research interests, find faculty matching your background, and draft personalized outreach emails.
 
 Log in to your workspace:
-${process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai'}/dashboard
+${baseUrl}/dashboard
 
 Best regards,
 The ProfMatch Team
@@ -69,7 +73,7 @@ Support: profmatchsupport@gmail.com`;
     </p>
     
     <div style="margin: 24px 0;">
-      <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai'}/dashboard" style="display: inline-block; padding: 10px 20px; background-color: #10b981; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 6px;">
+      <a href="${baseUrl}/dashboard" style="display: inline-block; padding: 10px 20px; background-color: #10b981; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: 600; border-radius: 6px;">
         Go to Dashboard &rarr;
       </a>
     </div>

@@ -23,7 +23,7 @@ export async function sendPaymentAdminAlertEmail(
   params: PaymentAlertEmailParams
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai';
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')).replace(/\/$/, '');
     const adminEmail =
       process.env.ADMIN_ALERT_EMAIL ||
       process.env.ADMIN_EMAILS?.split(',')[0]?.trim() ||
@@ -175,7 +175,7 @@ export async function sendPaymentCustomerReceiptEmail(
   params: PaymentAlertEmailParams
 ): Promise<{ success: boolean; messageId?: string; error?: string }> {
   try {
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://profmatch.ai';
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000')).replace(/\/$/, '');
     const statusUrl = `${appUrl}/checkout/status/${params.orderReference}`;
     const firstName = params.userName.split(' ')[0] || 'Researcher';
 
