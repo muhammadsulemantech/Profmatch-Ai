@@ -1,0 +1,41 @@
+# ProfMatch AI
+
+> ProfMatch AI is the premier AI-powered academic discovery, faculty matching, and graduate admissions outreach platform. It connects prospective graduate students (M.S., Ph.D., Postdoc, and Research Interns) with verified university professors, funded research labs, and academic opportunities across 250 sovereign countries and territories worldwide.
+
+## Overview
+
+ProfMatch AI eliminates the chaotic and impersonal process of cold emailing professors for research positions. By combining live academic data providers (OpenAlex, Tavily), US National Science Foundation (NSF) active grant tracking, and personalized Google Gemini generative AI engines, ProfMatch AI helps students identify faculty whose current research precisely aligns with their background, thesis topics, and CV skills.
+
+## Core Capabilities & Features
+
+- **Global Academic Discovery Engine**: Search across 250 countries and 190+ academic subdivisions (US States, German Bundeslands, Pakistan Provinces, UK Nations, etc.) spanning 6 primary academic disciplines and 42 sub-fields.
+- **Truthful Faculty Verification**: Every faculty profile is grounded in authentic institutional domain proofs (.edu, .ac.uk, etc.) to ensure students connect with real, active researchers.
+- **CV Instant Matchmaker**: Students can upload their academic CV/resume to automatically extract skills, target degree, and research keywords, matching them with top aligned professors in seconds.
+- **Active NSF & Grant Funding Detection**: Detects active laboratory research grants, funding amounts, and project awards to help students find professors with open funding for graduate assistantships.
+- **AutoPilot Outreach & Personalization**: Generates authentic academic email drafts strictly following global faculty etiquette (`Dear Professor [LastName],`), correlating the student's background with the professor's published papers.
+- **Human-in-the-Loop Safeguards**: Automatically saves outreach emails as Gmail drafts for student review rather than unsupervised spamming, enforcing strict anti-spam rate limits and cooldown intervals.
+- **Ivy-League Follow-Up Sequencer**: Assists students in scheduling polite, professional academic follow-ups at 7, 14, and 21-day milestones.
+- **Lab Team & Co-Author Discovery**: Discovers current Ph.D. students, postdocs, and lab members for peer networking and internal referral insights.
+
+## Public Resources & Links
+
+- [Faculty Discovery & Search](https://profmatch.ai/search): Search verified professors by topic, institution, country, and recruiting status.
+- [Academic Pricing & Tiers](https://profmatch.ai/pricing): Transparent pricing plans for students (Free Explorer, Scholar Starter, Pro Researcher, Elite Fellow).
+- [Responsible Outreach Policy](https://profmatch.ai/responsible-outreach): Institutional ethics, anti-spam policies, and respectful communication guidelines.
+- [Frequently Asked Questions](https://profmatch.ai/faq): Detailed guide for prospective graduate applicants contacting faculty.
+- [Privacy Policy](https://profmatch.ai/privacy): Zero-trust security policy, encryption standards, and user data protection.
+- [Terms of Service](https://profmatch.ai/terms): Platform usage terms and code of conduct.
+
+## Academic Tiers & Access
+
+- **Free Explorer**: $0/mo — Faculty preview in 2 selected destinations, 3 grounded searches total, 2 AI email drafts.
+- **Scholar Starter**: $12/mo — Access to top 10 academic nations, 50 grounded searches, 30 AI drafts, 5 AutoPilot batches.
+- **Pro Researcher**: $29/mo — Global access across 250 countries, 250 grounded searches, unlimited AI drafts, 150 AutoPilot batches, NSF grant tracking.
+- **Elite Fellow**: $79/mo — Unlimited global access, priority AI queue, dedicated outreach sequencer, team lab discovery.
+
+## Technical Stack & API Standard
+
+- Built on Next.js 14 App Router, TypeScript, Tailwind CSS, Supabase (PostgreSQL with Row Level Security), Gemini AI, and Resend/Gmail SMTP.
+- Public Countries Endpoint: `GET /api/countries` — Returns 250 sovereign countries with ISO codes, flags, and subdivisions.
+- Sitemap: `https://profmatch.ai/sitemap.xml`
+- Robots: `https://profmatch.ai/robots.txt`

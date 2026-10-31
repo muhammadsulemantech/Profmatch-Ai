@@ -17,6 +17,7 @@ export default function robots(): MetadataRoute.Robots {
         '/_next/static/',
         '/_next/image/',
         '/icon.svg',
+        '/llms.txt',
       ],
       disallow: [
         '/admin',
