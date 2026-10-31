@@ -578,6 +578,39 @@ profmatch-ai/
   - Confirmed `app/sitemap.ts` dynamically generates `sitemap.xml` for all static pages and verified faculty.
   - Added `/llms.txt` to the explicit `allow:` array in `app/robots.ts` ensuring transparent indexing for AI agents and LLM crawlers.
 
+### 15.4 Platform UX & Zero-Friction Upgrades Suite (COMPLETED 2026-11-01)
+- **1. Outreach 1-Click Draft Copy & Native `mailto:` Fallback (`components/outreach/email-review-modal.tsx`):**
+  - Added "Copy Draft" button with clipboard write, visual feedback icon, and tooltip.
+  - Added "Open in Mail App" button pre-populating native mail clients (Apple Mail, Outlook, Thunderbird, iOS/Android Mail) using a properly URL-encoded `mailto:` link (`mailto:${email}?subject=...&body=...`).
+  - Completely bypasses Google OAuth unverified app friction for students without connected Google accounts or who prefer manual sending.
+  - Added privacy tip advising users on native mail client fallback.
+- **2. Search Zero-Results Smart Suggestions & One-Click Reset (`app/search/page.tsx`):**
+  - Replaced blunt empty state with smart recovery actions when search filters yield zero faculty.
+  - Provided interactive country pills (Global, United States, Germany, United Kingdom, Pakistan) that instantly switch the filter.
+  - Added quick discipline chips ("Artificial Intelligence", "Computer Science", "Bioinformatics", "Data Science") that populate search query and search globally.
+  - Added prominent "Reset All Filters" CTA button to view all available faculty with 1 click.
+- **3. Dashboard Pending Manual Payment Verification Banner & WhatsApp Support (`app/dashboard/page.tsx`):**
+  - Added reactive check in `loadUserData()` for any submitted orders in `PENDING` payment status.
+  - Displays a high-visibility amber notice banner on the user workspace dashboard confirming their manual payment proof (JazzCash, Bank Wire, Crypto) is under active review.
+  - Direct WhatsApp billing support button (`https://wa.me/923001234567`) allowing students to expedite receipt verification with the admin team.
+  - "Check Status" button triggering instant live refresh of user orders and tier entitlements.
+- **4. Application Tracker CSV/Excel Export (`app/tracker/page.tsx`):**
+  - Implemented `handleExportCsv()` and added "Export CSV" button with `Download` icon in the Tracker header.
+  - Exports all saved and contacted faculty applications with Professor Name, Email, University, Department, Application Status, Notes, Follow-Up Date, and Creation Date into a UTF-8 CSV download.
+- **5. CV Parsing Progressive Multi-Step Indicator (`components/search/cv-upload-match-modal.tsx`):**
+  - Replaced static spinner during CV PDF upload & AI analysis with an animated 3-stage progress bar (33% -> 68% -> 94%).
+  - Added live step checklist with spinner and checkmark indicators:
+    - Step 1: Parsing CV PDF & extracting research text
+    - Step 2: AI extracting thesis topics, skills & publications (Gemini)
+    - Step 3: Matching with active professors & funded labs
+- **6. Application Tracker Smart Follow-Up Badges (`app/tracker/page.tsx`):**
+  - Added intelligent amber "Follow-up Recommended" reminder alerts directly on application cards in the `OUTREACH_SENT` stage.
+  - Prompts students to send follow-up emails if 7+ days have elapsed since initial contact, boosting academic reply rates.
+- **Verification:**
+  - `npx tsc --noEmit`: 0 errors.
+  - `node --test tests/db-service.test.mjs`: 6/6 tests passing (100%).
+
+
 
 
 

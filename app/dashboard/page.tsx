@@ -35,7 +35,8 @@ import {
   Link2,
   Camera,
   Loader2,
-  Rocket
+  Rocket,
+  MessageCircle,
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import { compressAndSaveAvatar, getSavedAvatar, removeSavedAvatar } from '@/lib/utils/avatar';
@@ -52,6 +53,7 @@ export default function DashboardPage() {
   const [latestReply, setLatestReply] = React.useState<any>(null);
   const [savedProfessors, setSavedProfessors] = React.useState<Professor[]>([]);
   const [sentEmailsList, setSentEmailsList] = React.useState<any[]>([]);
+  const [pendingOrder, setPendingOrder] = React.useState<any | null>(null);
 
   // Profile Avatar State
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
@@ -197,6 +199,31 @@ export default function DashboardPage() {
     const positive = userReplies.filter((r: any) => r.sentiment === 'POSITIVE' || r.sentiment === 'MEETING_REQUESTED').length;
     setPositiveCount(positive);
     setLatestReply(userReplies.length > 0 ? userReplies[0] : null);
+
+    // 4. Pending Payment Order Check
+    try {
+      mockDb.loadFromDisk();
+      const userPending = (mockDb.orders || []).find(
+        (o: any) => (o.user_id === user.id || o.user_email === user.email) && o.status === 'PENDING'
+      );
+      if (userPending) {
+        setPendingOrder(userPending);
+      } else {
+        const localLastOrderStr = localStorage.getItem('profmatch_last_order');
+        if (localLastOrderStr) {
+          const parsed = JSON.parse(localLastOrderStr);
+          if (parsed && (parsed.status === 'PENDING' || parsed.orderReference)) {
+            setPendingOrder(parsed);
+          } else {
+            setPendingOrder(null);
+          }
+        } else {
+          setPendingOrder(null);
+        }
+      }
+    } catch {
+      setPendingOrder(null);
+    }
   }, [user]);
 
   React.useEffect(() => {
@@ -299,6 +326,46 @@ export default function DashboardPage() {
             >
               Create Account / Sign In
             </button>
+          </div>
+        )}
+
+        {/* PENDING PAYMENT VERIFICATION BANNER */}
+        {pendingOrder && (
+          <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-amber-950/20 border border-amber-500/30 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xl shadow-amber-500/5">
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5 animate-pulse" />
+              </div>
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold text-white text-sm">Payment Under Administrative Verification</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase tracking-wider">
+                    {pendingOrder.plan_tier || pendingOrder.planTier || 'Plan'} Upgrade
+                  </span>
+                </div>
+                <p className="text-xs text-slate-300 leading-relaxed">
+                  Your payment proof (Ref: <code className="font-mono text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded">{pendingOrder.order_reference || pendingOrder.orderReference}</code>) is received. Accounts are verified within 1&ndash;2 hours.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2.5 shrink-0 w-full sm:w-auto">
+              <a
+                href={`https://wa.me/923227342728?text=${encodeURIComponent(`Hi ProfMatch AI Team, I submitted payment proof for Order ${pendingOrder.order_reference || pendingOrder.orderReference}. Please verify my account.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-sm"
+              >
+                <MessageCircle className="w-3.5 h-3.5 text-emerald-400" />
+                <span>WhatsApp Billing Help</span>
+              </a>
+              <Link
+                href={`/checkout/status/${pendingOrder.order_reference || pendingOrder.orderReference}`}
+                className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs font-semibold text-center transition-colors"
+              >
+                View Status &rarr;
+              </Link>
+            </div>
           </div>
         )}
 

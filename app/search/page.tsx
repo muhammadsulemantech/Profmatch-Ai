@@ -641,25 +641,99 @@ export default function SearchPage() {
                 </div>
 
                 {displayedProfessors.length === 0 ? (
-                  <div className="p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-slate-800 flex items-center justify-center mx-auto text-slate-400">
-                      {savedOnly ? <Bookmark className="w-6 h-6 text-emerald-400" /> : <Globe className="w-6 h-6" />}
+                  <div className="p-8 sm:p-12 rounded-2xl bg-slate-900/60 border border-slate-800 text-center space-y-5">
+                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500/15 to-teal-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 shadow-lg shadow-emerald-500/5">
+                      {savedOnly ? <Bookmark className="w-7 h-7 text-emerald-400" /> : <Globe className="w-7 h-7" />}
                     </div>
-                    <p className="text-sm font-semibold text-white">
-                      {savedOnly ? 'No faculty saved yet' : 'No faculty matching this exact filter combination'}
-                    </p>
-                    <p className="text-xs text-slate-400 max-w-md mx-auto">
-                      {savedOnly
-                        ? 'Click the bookmark icon (🔖) on any professor card to save them to your faculty list.'
-                        : 'Try widening your field scope or selecting "Global (All Countries)" to discover related scholars.'}
-                    </p>
-                    <button
-                      type="button"
-                      onClick={handleResetFilters}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-xs font-medium text-white rounded-xl border border-slate-700 transition-colors"
-                    >
-                      Reset Filters
-                    </button>
+
+                    <div className="space-y-1.5 max-w-md mx-auto">
+                      <p className="text-base font-bold text-white">
+                        {savedOnly ? 'No faculty saved yet' : 'No faculty matching this exact filter combination'}
+                      </p>
+                      <p className="text-xs text-slate-400 leading-relaxed">
+                        {savedOnly
+                          ? 'Click the bookmark icon (🔖) on any professor card to build your personalized shortlisted faculty list.'
+                          : 'Try broadening your academic scope or explore top research destinations with verified funded faculty below:'}
+                      </p>
+                    </div>
+
+                    {!savedOnly && (
+                      <div className="space-y-4 pt-1 max-w-lg mx-auto">
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            Popular Academic Destinations:
+                          </span>
+                          <div className="flex flex-wrap items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCountryChange('Global (All Countries)')}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all hover:scale-105"
+                            >
+                              🌐 Global (All Countries)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCountryChange('United States')}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all hover:scale-105"
+                            >
+                              🇺🇸 United States
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCountryChange('Germany')}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all hover:scale-105"
+                            >
+                              🇩🇪 Germany
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCountryChange('United Kingdom')}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all hover:scale-105"
+                            >
+                              🇬🇧 United Kingdom
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleCountryChange('Pakistan')}
+                              className="px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 transition-all hover:scale-105"
+                            >
+                              🇵🇰 Pakistan
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">
+                            Suggested Research Fields:
+                          </span>
+                          <div className="flex flex-wrap items-center justify-center gap-1.5">
+                            {['Artificial Intelligence', 'Computer Science', 'Bioinformatics', 'Data Science'].map((field) => (
+                              <button
+                                key={field}
+                                type="button"
+                                onClick={() => {
+                                  setNaturalQuery(field);
+                                  setCountry('Global (All Countries)');
+                                }}
+                                className="px-2.5 py-1 rounded-md bg-slate-950 text-[11px] text-emerald-400 border border-slate-800 hover:border-emerald-500/40 transition-colors"
+                              >
+                                &ldquo;{field}&rdquo;
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleResetFilters}
+                        className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-xs font-bold text-slate-950 rounded-xl shadow-md shadow-emerald-500/20 transition-all"
+                      >
+                        Reset All Filters &bull; View All Faculty
+                      </button>
+                    </div>
                   </div>
                 ) : isPaywallTriggered ? (
                   <div className="relative">

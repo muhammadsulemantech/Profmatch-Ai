@@ -22,7 +22,8 @@ import {
   Filter,
   Check,
   Building2,
-  GraduationCap
+  GraduationCap,
+  Download,
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 
@@ -172,6 +173,54 @@ export default function ApplicationTrackerPage() {
     setEditingCard(null);
   };
 
+  const handleExportCsv = () => {
+    if (cards.length === 0) {
+      alert('No application records to export. Add or save faculty first!');
+      return;
+    }
+
+    const headers = [
+      'Professor Name',
+      'Title',
+      'University',
+      'Country',
+      'Email',
+      'Stage / Status',
+      'Date Added',
+      'Notes',
+    ];
+
+    const escapeCsv = (str: string | undefined | null) => {
+      if (!str) return '""';
+      const clean = String(str).replace(/"/g, '""');
+      return `"${clean}"`;
+    };
+
+    const rows = cards.map(c =>
+      [
+        escapeCsv(c.professorName),
+        escapeCsv(c.title),
+        escapeCsv(c.universityName),
+        escapeCsv(c.country),
+        escapeCsv(c.email),
+        escapeCsv(c.stage),
+        escapeCsv(c.appliedDate || 'Current'),
+        escapeCsv(c.notes || ''),
+      ].join(',')
+    );
+
+    const csvContent = [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `profmatch_applications_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   // Filter cards by search & stage
   const filteredCards = useMemo(() => {
     return cards.filter(c => {
@@ -202,16 +251,28 @@ export default function ApplicationTrackerPage() {
               MS &amp; PhD Application Kanban Console
             </h1>
             <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-              Manage your global faculty outreach, track professor replies, schedule lab interviews, and organize your graduate admission status across 190+ countries.
+              Manage your global faculty outreach, track professor replies, schedule lab interviews, and organize your graduate admission status across 250 countries.
             </p>
           </div>
 
-          <Link
-            href="/search"
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 shrink-0 transition-all"
-          >
-            <Plus className="w-4 h-4" /> Discover &amp; Save Faculty
-          </Link>
+          <div className="flex items-center gap-3 flex-wrap">
+            <button
+              type="button"
+              onClick={handleExportCsv}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs shadow-md flex items-center justify-center gap-1.5 shrink-0 transition-all hover:scale-105"
+              title="Download all your faculty outreach records as a CSV spreadsheet"
+            >
+              <Download className="w-4 h-4 text-emerald-400" />
+              <span>Export CSV</span>
+            </button>
+
+            <Link
+              href="/search"
+              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-1.5 shrink-0 transition-all hover:scale-105"
+            >
+              <Plus className="w-4 h-4" /> Discover &amp; Save Faculty
+            </Link>
+          </div>
         </div>
 
         {/* Filter Controls Bar */}
@@ -302,6 +363,21 @@ export default function ApplicationTrackerPage() {
                             {card.universityName} &bull; {card.country}
                           </p>
                         </div>
+
+                        {card.stage === 'OUTREACH_SENT' && (
+                          <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
+                            <div className="flex items-center gap-1.5 font-semibold">
+                              <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                              <span>Follow-up Recommended</span>
+                            </div>
+                            <Link
+                              href={`/professors/${card.professorId}`}
+                              className="text-[10px] font-bold text-amber-400 hover:text-amber-200 underline"
+                            >
+                              Draft &rarr;
+                            </Link>
+                          </div>
+                        )}
 
                         {card.notes && (
                           <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] text-slate-300 font-light leading-snug">

@@ -228,6 +228,13 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - UI Upgrades: Enriched dropdowns with flag emojis across /search, /profile, /onboarding, and /checkout.
   - Strict Public Security Audit: Verified public/ directory contains only brand assets; .env.local, database/persistent_store.json, and OTP stores are strictly gitignored and never committed; confirmed zero leaks of server secrets (AI_API_KEY, SUPABASE_SERVICE_ROLE_KEY, STRIPE_SECRET_KEY, RESEND_API_KEY, SMTP_PASS, GOOGLE_CLIENT_SECRET) in client bundles.
   - LLMs.txt Standard File & AI Discovery: Implemented public/llms.txt adhering to the official specification for AI search engines & crawlers (ChatGPT, Claude, Perplexity, Gemini); whitelisted /llms.txt in app/robots.ts.
+• Tier 15.4: Platform UX & Zero-Friction Upgrades Suite (2026-11-01):
+  - 1-Click Draft Copy & mailto: Fallback: Added "Copy Draft" and "Open in Mail App" buttons to email review modal (components/outreach/email-review-modal.tsx) with mailto URL encoding and privacy delivery tip to bypass Google OAuth friction.
+  - Zero-Results Smart Suggestions: Enhanced search empty state (app/search/page.tsx) with interactive country pills, quick research fields, and "Reset All Filters" CTA.
+  - Dashboard Pending Payment Notice: Added amber banner on workspace dashboard (app/dashboard/page.tsx) showing manual payment proof review status with WhatsApp support link and status check.
+  - Application Tracker CSV Export: Added UTF-8 CSV download (handleExportCsv) in tracker header (app/tracker/page.tsx) exporting all saved applications.
+  - CV Match Progressive Step Indicator: Added 3-step progress bar (33% -> 68% -> 94%) with live animated checklist (PDF text parsing, Gemini research extraction, lab matching) in components/search/cv-upload-match-modal.tsx.
+  - Smart Follow-up Reminders: Added amber "Follow-up Recommended" badges on cards in OUTREACH_SENT stage (app/tracker/page.tsx) for 7+ day follow-up cadence.
 ====================================================================
 
 

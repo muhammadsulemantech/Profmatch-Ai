@@ -483,52 +483,75 @@ export default function EmailReviewModal({
         </div>
 
         {/* Action Buttons Footer */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800">
-          <button
-            type="button"
-            onClick={handleCopyContent}
-            className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
-          >
-            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            {copied ? 'Copied to Clipboard!' : 'Copy Content'}
-          </button>
-
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors"
-            >
-              Cancel
-            </button>
-
-            {connectedStatus.connected ? (
+        <div className="space-y-3 pt-4 border-t border-slate-800">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={handleCreateDraft}
-                disabled={isCreatingDraft || !toEmail || !subject || !bodyText}
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-1.5 transition-all"
+                onClick={handleCopyContent}
+                className="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700"
               >
-                {isCreatingDraft ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" /> Creating Draft...
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-4 h-4" /> Create Gmail Draft
-                  </>
-                )}
+                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-slate-300" />}
+                {copied ? 'Copied to Clipboard!' : 'Copy Draft'}
               </button>
-            ) : (
+
+              <a
+                href={`mailto:${encodeURIComponent(toEmail)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(bodyText)}`}
+                className="px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors border border-slate-700/80 hover:border-cyan-500/50"
+                title="Open in your default desktop or mobile mail client (Apple Mail, Outlook, Thunderbird, etc.)"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-cyan-400" />
+                <span>Open in Mail App</span>
+              </a>
+            </div>
+
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={handleConnectGmail}
-                className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition-all"
+                onClick={onClose}
+                className="px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 hover:bg-slate-800 text-slate-300 text-xs font-medium transition-colors"
               >
-                <Sparkles className="w-4 h-4" /> Connect Gmail to Create Draft
+                Cancel
               </button>
-            )}
+
+              {connectedStatus.connected ? (
+                <button
+                  type="button"
+                  onClick={handleCreateDraft}
+                  disabled={isCreatingDraft || !toEmail || !subject || !bodyText}
+                  className="px-5 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 disabled:opacity-50 flex items-center gap-1.5 transition-all"
+                >
+                  {isCreatingDraft ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Creating Draft...
+                    </>
+                  ) : (
+                    <>
+                      <Mail className="w-4 h-4" /> Save as Gmail Draft
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleConnectGmail}
+                  className="px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-1.5 transition-all"
+                  title="Connect your Gmail account via Google OAuth to automatically generate drafts"
+                >
+                  <Sparkles className="w-4 h-4" /> Connect Gmail to Auto-Draft
+                </button>
+              )}
+            </div>
           </div>
+
+          {!connectedStatus.connected && (
+            <p className="text-[11px] text-slate-500 flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              <span>
+                <strong>Privacy Tip:</strong> You can either connect Gmail for 1-click draft syncing, or click <strong>&quot;Copy Draft&quot;</strong> / <strong>&quot;Open in Mail App&quot;</strong> to send manually with complete privacy.
+              </span>
+            </p>
+          )}
         </div>
       </div>
     </div>

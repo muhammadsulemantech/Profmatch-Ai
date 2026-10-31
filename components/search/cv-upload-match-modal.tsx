@@ -28,6 +28,7 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
   const [isDragging, setIsDragging] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stage, setStage] = useState<'upload' | 'analyzing' | 'results'>('upload');
+  const [analysisStep, setAnalysisStep] = useState<number>(1);
   const [matchData, setMatchData] = useState<CVMatchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -71,6 +72,7 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
 
     setIsProcessing(true);
     setStage('analyzing');
+    setAnalysisStep(1);
     setError(null);
 
     trackAnalyticsEvent('cv_match_started', {
@@ -78,7 +80,13 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
       fileSize: file.size,
     });
 
+    let t1: any;
+    let t2: any;
+
     try {
+      t1 = setTimeout(() => setAnalysisStep(2), 1200);
+      t2 = setTimeout(() => setAnalysisStep(3), 2600);
+
       const formData = new FormData();
       formData.append('cv', file);
 
@@ -119,6 +127,8 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
       setError(err.message || 'Error parsing CV. Please try again.');
       setStage('upload');
     } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
       setIsProcessing(false);
     }
   };
@@ -234,16 +244,75 @@ export default function CVUploadMatchModal({ isOpen, onClose }: CVUploadMatchMod
 
         {/* STAGE 2: AI Parsing & Analysis Animation */}
         {stage === 'analyzing' && (
-          <div className="py-12 flex flex-col items-center justify-center text-center space-y-4">
+          <div className="py-8 px-4 flex flex-col items-center justify-center space-y-6 max-w-md mx-auto text-center">
             <div className="relative">
               <div className="w-16 h-16 rounded-full border-4 border-slate-800 border-t-emerald-400 animate-spin" />
-              <Sparkles className="w-6 h-6 text-emerald-400 absolute inset-0 m-auto" />
+              <Sparkles className="w-6 h-6 text-emerald-400 absolute inset-0 m-auto animate-pulse" />
             </div>
-            <div className="space-y-1 max-w-sm">
+
+            <div className="space-y-1">
               <h3 className="font-bold text-white text-base">Analyzing Your Research Profile...</h3>
               <p className="text-xs text-slate-400">
-                Extracting technical skills, thesis keywords, and querying global academic repositories.
+                Gemini 2.5 is extracting your research DNA and querying global academic repositories.
               </p>
+            </div>
+
+            {/* Visual Step Progress Bar */}
+            <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+              <div
+                className="bg-gradient-to-r from-emerald-500 to-teal-400 h-1.5 rounded-full transition-all duration-500 ease-out"
+                style={{ width: analysisStep === 1 ? '33%' : analysisStep === 2 ? '68%' : '94%' }}
+              />
+            </div>
+
+            {/* 3 Step Indicators */}
+            <div className="w-full space-y-2.5 text-left text-xs">
+              <div className={`p-2.5 rounded-lg border flex items-center gap-3 transition-colors ${
+                analysisStep > 1
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : analysisStep === 1
+                  ? 'bg-slate-800/80 border-slate-700 text-white font-medium'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
+              }`}>
+                {analysisStep > 1 ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : analysisStep === 1 ? (
+                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-slate-700 shrink-0" />
+                )}
+                <span>1. Parsing CV PDF & extracting research text</span>
+              </div>
+
+              <div className={`p-2.5 rounded-lg border flex items-center gap-3 transition-colors ${
+                analysisStep > 2
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                  : analysisStep === 2
+                  ? 'bg-slate-800/80 border-slate-700 text-white font-medium'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
+              }`}>
+                {analysisStep > 2 ? (
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                ) : analysisStep === 2 ? (
+                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-slate-700 shrink-0" />
+                )}
+                <span>2. AI extracting thesis topics, skills & publications</span>
+              </div>
+
+              <div className={`p-2.5 rounded-lg border flex items-center gap-3 transition-colors ${
+                analysisStep === 3
+                  ? 'bg-slate-800/80 border-slate-700 text-white font-medium'
+                  : 'bg-slate-900/40 border-slate-800 text-slate-500'
+              }`}>
+                {analysisStep === 3 ? (
+                  <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
+                ) : (
+                  <div className="w-4 h-4 rounded-full border border-slate-700 shrink-0" />
+                )}
+                <span>3. Matching with active professors & funded labs</span>
+              </div>
             </div>
           </div>
         )}
