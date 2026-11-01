@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
-import { getProfileByEmail } from '@/lib/services/db-service';
+import { getProfileByEmail, saveUserProfile } from '@/lib/services/db-service';
 import { verifyPasswordResetToken } from '@/lib/auth/password-reset-store';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { logAuditEvent } from '@/lib/security/audit';
@@ -87,11 +87,17 @@ export async function POST(request: NextRequest) {
         const sbUser = data?.users?.find((u) => u.email?.toLowerCase() === email);
 
         if (sbUser) {
+          const profile = await getProfileByEmail(email);
+          const existingAvatar = profile?.avatar_url || sbUser.user_metadata?.avatar_url || null;
+          const existingFullName = profile?.full_name || sbUser.user_metadata?.full_name || null;
+
           const { error: updateErr } = await adminClient.auth.admin.updateUserById(sbUser.id, {
             password: newPassword,
             email_confirm: true,
             user_metadata: {
               ...(sbUser.user_metadata || {}),
+              full_name: existingFullName || sbUser.user_metadata?.full_name,
+              avatar_url: existingAvatar,
               reset_password_token: null,
               reset_password_expires_at: null,
               last_password_reset_at: Date.now(),
@@ -102,6 +108,17 @@ export async function POST(request: NextRequest) {
             console.error('[SUPABASE PASSWORD UPDATE ERROR]', updateErr);
             return apiError('Failed to update password in auth service.', 500);
           }
+
+          if (profile) {
+            await saveUserProfile({
+              id: sbUser.id,
+              email: sbUser.email || email,
+              full_name: existingFullName || profile.full_name,
+              avatar_url: existingAvatar || profile.avatar_url,
+              role: profile.role || 'USER',
+            });
+          }
+
           updatedInSupabase = true;
         } else {
           // If profile exists locally but not in Supabase Auth, create with new password
@@ -111,7 +128,10 @@ export async function POST(request: NextRequest) {
               email,
               password: newPassword,
               email_confirm: true,
-              user_metadata: { full_name: profile.full_name },
+              user_metadata: {
+                full_name: profile.full_name,
+                avatar_url: profile.avatar_url || null,
+              },
             });
             updatedInSupabase = true;
           }

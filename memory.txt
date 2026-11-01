@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-11-01 (Tier 15: Global Countries API Integration, Security Audit & LLMs.txt AI Discovery)
+Last Updated: 2026-11-01 (Tier 16: Profile Avatar, Saved Faculty Shortlists & Lifetime Activity Persistence)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -192,10 +192,10 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 --------------------------------------------------------------------
 4. VERIFICATION STATUS
 --------------------------------------------------------------------
-• Automated Unit & Security Tests: npm test -> 94/94 tests passing across 10 suites (0 failures).
+• Automated Unit & Security Tests: npm test -> 97/97 tests passing across 11 suites (0 failures).
 • ESLint Quality Check: npx eslint . -> 0 errors, 0 warnings.
 • TypeScript Verification: npx tsc --noEmit -> 0 errors.
-• Production Build: npm run build -> Exit code 0 (70/70 dynamic & static routes compiled cleanly).
+• Production Build: npm run build -> Exit code 0 (76/76 dynamic & static routes compiled cleanly).
 • Live Handshake: Google SMTP TLS delivery & Resend confirmed.
 • Live User Experience Verified (scripts/verify-user-experience.mjs):
   - Signup & OTP: Scrypt hashing verified, 6-digit OTP delivered live via Google SMTP (250 2.0.0 OK).
@@ -238,6 +238,19 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
 • Tier 15.5: Transactional Email Dynamic Base URL & NXDOMAIN Elimination (2026-11-01):
   - Fixed NXDOMAIN Error on Password Reset: Replaced static profmatch.ai domain fallback with dynamic request origin resolution (requestOrigin from headers/host/origin) in app/api/auth/forgot-password/route.ts.
   - Added resolveAppBaseUrl(origin) in lib/email/reset-password-email.ts, lib/email/welcome-email.ts, and lib/email/payment-admin-alert.ts, resolving to active localhost (dev) or live deployment URL (prod/Vercel) automatically.
+• Tier 16: Profile Avatar, Saved Faculty Shortlists & Lifetime Activity Persistence (2026-11-01):
+  - Profile Avatar Disappearance Root Cause Remediation:
+    * Browser Cookie 4KB Limit: Eliminated storing heavy base64 avatar images in document.cookie (browsers silently reject cookies > 4096 bytes).
+    * Dual-Cloud Storage & Compression: Implemented 256x256 client canvas JPEG compression in lib/utils/avatar.ts with immediate cloud persistence to Supabase Auth (user_metadata.avatar_url) and PostgreSQL (profiles.avatar_url).
+    * Password Reset NULL Overwrite Guard: Hardened saveUserProfile (lib/services/db-service.ts), /api/auth/login, and /api/auth/reset-password with defensive coalesce checks to prevent overwriting existing user avatar with null upon session changes.
+    * Polymorphic Multi-Key Cache: Upgraded cacheServerAvatar and getSavedAvatar supporting user ID, user email, and guest fallbacks across mobile and PC devices.
+  - Saved Faculty & Outreach Disappearance Root Cause Remediation:
+    * PostgreSQL Foreign Key Crash Elimination: Dropped rigid UUID REFERENCES professors(id) foreign key constraint on public.saved_professors and public.emails in Supabase PostgreSQL; altered professor_id to TEXT to support string IDs (prof_1, OpenAlex) without database exceptions.
+    * Dedicated Cloud Shortlist Endpoints: Created GET & POST /api/user/saved-professors for persistent PostgreSQL storage of faculty shortlists.
+    * Search & Dashboard Cloud Sync: Upgraded app/search/page.tsx (toggleSave) to immediately persist shortlists to Supabase, and app/dashboard/page.tsx to automatically merge guest and local shortlists with cloud state.
+    * Lifetime Metric Aggregation (November 1st Rollover Fix): Solved zeroed-out "Emails Sent: 0" dashboard metric caused by monthly billing quota rollover (usage_records month_year === '2026-11'). Upgraded getUsageRecord, /api/auth/me, /api/auth/login, and app/dashboard/page.tsx to aggregate all historical months (all_time_emails_sent), displaying lifetime delivered counts ("21 sent all-time • verified delivered").
+    * Student Profile Cloud Sync: Added target_region and desired_domain to public.student_profiles and upgraded app/profile/page.tsx handleSave to persist research target directly to Supabase cloud.
+    * Account Healing: Restored user 78476fe6-5897-44e4-8f8d-84252834e660 (muhammadmun305@gmail.com / khan) with shortlisted faculty (Dr. Greg Durrett), 21 lifetime sent outreach emails, and active PhD student targeting profile.
 ====================================================================
 
 

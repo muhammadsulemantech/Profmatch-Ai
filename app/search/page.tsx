@@ -181,24 +181,87 @@ export default function SearchPage() {
   ]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const key = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
-      try {
-        const stored = localStorage.getItem(key);
-        if (stored) setSavedProfIds(JSON.parse(stored));
-      } catch {}
+    if (typeof window === 'undefined') return;
+
+    const userKey = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
+    let localSaved: string[] = [];
+
+    try {
+      const stored = localStorage.getItem(userKey);
+      if (stored) localSaved = JSON.parse(stored);
+    } catch {}
+
+    // Check guest keys for unmigrated faculty
+    const guestKeys = ['profmatch_saved_profs_guest', 'profmatch_saved_profs_usr_guest'];
+    for (const gk of guestKeys) {
+      if (gk !== userKey) {
+        try {
+          const guestData = localStorage.getItem(gk);
+          if (guestData) {
+            const guestIds = JSON.parse(guestData);
+            if (Array.isArray(guestIds) && guestIds.length > 0) {
+              localSaved = Array.from(new Set([...localSaved, ...guestIds]));
+            }
+          }
+        } catch {}
+      }
+    }
+
+    setSavedProfIds(localSaved);
+
+    // If authenticated, synchronize with Supabase Cloud
+    if (user?.id) {
+      fetch('/api/user/saved-professors')
+        .then((res) => (res.ok ? res.json() : null))
+        .then((res) => {
+          if (res?.success && Array.isArray(res.savedProfessors)) {
+            const serverSaved = res.savedProfessors.map(String);
+            const combined = Array.from(new Set([...localSaved, ...serverSaved]));
+            setSavedProfIds(combined);
+            try {
+              localStorage.setItem(userKey, JSON.stringify(combined));
+            } catch {}
+
+            // If local had shortlisted professors not yet on the server, push to cloud
+            if (combined.length > serverSaved.length) {
+              fetch('/api/user/saved-professors', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ professorIds: combined }),
+              }).catch(() => {});
+            }
+          }
+        })
+        .catch(() => {});
     }
   }, [user]);
 
   const toggleSave = (id: string) => {
     requireAuth('save faculty to shortlist', () => {
-      const updated = savedProfIds.includes(id)
+      const isCurrentlySaved = savedProfIds.includes(id);
+      const updated = isCurrentlySaved
         ? savedProfIds.filter(pId => pId !== id)
         : [...savedProfIds, id];
       setSavedProfIds(updated);
+
       if (typeof window !== 'undefined') {
         const key = user ? `profmatch_saved_profs_${user.id}` : 'profmatch_saved_profs_guest';
-        localStorage.setItem(key, JSON.stringify(updated));
+        try {
+          localStorage.setItem(key, JSON.stringify(updated));
+        } catch {}
+      }
+
+      // Persist directly to Supabase cloud
+      if (user?.id) {
+        fetch('/api/user/saved-professors', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            professorId: id,
+            action: isCurrentlySaved ? 'remove' : 'add',
+            professorIds: updated,
+          }),
+        }).catch(() => {});
       }
     });
   };

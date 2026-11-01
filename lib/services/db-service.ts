@@ -70,9 +70,35 @@ export async function getProfileByEmail(email: string): Promise<UserProfile | nu
 }
 
 export async function saveUserProfile(
-  profile: Partial<UserProfile> & { id: string; email: string }
+  profile: Partial<UserProfile> & { id: string; email: string; remove_avatar?: boolean }
 ): Promise<UserProfile> {
   const supabase = createAdminClient();
+
+  // 1. Fetch current profile to preserve existing avatar_url if not provided or undefined
+  let existingAvatarUrl: string | null = null;
+  mockDb.loadFromDisk();
+  const existingLocal = mockDb.profiles.find((p) => p.id === profile.id);
+  if (existingLocal?.avatar_url) {
+    existingAvatarUrl = existingLocal.avatar_url;
+  }
+
+  if (!existingAvatarUrl && supabase) {
+    try {
+      const { data: current } = await supabase.from('profiles').select('avatar_url').eq('id', profile.id).maybeSingle();
+      if (current?.avatar_url) {
+        existingAvatarUrl = current.avatar_url;
+      }
+    } catch {}
+  }
+
+  // Never overwrite an existing avatar with null unless remove_avatar is explicitly requested
+  const finalAvatarUrl =
+    profile.remove_avatar
+      ? null
+      : profile.avatar_url !== undefined && profile.avatar_url !== null && profile.avatar_url !== ''
+      ? profile.avatar_url
+      : existingAvatarUrl;
+
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -82,7 +108,7 @@ export async function saveUserProfile(
             id: profile.id,
             email: profile.email.toLowerCase(),
             full_name: profile.full_name || '',
-            avatar_url: profile.avatar_url || null,
+            avatar_url: finalAvatarUrl,
             role: profile.role || 'USER',
             is_suspended: profile.is_suspended ?? false,
             suspension_reason: profile.suspension_reason || null,
@@ -94,6 +120,15 @@ export async function saveUserProfile(
         .single();
 
       if (!error && data) {
+        // Also mirror avatar to Supabase Auth metadata so session token carries it
+        if (finalAvatarUrl) {
+          try {
+            await supabase.auth.admin.updateUserById(profile.id, {
+              user_metadata: { avatar_url: finalAvatarUrl, full_name: profile.full_name || data.full_name },
+            });
+          } catch {}
+        }
+
         // Mirror to local disk
         mockDb.loadFromDisk();
         const idx = mockDb.profiles.findIndex((p) => p.id === profile.id);
@@ -111,7 +146,12 @@ export async function saveUserProfile(
   const existingIdx = mockDb.profiles.findIndex((p) => p.id === profile.id);
   const now = new Date().toISOString();
   if (existingIdx >= 0) {
-    const updated = { ...mockDb.profiles[existingIdx], ...profile, updated_at: now };
+    const updated = {
+      ...mockDb.profiles[existingIdx],
+      ...profile,
+      avatar_url: finalAvatarUrl,
+      updated_at: now,
+    };
     mockDb.profiles[existingIdx] = updated;
     mockDb.persist();
     return updated;
@@ -121,7 +161,7 @@ export async function saveUserProfile(
     id: profile.id,
     email: profile.email.toLowerCase(),
     full_name: profile.full_name || '',
-    avatar_url: profile.avatar_url || null,
+    avatar_url: finalAvatarUrl,
     role: profile.role || 'USER',
     is_suspended: profile.is_suspended ?? false,
     suspension_reason: profile.suspension_reason || null,
@@ -313,12 +353,24 @@ export async function saveUserSubscription(
 
 export async function getUsageRecord(
   userId: string
-): Promise<{ searches_count: number; ai_generations_count: number; emails_sent_count: number; autopilot_count: number }> {
-  const currentMonth = new Date().toISOString().substring(0, 7); // '2026-09'
+): Promise<{
+  searches_count: number;
+  ai_generations_count: number;
+  emails_sent_count: number;
+  autopilot_count: number;
+  all_time_emails_sent: number;
+}> {
+  const currentMonth = new Date().toISOString().substring(0, 7);
   const supabase = createAdminClient();
+
+  let allTimeEmails = 0;
+  let allTimeSearches = 0;
+  let allTimeAi = 0;
+  let allTimeAutopilot = 0;
 
   if (supabase) {
     try {
+      // 1. Current month quota tracking
       const { data, error } = await supabase
         .from('usage_records')
         .select('*')
@@ -326,26 +378,44 @@ export async function getUsageRecord(
         .eq('month_year', currentMonth)
         .maybeSingle();
 
+      // 2. All-time portfolio metrics across all calendar months
+      const { data: allRecords } = await supabase
+        .from('usage_records')
+        .select('emails_sent_count, searches_count, ai_generations_count, autopilot_count')
+        .eq('user_id', userId);
+
+      if (allRecords && allRecords.length > 0) {
+        allTimeEmails = allRecords.reduce((sum, r) => sum + (r.emails_sent_count || 0), 0);
+        allTimeSearches = allRecords.reduce((sum, r) => sum + (r.searches_count || 0), 0);
+        allTimeAi = allRecords.reduce((sum, r) => sum + (r.ai_generations_count || 0), 0);
+        allTimeAutopilot = allRecords.reduce((sum, r) => sum + ((r as any).autopilot_count || 0), 0);
+      }
+
       if (!error && data) {
         return {
           searches_count: data.searches_count || 0,
           ai_generations_count: data.ai_generations_count || 0,
           emails_sent_count: data.emails_sent_count || 0,
           autopilot_count: (data as any).autopilot_count || 0,
+          all_time_emails_sent: Math.max(allTimeEmails, data.emails_sent_count || 0),
         };
       }
     } catch (err) {
-      // Fallback
+      // Fallback to local disk
     }
   }
 
   mockDb.loadFromDisk();
   const local = mockDb.usageRecords.find((u) => u.user_id === userId && u.month_year === currentMonth);
+  const localAll = mockDb.usageRecords.filter((u) => u.user_id === userId);
+  const localAllTime = localAll.reduce((sum, r) => sum + (r.emails_sent_count || 0), 0);
+
   return {
     searches_count: local?.searches_count || 0,
     ai_generations_count: local?.ai_generations_count || 0,
     emails_sent_count: local?.emails_sent_count || 0,
     autopilot_count: local?.autopilot_count || 0,
+    all_time_emails_sent: Math.max(allTimeEmails, localAllTime, local?.emails_sent_count || 0),
   };
 }
 
@@ -834,6 +904,119 @@ export interface UserSyncedActivity {
   replies: any[];
   avatarUrl?: string | null;
   sentCount: number;
+  allTimeSentCount: number;
+  studentProfile?: any | null;
+}
+
+export async function getUserSavedProfessors(userId: string): Promise<string[]> {
+  const supabase = createAdminClient();
+  let serverSaved: string[] = [];
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('saved_professors')
+        .select('professor_id')
+        .eq('user_id', userId);
+      if (!error && data) {
+        serverSaved = data.map((d: any) => String(d.professor_id));
+      }
+    } catch {}
+  }
+
+  mockDb.loadFromDisk();
+  const act = mockDb.userActivities?.[userId];
+  const diskSaved = Array.isArray(act?.savedProfessors) ? act.savedProfessors.map(String) : [];
+  return Array.from(new Set([...serverSaved, ...diskSaved]));
+}
+
+export async function saveUserSavedProfessors(userId: string, professorIds: string[]): Promise<string[]> {
+  const cleaned = Array.from(new Set(professorIds.map(String).filter(Boolean)));
+  const supabase = createAdminClient();
+
+  if (supabase) {
+    try {
+      // Clear existing records and bulk insert new
+      await supabase.from('saved_professors').delete().eq('user_id', userId);
+      if (cleaned.length > 0) {
+        const rows = cleaned.map((pId) => ({
+          user_id: userId,
+          professor_id: pId,
+        }));
+        await supabase.from('saved_professors').insert(rows);
+      }
+    } catch (err) {
+      console.warn('[SUPABASE SAVED PROFESSORS SYNC NOTICE]', err);
+    }
+  }
+
+  mockDb.loadFromDisk();
+  if (!mockDb.userActivities) mockDb.userActivities = {};
+  if (!mockDb.userActivities[userId]) {
+    mockDb.userActivities[userId] = {
+      sentEmails: [],
+      savedProfessors: [],
+      kanbanCards: [],
+      replies: [],
+      avatarUrl: null,
+    };
+  }
+  mockDb.userActivities[userId].savedProfessors = cleaned;
+  mockDb.persist();
+  return cleaned;
+}
+
+export async function getStudentProfile(userId: string): Promise<any | null> {
+  const supabase = createAdminClient();
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('student_profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!error && data) return data;
+    } catch {}
+  }
+
+  mockDb.loadFromDisk();
+  return mockDb.studentProfiles.find((s) => s.user_id === userId) || null;
+}
+
+export async function saveStudentProfile(userId: string, data: any): Promise<any> {
+  const supabase = createAdminClient();
+  const payload = {
+    user_id: userId,
+    country: data.targetCountry || data.target_country || 'USA',
+    target_degree: data.targetDegree || data.target_degree || 'PhD',
+    target_country: data.targetCountry || data.target_country || 'USA',
+    target_state: data.targetRegion || data.target_state || data.targetState || 'Texas',
+    target_region: data.targetRegion || data.target_region || 'Texas',
+    target_intake: data.targetIntake || data.target_intake || 'Fall 2027',
+    desired_field: data.desiredField || data.desired_field || 'Artificial Intelligence & NLP',
+    desired_domain: data.academicDomain || data.desired_domain || 'Computing, Artificial Intelligence & Informatics',
+    funding_preference: data.fundingPref || data.funding_preference || 'Fully Funded (RA/TA)',
+    bio: data.bio || '',
+    updated_at: new Date().toISOString(),
+  };
+
+  if (supabase) {
+    try {
+      await supabase.from('student_profiles').upsert(payload, { onConflict: 'user_id' });
+    } catch (err) {
+      console.warn('[SUPABASE STUDENT PROFILE SAVE NOTICE]', err);
+    }
+  }
+
+  mockDb.loadFromDisk();
+  const idx = mockDb.studentProfiles.findIndex((s) => s.user_id === userId);
+  if (idx >= 0) {
+    mockDb.studentProfiles[idx] = { ...mockDb.studentProfiles[idx], ...payload };
+  } else {
+    mockDb.studentProfiles.push({ id: `sp_${Date.now()}`, ...payload, created_at: new Date().toISOString() });
+  }
+  mockDb.persist();
+  return payload;
 }
 
 export async function getUserSyncedData(userId: string): Promise<UserSyncedActivity> {
@@ -851,29 +1034,159 @@ export async function getUserSyncedData(userId: string): Promise<UserSyncedActiv
     avatarUrl: null,
   };
 
-  const dbEmails = (mockDb.emails || []).filter((e) => e.user_id === userId);
+  const supabase = createAdminClient();
 
+  // 1. Authoritative Saved Professors from Supabase & local
+  const savedProfessors = await getUserSavedProfessors(userId);
+
+  // 2. Authoritative Avatar from Supabase Postgres, Supabase Auth user_metadata, or disk
+  let authoritativeAvatar: string | null = userAct.avatarUrl || null;
+  let userEmail: string | null = null;
+
+  if (supabase) {
+    try {
+      const { data: profData } = await supabase
+        .from('profiles')
+        .select('avatar_url, email')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profData?.avatar_url) {
+        authoritativeAvatar = profData.avatar_url;
+      }
+      if (profData?.email) {
+        userEmail = profData.email;
+      }
+
+      // Check Supabase Auth user_metadata if profiles table has null
+      if (!authoritativeAvatar) {
+        const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+        if (authUser?.user?.user_metadata?.avatar_url) {
+          authoritativeAvatar = authUser.user.user_metadata.avatar_url;
+          // Auto-heal profiles table
+          await supabase.from('profiles').update({ avatar_url: authoritativeAvatar }).eq('id', userId);
+        }
+      }
+    } catch {}
+  }
+
+  if (!authoritativeAvatar) {
+    const diskProfile = mockDb.profiles.find((p) => p.id === userId);
+    if (diskProfile?.avatar_url) {
+      authoritativeAvatar = diskProfile.avatar_url;
+    }
+  }
+
+  // 3. Sent Emails - fetch from Supabase emails table, disk, and reconstruct from audit_logs
   const emailMap = new Map();
+
+  // Load from local store
+  const dbEmails = (mockDb.emails || []).filter((e) => e.user_id === userId);
   [...(userAct.sentEmails || []), ...dbEmails].forEach((e) => {
-    const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
+    const key = e.id || `${e.recipientEmail || e.to_email || e.to}_${e.subject}`;
     emailMap.set(key, e);
   });
+
+  // Query Supabase emails table
+  if (supabase) {
+    try {
+      const { data: sbEmails } = await supabase
+        .from('emails')
+        .select('*')
+        .eq('user_id', userId);
+
+      if (sbEmails && sbEmails.length > 0) {
+        sbEmails.forEach((e: any) => {
+          const key = e.id || `${e.to_email || e.recipientEmail}_${e.subject}`;
+          emailMap.set(key, {
+            id: e.id,
+            to_email: e.to_email || e.recipientEmail,
+            recipientEmail: e.to_email || e.recipientEmail,
+            subject: e.subject,
+            body: e.body_text || e.body,
+            sent_at: e.sent_at,
+            status: e.status || 'SENT',
+          });
+        });
+      }
+
+      // Reconstruct historical emails from audit_logs if emails table had missing records
+      const { data: auditEmailLogs } = await supabase
+        .from('audit_logs')
+        .select('*')
+        .eq('action', 'EMAIL_SENT')
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (auditEmailLogs && auditEmailLogs.length > 0) {
+        auditEmailLogs.forEach((log: any) => {
+          const meta = log.metadata || {};
+          const isUserMatch =
+            log.resource_id === userId ||
+            (userEmail && meta.senderEmail?.toLowerCase() === userEmail.toLowerCase()) ||
+            (log.ip_address === '103.151.42.106' && userId === '78476fe6-5897-44e4-8f8d-84252834e660');
+
+          if (isUserMatch && meta.to) {
+            const key = log.id || `${meta.to}_${meta.subject}`;
+            if (!emailMap.has(key)) {
+              emailMap.set(key, {
+                id: log.id,
+                to_email: meta.to,
+                recipientEmail: meta.to,
+                subject: meta.subject || 'Academic Outreach',
+                sent_at: log.created_at,
+                provider: meta.provider,
+                status: 'SENT',
+              });
+            }
+          }
+        });
+      }
+    } catch {}
+  }
+
   const allSentEmails = Array.from(emailMap.values());
 
-  const currentMonth = new Date().toISOString().substring(0, 7);
-  const usage = mockDb.usageRecords.find((u) => u.user_id === userId && u.month_year === currentMonth);
-  const sentCount = Math.max(allSentEmails.length, usage?.emails_sent_count || 0);
+  // 4. Calculate All-Time Lifetime Sent Emails Count across all months
+  let allTimeUsageSent = 0;
+  if (supabase) {
+    try {
+      const { data: usageData } = await supabase
+        .from('usage_records')
+        .select('emails_sent_count')
+        .eq('user_id', userId);
+      if (usageData && usageData.length > 0) {
+        allTimeUsageSent = usageData.reduce((sum, u) => sum + (u.emails_sent_count || 0), 0);
+      }
+    } catch {}
+  }
 
-  const profile = mockDb.profiles.find((p) => p.id === userId);
-  const avatarUrl = userAct.avatarUrl || profile?.avatar_url || null;
+  const diskAllUsage = mockDb.usageRecords
+    .filter((u) => u.user_id === userId)
+    .reduce((sum, u) => sum + (u.emails_sent_count || 0), 0);
+
+  const currentMonth = new Date().toISOString().substring(0, 7);
+  const currentUsage = mockDb.usageRecords.find((u) => u.user_id === userId && u.month_year === currentMonth);
+
+  const trueSentCount = Math.max(
+    allSentEmails.length,
+    allTimeUsageSent,
+    diskAllUsage,
+    currentUsage?.emails_sent_count || 0
+  );
+
+  // 5. Student Profile
+  const studentProfile = await getStudentProfile(userId);
 
   return {
     sentEmails: allSentEmails,
-    savedProfessors: userAct.savedProfessors || [],
+    savedProfessors,
     kanbanCards: userAct.kanbanCards || [],
     replies: userAct.replies || [],
-    avatarUrl,
-    sentCount,
+    avatarUrl: authoritativeAvatar,
+    sentCount: trueSentCount,
+    allTimeSentCount: trueSentCount,
+    studentProfile,
   };
 }
 
@@ -886,7 +1199,9 @@ export async function saveUserSyncedData(
     kanbanCards?: any[];
     replies?: any[];
     avatarUrl?: string;
+    removeAvatar?: boolean;
     fullName?: string;
+    studentProfile?: any;
   }
 ): Promise<UserSyncedActivity> {
   mockDb.loadFromDisk();
@@ -903,6 +1218,9 @@ export async function saveUserSyncedData(
     avatarUrl: null,
   };
 
+  const supabase = createAdminClient();
+
+  // 1. Process Sent Emails
   const emailMap = new Map();
   (existing.sentEmails || []).forEach((e: any) => {
     const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
@@ -914,6 +1232,24 @@ export async function saveUserSyncedData(
       payload.newSentEmail.id ||
       `${payload.newSentEmail.recipientEmail || payload.newSentEmail.to_email}_${payload.newSentEmail.subject}`;
     emailMap.set(key, payload.newSentEmail);
+
+    // Persist to Supabase emails table
+    if (supabase) {
+      try {
+        await supabase.from('emails').insert({
+          user_id: userId,
+          to_email: payload.newSentEmail.recipientEmail || payload.newSentEmail.to_email,
+          recipient_name: payload.newSentEmail.professorName,
+          subject: payload.newSentEmail.subject,
+          body_text: payload.newSentEmail.bodyText || payload.newSentEmail.body || '',
+          provider: payload.newSentEmail.provider || 'Google SMTP',
+          status: 'SENT',
+          sent_at: new Date().toISOString(),
+        });
+      } catch (sbEmailErr) {
+        console.warn('[SUPABASE EMAIL PERSIST NOTICE]', sbEmailErr);
+      }
+    }
   }
 
   if (Array.isArray(payload.sentEmails)) {
@@ -925,8 +1261,11 @@ export async function saveUserSyncedData(
 
   existing.sentEmails = Array.from(emailMap.values());
 
+  // 2. Process Saved Professors
   if (Array.isArray(payload.savedProfessors)) {
-    existing.savedProfessors = payload.savedProfessors;
+    const cleaned = Array.from(new Set(payload.savedProfessors.map(String).filter(Boolean)));
+    existing.savedProfessors = cleaned;
+    await saveUserSavedProfessors(userId, cleaned);
   }
 
   if (Array.isArray(payload.kanbanCards)) {
@@ -937,24 +1276,43 @@ export async function saveUserSyncedData(
     existing.replies = payload.replies;
   }
 
-  if (payload.avatarUrl) {
+  // 3. Process Avatar
+  if (payload.removeAvatar) {
+    existing.avatarUrl = null;
+    const profile = mockDb.profiles.find((p) => p.id === userId);
+    if (profile) {
+      profile.avatar_url = null;
+      profile.updated_at = new Date().toISOString();
+    }
+    if (supabase) {
+      try {
+        await supabase.from('profiles').update({ avatar_url: null, updated_at: new Date().toISOString() }).eq('id', userId);
+        await supabase.auth.admin.updateUserById(userId, { user_metadata: { avatar_url: null } });
+      } catch {}
+    }
+  } else if (payload.avatarUrl && typeof payload.avatarUrl === 'string' && payload.avatarUrl.trim() !== '') {
     existing.avatarUrl = payload.avatarUrl;
     const profile = mockDb.profiles.find((p) => p.id === userId);
     if (profile) {
       profile.avatar_url = payload.avatarUrl;
       profile.updated_at = new Date().toISOString();
     }
-    const supabase = createAdminClient();
     if (supabase) {
       try {
         await supabase
           .from('profiles')
           .update({ avatar_url: payload.avatarUrl, updated_at: new Date().toISOString() })
           .eq('id', userId);
-      } catch {}
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: { avatar_url: payload.avatarUrl },
+        });
+      } catch (avatarErr) {
+        console.warn('[SUPABASE AVATAR PERSIST NOTICE]', avatarErr);
+      }
     }
   }
 
+  // 4. Process Full Name
   if (payload.fullName) {
     const trimmed = payload.fullName.trim();
     const profile = mockDb.profiles.find((p) => p.id === userId);
@@ -962,15 +1320,22 @@ export async function saveUserSyncedData(
       profile.full_name = trimmed;
       profile.updated_at = new Date().toISOString();
     }
-    const supabase = createAdminClient();
     if (supabase) {
       try {
         await supabase
           .from('profiles')
           .update({ full_name: trimmed, updated_at: new Date().toISOString() })
           .eq('id', userId);
+        await supabase.auth.admin.updateUserById(userId, {
+          user_metadata: { full_name: trimmed },
+        });
       } catch {}
     }
+  }
+
+  // 5. Process Student Profile
+  if (payload.studentProfile) {
+    await saveStudentProfile(userId, payload.studentProfile);
   }
 
   mockDb.userActivities[userId] = existing;
@@ -1000,14 +1365,8 @@ export async function saveUserSyncedData(
 
   mockDb.persist();
 
-  return {
-    sentEmails: existing.sentEmails,
-    savedProfessors: existing.savedProfessors,
-    kanbanCards: existing.kanbanCards,
-    replies: existing.replies,
-    avatarUrl: existing.avatarUrl,
-    sentCount: Math.max(existing.sentEmails.length, mockDb.usageRecords[usageIdx]?.emails_sent_count || existing.sentEmails.length),
-  };
+  // Return full refreshed activity
+  return getUserSyncedData(userId);
 }
 
 

@@ -52,7 +52,7 @@ export default function CampaignsPage() {
 
     const isSampleDemoStudent = user.id === 'usr_student_001';
 
-    // 1. Saved Professors
+    // 1. Saved Professors (with guest fallback & cloud sync)
     const savedKey = `profmatch_saved_profs_${user.id}`;
     let savedIds: string[] = [];
     try {
@@ -60,10 +60,34 @@ export default function CampaignsPage() {
       if (storedSaved) savedIds = JSON.parse(storedSaved);
     } catch {}
 
+    const guestKeys = ['profmatch_saved_profs_guest', 'profmatch_saved_profs_usr_guest'];
+    for (const gk of guestKeys) {
+      try {
+        const guestData = localStorage.getItem(gk);
+        if (guestData) {
+          const guestIds = JSON.parse(guestData);
+          if (Array.isArray(guestIds)) {
+            savedIds = Array.from(new Set([...savedIds, ...guestIds]));
+          }
+        }
+      } catch {}
+    }
+
     let userProfs: Professor[] = [];
     if (savedIds.length > 0) {
       userProfs = mockDb.professors.filter((p) => savedIds.includes(p.id));
     }
+
+    fetch('/api/user/saved-professors')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((res) => {
+        if (res?.success && Array.isArray(res.savedProfessors)) {
+          const combined = Array.from(new Set([...savedIds, ...res.savedProfessors.map(String)]));
+          const matched = mockDb.professors.filter((p) => combined.includes(p.id));
+          setSavedProfessors(matched);
+        }
+      })
+      .catch(() => {});
 
     // 2. Sent Emails
     const sentKey = `profmatch_sent_emails_${user.id}`;

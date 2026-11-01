@@ -38,8 +38,8 @@ import {
   Rocket,
   MessageCircle,
 } from 'lucide-react';
+import { compressAndSaveAvatar, getSavedAvatar, removeSavedAvatar, cacheServerAvatar } from '@/lib/utils/avatar';
 import { Professor } from '@/types/database';
-import { compressAndSaveAvatar, getSavedAvatar, removeSavedAvatar } from '@/lib/utils/avatar';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -59,8 +59,25 @@ export default function DashboardPage() {
   const [avatarUrl, setAvatarUrl] = React.useState<string | null>(null);
   const [isUploadingAvatar, setIsUploadingAvatar] = React.useState<boolean>(false);
   const avatarFileInputRef = React.useRef<HTMLInputElement>(null);
+  const [studentProfile, setStudentProfile] = React.useState<any>(null);
 
-  const student = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
+  const student = React.useMemo(() => {
+    if (studentProfile) {
+      return {
+        target_degree: studentProfile.target_degree || studentProfile.targetDegree || 'PhD',
+        target_country: studentProfile.target_country || studentProfile.targetCountry || 'USA',
+        target_state: studentProfile.target_state || studentProfile.targetRegion || 'Texas',
+        desired_field: studentProfile.desired_field || studentProfile.desiredField || 'Artificial Intelligence & NLP',
+      };
+    }
+    const defaultStudent = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
+    return {
+      target_degree: (user as any)?.target_degree || defaultStudent?.target_degree || 'PhD',
+      target_country: defaultStudent?.target_country || 'USA',
+      target_state: defaultStudent?.target_state || 'Texas',
+      desired_field: defaultStudent?.desired_field || 'Artificial Intelligence & NLP',
+    };
+  }, [studentProfile, user]);
   const matches = mockDb.researchMatches;
 
   const displayName = React.useMemo(() => {
@@ -100,14 +117,18 @@ export default function DashboardPage() {
       setAvatarUrl(null);
       setSavedProfessors([]);
       setSentEmailsList([]);
+      setStudentProfile(null);
       return;
     }
 
-    // 0. Load Profile Avatar
-    const savedAvatar = getSavedAvatar(user.id);
-    setAvatarUrl(savedAvatar);
+    // 0. Load Profile Avatar (Supabase Auth user.avatar_url or multi-key local cache)
+    const savedAvatar = user?.avatar_url || getSavedAvatar(user.id, user.email);
+    if (savedAvatar) {
+      setAvatarUrl(savedAvatar);
+      cacheServerAvatar(savedAvatar, user.id, user.email);
+    }
 
-    // 1. Saved Professors Count & List
+    // 1. Saved Professors Count & List (Merge local storage and guest session items)
     const savedKey = `profmatch_saved_profs_${user.id}`;
     let savedIds: string[] = [];
     try {
@@ -115,11 +136,32 @@ export default function DashboardPage() {
       if (storedSaved) savedIds = JSON.parse(storedSaved);
     } catch {}
 
+    // Check guest keys for unmigrated shortlisted professors
+    const guestKeys = ['profmatch_saved_profs_guest', 'profmatch_saved_profs_usr_guest'];
+    let guestMigrated = false;
+    for (const gk of guestKeys) {
+      try {
+        const guestData = localStorage.getItem(gk);
+        if (guestData) {
+          const guestIds = JSON.parse(guestData);
+          if (Array.isArray(guestIds) && guestIds.length > 0) {
+            savedIds = Array.from(new Set([...savedIds, ...guestIds]));
+            guestMigrated = true;
+          }
+        }
+      } catch {}
+    }
+    if (guestMigrated) {
+      try {
+        localStorage.setItem(savedKey, JSON.stringify(savedIds));
+      } catch {}
+    }
+
     setSavedCount(savedIds.length);
     const userSavedProfs = mockDb.professors.filter(p => savedIds.includes(p.id));
     setSavedProfessors(userSavedProfs);
 
-    // 2. Sent Emails Count & List (with Cross-Device Cloud Sync)
+    // 2. Sent Emails Count & List (with Cross-Device Cloud Sync & Lifetime Aggregation)
     const sentKey = `profmatch_sent_emails_${user.id}`;
     let localSent: any[] = [];
     try {
@@ -132,27 +174,59 @@ export default function DashboardPage() {
     [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
     let userEmails = Array.from(combinedEmailsMap.values());
 
-    // Initial local render
-    const initialSentCount = Math.max(userEmails.length, user.usage?.emails_sent_count || 0);
+    // Initial local render with all-time usage aggregation
+    const userAllTimeQuota = (user.usage as any)?.all_time_emails_sent || user.usage?.emails_sent_count || 0;
+    const initialSentCount = Math.max(userEmails.length, userAllTimeQuota);
     setSentCount(initialSentCount);
     setSentEmailsList(userEmails);
 
-    // Cross-Device Server Sync (Synchronizes Laptop & Mobile)
+    // Cross-Device Server Sync (Synchronizes Cloud Supabase PostgreSQL & Local Store)
     fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((syncRes) => {
         if (syncRes?.success && syncRes.data) {
+          // Sync Student Profile
+          if (syncRes.data.studentProfile) {
+            setStudentProfile(syncRes.data.studentProfile);
+          }
+
+          // Merge server & local saved professors
+          const serverSaved: string[] = (syncRes.data.savedProfessors || []).map(String);
+          const combinedSavedIds = Array.from(new Set([...savedIds, ...serverSaved]));
+          if (combinedSavedIds.length !== savedIds.length) {
+            setSavedCount(combinedSavedIds.length);
+            try {
+              localStorage.setItem(savedKey, JSON.stringify(combinedSavedIds));
+            } catch {}
+            const allSavedProfs = mockDb.professors.filter(p => combinedSavedIds.includes(p.id));
+            setSavedProfessors(allSavedProfs);
+          }
+
+          // If local has saved professors not yet in Supabase, push to cloud
+          if (combinedSavedIds.length > serverSaved.length) {
+            fetch('/api/user/saved-professors', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ professorIds: combinedSavedIds }),
+            }).catch(() => {});
+          }
+
+          // Merge server & local emails
           const serverEmails = syncRes.data.sentEmails || [];
           const serverAvatar = syncRes.data.avatarUrl;
 
-          // Merge server & local emails
           const mergedMap = new Map();
           [...userEmails, ...serverEmails].forEach((e) => {
             const key = e.id || `${e.recipientEmail || e.to_email}_${e.subject}`;
             mergedMap.set(key, e);
           });
           const allMerged = Array.from(mergedMap.values());
-          const trueSentCount = Math.max(allMerged.length, syncRes.data.sentCount || 0, user.usage?.emails_sent_count || 0);
+          const trueSentCount = Math.max(
+            allMerged.length,
+            syncRes.data.allTimeSentCount || 0,
+            syncRes.data.sentCount || 0,
+            userAllTimeQuota
+          );
 
           setSentCount(trueSentCount);
           setSentEmailsList(allMerged);
@@ -160,7 +234,7 @@ export default function DashboardPage() {
             localStorage.setItem(sentKey, JSON.stringify(allMerged));
           } catch {}
 
-          // If local has emails not on server (e.g. sent from laptop before sync), push to server
+          // If local has emails not on server, push to server
           if (localSent.length > 0 && allMerged.length > serverEmails.length) {
             fetch('/api/user/sync', {
               method: 'POST',
@@ -172,9 +246,7 @@ export default function DashboardPage() {
           // Sync Avatar if available on server
           if (serverAvatar) {
             setAvatarUrl(serverAvatar);
-            try {
-              localStorage.setItem(`profmatch_user_avatar_${user.id}`, serverAvatar);
-            } catch {}
+            cacheServerAvatar(serverAvatar, user.id, user.email);
           }
         }
       })
@@ -636,8 +708,8 @@ export default function DashboardPage() {
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
                 <span className="text-xs font-medium text-slate-400">Emails Sent</span>
                 <p className="font-heading text-3xl font-bold text-white">{sentCount}</p>
-                <span className="text-[11px] text-slate-400 block font-medium">
-                  {sentCount > 0 ? '100% verified delivered' : '0 emails sent'}
+                <span className="text-[11px] text-emerald-400 block font-medium">
+                  {sentCount > 0 ? `${sentCount} sent all-time • verified delivered` : '0 emails sent'}
                 </span>
               </div>
               <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">

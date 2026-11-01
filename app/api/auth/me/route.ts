@@ -48,6 +48,12 @@ export async function GET(request: NextRequest) {
         avatar_url: session.user.avatar_url,
         role: session.user.role,
       });
+    } else if (!userProfile.avatar_url && session.user.avatar_url) {
+      userProfile = await saveUserProfile({
+        id: userProfile.id,
+        email: userProfile.email,
+        avatar_url: session.user.avatar_url,
+      });
     }
 
     const sub = await getUserSubscription(userProfile.id);
@@ -71,7 +77,8 @@ export async function GET(request: NextRequest) {
         email: userProfile.email,
         full_name: userProfile.full_name,
         role: userProfile.role,
-        avatar_url: userProfile.avatar_url,
+        avatar_url: userProfile.avatar_url || session.user.avatar_url || null,
+        target_degree: (session.user as any).target_degree || 'PhD',
         is_suspended: userProfile.is_suspended ?? false,
         tier,
         plan_tier: tier,

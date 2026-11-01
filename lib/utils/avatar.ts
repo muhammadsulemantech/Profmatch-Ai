@@ -44,16 +44,13 @@ export async function compressAndSaveAvatar(file: File, userId: string = 'guest'
           if (typeof window !== 'undefined') {
             const key = `profmatch_user_avatar_${userId}`;
             localStorage.setItem(key, dataUrl);
-
-            // Also set a 1-year persistent cookie for backup across sessions
-            try {
-              document.cookie = `${key}=${encodeURIComponent(dataUrl)}; path=/; max-age=31536000; SameSite=Lax`;
-            } catch {}
+            localStorage.setItem('profmatch_user_avatar_guest', dataUrl);
+            localStorage.setItem('profmatch_user_avatar_usr_guest', dataUrl);
 
             window.dispatchEvent(new CustomEvent('profmatch_avatar_updated', { detail: dataUrl }));
 
-            // Sync to server so avatar is instantly available on mobile and laptop
-            if (userId && userId !== 'guest') {
+            // Authoritative Cloud Sync to Supabase PostgreSQL & Auth user_metadata
+            if (userId && userId !== 'guest' && userId !== 'usr_guest') {
               fetch('/api/user/sync', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -73,25 +70,73 @@ export async function compressAndSaveAvatar(file: File, userId: string = 'guest'
   });
 }
 
-export function getSavedAvatar(userId: string = 'guest'): string | null {
+export function cacheServerAvatar(
+  userIdOrUrl: string,
+  avatarUrlOrUserId?: string | null,
+  userEmail?: string
+): void {
+  if (typeof window === 'undefined') return;
+  let url: string | null = null;
+  let uid: string | null = null;
+
+  if (userIdOrUrl && (userIdOrUrl.startsWith('data:image') || userIdOrUrl.startsWith('http') || userIdOrUrl.startsWith('/'))) {
+    url = userIdOrUrl;
+    uid = avatarUrlOrUserId || 'guest';
+  } else {
+    uid = userIdOrUrl || 'guest';
+    url = avatarUrlOrUserId || null;
+  }
+
+  if (!url || typeof url !== 'string') return;
+
+  try {
+    if (uid && uid !== 'guest') {
+      localStorage.setItem(`profmatch_user_avatar_${uid}`, url);
+    }
+    if (userEmail) {
+      localStorage.setItem(`profmatch_user_avatar_${userEmail.toLowerCase().trim()}`, url);
+    }
+    localStorage.setItem('profmatch_user_avatar_guest', url);
+    localStorage.setItem('profmatch_user_avatar_usr_guest', url);
+  } catch {}
+}
+
+export function getSavedAvatar(userId: string = 'guest', userEmail?: string): string | null {
   if (typeof window === 'undefined') return null;
   try {
-    const key = `profmatch_user_avatar_${userId}`;
-    const saved = localStorage.getItem(key);
-    if (saved) return saved;
-
-    // Fallback 1: Check 1-year cookie
-    const cookieMatch = document.cookie.match(new RegExp(`(?:^|; )${key}=([^;]*)`));
-    if (cookieMatch && cookieMatch[1]) {
-      const decoded = decodeURIComponent(cookieMatch[1]);
-      localStorage.setItem(key, decoded);
-      return decoded;
+    // 1. Direct user ID key
+    if (userId && userId !== 'guest') {
+      const saved = localStorage.getItem(`profmatch_user_avatar_${userId}`);
+      if (saved && saved.startsWith('data:image')) return saved;
     }
 
-    // Fallback 2: Check guest avatar if specific user key not found
-    if (userId !== 'guest') {
-      const guestSaved = localStorage.getItem('profmatch_user_avatar_guest');
-      if (guestSaved) return guestSaved;
+    // 2. Email key fallback
+    if (userEmail) {
+      const emailSaved = localStorage.getItem(`profmatch_user_avatar_${userEmail.toLowerCase().trim()}`);
+      if (emailSaved && emailSaved.startsWith('data:image')) {
+        if (userId && userId !== 'guest') {
+          localStorage.setItem(`profmatch_user_avatar_${userId}`, emailSaved);
+        }
+        return emailSaved;
+      }
+    }
+
+    // 3. Guest avatar fallback
+    const guestSaved = localStorage.getItem('profmatch_user_avatar_guest');
+    if (guestSaved && guestSaved.startsWith('data:image')) {
+      if (userId && userId !== 'guest') {
+        localStorage.setItem(`profmatch_user_avatar_${userId}`, guestSaved);
+      }
+      return guestSaved;
+    }
+
+    // 4. Usr_guest fallback
+    const usrGuestSaved = localStorage.getItem('profmatch_user_avatar_usr_guest');
+    if (usrGuestSaved && usrGuestSaved.startsWith('data:image')) {
+      if (userId && userId !== 'guest') {
+        localStorage.setItem(`profmatch_user_avatar_${userId}`, usrGuestSaved);
+      }
+      return usrGuestSaved;
     }
   } catch {}
   return null;
@@ -103,10 +148,16 @@ export function removeSavedAvatar(userId: string = 'guest'): void {
     const key = `profmatch_user_avatar_${userId}`;
     localStorage.removeItem(key);
     localStorage.removeItem('profmatch_user_avatar_guest');
+    localStorage.removeItem('profmatch_user_avatar_usr_guest');
 
-    // Expire cookie
-    document.cookie = `${key}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    document.cookie = `profmatch_user_avatar_guest=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    // Notify backend to remove avatar from database
+    if (userId && userId !== 'guest') {
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId, removeAvatar: true }),
+      }).catch(() => {});
+    }
 
     window.dispatchEvent(new CustomEvent('profmatch_avatar_updated', { detail: null }));
   } catch {}

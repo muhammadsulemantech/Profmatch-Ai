@@ -1,7 +1,6 @@
-import { getConnectedEmailAccount } from './db-service';
+import { getConnectedEmailAccount, syncIncrementUsage, saveUserSyncedData } from './db-service';
 import { getFreshAccessToken, refreshAccessTokenForce, buildMimeMessage } from './gmail-service';
 import { getEmailProvider } from '@/lib/providers/email';
-import { syncIncrementUsage } from './db-service';
 
 export interface SendEmailParams {
   userId: string;
@@ -81,6 +80,19 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
         const sendData = await sendRes.json();
         syncIncrementUsage(userId, 'emails_sent_count', 1);
 
+        saveUserSyncedData(userId, {
+          newSentEmail: {
+            id: sendData.id || `msg_${Date.now()}`,
+            recipientEmail: toEmail,
+            to_email: toEmail,
+            professorName,
+            subject,
+            bodyText,
+            provider: 'Gmail OAuth',
+            sent_at: new Date().toISOString(),
+          },
+        }).catch(() => {});
+
         return {
           success: true,
           sentVia: 'GMAIL',
@@ -105,6 +117,19 @@ export async function sendOutreachEmail(params: SendEmailParams): Promise<SendEm
   }
 
   syncIncrementUsage(userId, 'emails_sent_count', 1);
+
+  saveUserSyncedData(userId, {
+    newSentEmail: {
+      id: result.messageId || `msg_${Date.now()}`,
+      recipientEmail: toEmail,
+      to_email: toEmail,
+      professorName,
+      subject,
+      bodyText,
+      provider: provider.name || 'Google SMTP',
+      sent_at: new Date().toISOString(),
+    },
+  }).catch(() => {});
 
   return {
     success: true,

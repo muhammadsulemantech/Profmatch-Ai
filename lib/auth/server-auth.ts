@@ -92,6 +92,7 @@ async function mapSupabaseUserToSession(user: any, token: string): Promise<AuthS
         user.user_metadata?.name ||
         (isAdmin ? 'Administrator' : email.split('@')[0] || 'Researcher'),
       avatar_url: dbProfile?.avatar_url || user.user_metadata?.avatar_url || null,
+      target_degree: user.user_metadata?.target_degree || 'PhD',
       role: isAdmin ? 'ADMIN' : (dbProfile?.role || (user.user_metadata?.role as any) || 'USER'),
       is_suspended: dbProfile?.is_suspended ?? false,
       created_at: dbProfile?.created_at || user.created_at,

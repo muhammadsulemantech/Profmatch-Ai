@@ -80,15 +80,17 @@ export async function POST(request: NextRequest) {
     const isAdmin = isAdminEmail(user.email) || user.user_metadata?.role === 'ADMIN' || existingProfile?.role === 'ADMIN';
     const effectiveRole = isAdmin ? 'ADMIN' : (existingProfile?.role || (user.user_metadata?.role as any) || 'USER');
 
+    const resolvedAvatar = existingProfile?.avatar_url || user.user_metadata?.avatar_url || null;
+
     const sanitizedUser = {
       id: user.id,
       email: user.email || email,
       full_name: existingProfile?.full_name || user.user_metadata?.full_name || (isAdmin ? 'Administrator' : email.split('@')[0]),
-      avatar_url: existingProfile?.avatar_url || user.user_metadata?.avatar_url || null,
+      avatar_url: resolvedAvatar,
       role: effectiveRole,
     };
 
-    // Keep persistent profile synced without losing existing role or suspension
+    // Keep persistent profile synced without losing existing role, suspension, or avatar
     await saveUserProfile({
       id: sanitizedUser.id,
       email: sanitizedUser.email,
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
 
     const fullUser = {
       ...sanitizedUser,
+      target_degree: user.user_metadata?.target_degree || 'PhD',
       tier,
       plan_tier: tier,
       subscription_status: isExpired ? 'expired' : (sub ? sub.status : 'free'),

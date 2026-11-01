@@ -39,6 +39,7 @@ export interface UserProfile {
   email: string;
   full_name: string | null;
   avatar_url: string | null;
+  target_degree?: string | null;
   role: UserRole;
   is_suspended: boolean;
   suspension_reason?: string | null;

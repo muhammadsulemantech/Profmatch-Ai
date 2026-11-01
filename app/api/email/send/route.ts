@@ -58,6 +58,8 @@ export async function POST(request: NextRequest) {
 
     // Log audit
     await logAuditEvent({
+      userId: session.user.id,
+      userEmail: session.user.email,
       action: 'EMAIL_SENT',
       resourceType: 'EMAIL',
       resourceId: emailId,
@@ -69,6 +71,24 @@ export async function POST(request: NextRequest) {
       },
       ipAddress: ip,
     });
+
+    // Authoritatively persist sent email and increment usage
+    try {
+      const { saveUserSyncedData } = await import('@/lib/services/db-service');
+      await saveUserSyncedData(session.user.id, {
+        newSentEmail: {
+          id: result.messageId || `msg_${Date.now()}`,
+          recipientEmail,
+          to_email: recipientEmail,
+          subject,
+          bodyText,
+          provider: provider.name,
+          sent_at: new Date().toISOString(),
+        },
+      });
+    } catch (persistErr) {
+      console.warn('[EMAIL PERSIST SYNC NOTICE]', persistErr);
+    }
 
     return NextResponse.json({
       success: true,

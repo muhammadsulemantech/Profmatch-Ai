@@ -14,6 +14,7 @@ import {
   compressAndSaveAvatar,
   getSavedAvatar,
   removeSavedAvatar,
+  cacheServerAvatar,
 } from '@/lib/utils/avatar';
 
 import { AvatarSection } from '@/components/profile/avatar-section';
@@ -300,14 +301,42 @@ export default function ProfilePage() {
     }
 
     // Load Avatar
-    const savedAvatar = getSavedAvatar(userKey);
-    setAvatarUrl(savedAvatar);
+    const savedAvatar = user?.avatar_url || getSavedAvatar(userKey, user?.email);
+    if (savedAvatar) {
+      setAvatarUrl(savedAvatar);
+      cacheServerAvatar(savedAvatar, userKey, user?.email);
+    }
+
+    // Cloud Profile & Avatar Sync
+    if (user?.id) {
+      fetch(`/api/user/sync?userId=${encodeURIComponent(user.id)}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((syncRes) => {
+          if (syncRes?.success && syncRes.data) {
+            const sp = syncRes.data.studentProfile;
+            if (sp) {
+              if (sp.target_degree || sp.targetDegree) setTargetDegree(sp.target_degree || sp.targetDegree);
+              if (sp.target_country || sp.targetCountry) setTargetCountry(sp.target_country || sp.targetCountry);
+              if (sp.target_region || sp.targetRegion || sp.target_state) setTargetRegion(sp.target_region || sp.targetRegion || sp.target_state);
+              if (sp.desired_domain || sp.academicDomain) setAcademicDomain(sp.desired_domain || sp.academicDomain);
+              if (sp.desired_field || sp.desiredField) setDesiredField(sp.desired_field || sp.desiredField);
+              if (sp.funding_preference || sp.fundingPref) setFundingPref(sp.funding_preference || sp.fundingPref);
+              if (sp.bio) setBio(sp.bio);
+            }
+            if (syncRes.data.avatarUrl) {
+              setAvatarUrl(syncRes.data.avatarUrl);
+              cacheServerAvatar(syncRes.data.avatarUrl, user.id, user.email);
+            }
+          }
+        })
+        .catch(() => {});
+    }
 
     const handleAvatarUpdate = (e: any) => {
       if (e?.detail) {
         setAvatarUrl(e.detail);
       } else {
-        setAvatarUrl(getSavedAvatar(user ? user.id : 'guest'));
+        setAvatarUrl(getSavedAvatar(user ? user.id : 'guest', user?.email));
       }
     };
 
@@ -327,6 +356,16 @@ export default function ProfilePage() {
     try {
       const dataUrl = await compressAndSaveAvatar(file, user ? user.id : 'guest');
       setAvatarUrl(dataUrl);
+
+      // Cloud persistence
+      if (user?.id) {
+        cacheServerAvatar(dataUrl, user.id, user.email);
+        fetch('/api/user/sync', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.id, avatarUrl: dataUrl }),
+        }).catch(() => {});
+      }
     } catch (err) {
       console.error('Failed to upload avatar:', err);
       alert('Failed to process image. Please try another image file.');
@@ -341,6 +380,13 @@ export default function ProfilePage() {
   const handleRemoveAvatar = () => {
     removeSavedAvatar(user ? user.id : 'guest');
     setAvatarUrl(null);
+    if (user?.id) {
+      fetch('/api/user/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: user.id, removeAvatar: true }),
+      }).catch(() => {});
+    }
   };
 
   const selectedCountryObj = getCountryByNameOrCode(targetCountry);
@@ -571,19 +617,31 @@ export default function ProfilePage() {
       }
     }
 
-    if (user && trimmedName) {
-      setAuthenticatedUser({
-        ...user,
-        full_name: trimmedName,
-      });
+    if (user) {
+      if (trimmedName) {
+        setAuthenticatedUser({
+          ...user,
+          full_name: trimmedName,
+        });
+      }
 
-      // Sync name to server & database
+      // Sync name, avatar, and student academic profile to server & Supabase database
       fetch('/api/user/sync', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: user.id,
-          fullName: trimmedName,
+          fullName: trimmedName || user.full_name,
+          avatarUrl: avatarUrl || undefined,
+          studentProfile: {
+            targetDegree,
+            targetCountry,
+            targetRegion,
+            academicDomain,
+            desiredField,
+            fundingPref,
+            bio,
+          },
         }),
       }).catch(() => {});
     }
