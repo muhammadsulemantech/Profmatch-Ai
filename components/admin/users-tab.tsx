@@ -147,11 +147,11 @@ export function UsersTab({
               )}
             </div>
 
-            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full no-scrollbar">
               <button
                 type="button"
                 onClick={() => setUserPlanFilter('ALL')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
                   userPlanFilter === 'ALL' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -160,7 +160,7 @@ export function UsersTab({
               <button
                 type="button"
                 onClick={() => setUserPlanFilter('PAID')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
                   userPlanFilter === 'PAID' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -169,7 +169,7 @@ export function UsersTab({
               <button
                 type="button"
                 onClick={() => setUserPlanFilter('FREE')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
                   userPlanFilter === 'FREE' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -178,7 +178,7 @@ export function UsersTab({
               <button
                 type="button"
                 onClick={() => setUserPlanFilter('ADMIN')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-all whitespace-nowrap ${
                   userPlanFilter === 'ADMIN' ? 'bg-emerald-500 text-slate-950 font-bold' : 'text-slate-400 hover:text-white'
                 }`}
               >
@@ -219,16 +219,16 @@ export function UsersTab({
                 return (
                   <tr key={u.id} className="border-b border-slate-800/60 hover:bg-slate-900/40 transition-colors">
                     <td className="px-5 py-4">
-                      <div>
+                      <div className="min-w-[160px]">
                         <div className="flex items-center gap-2">
-                          <p className="font-semibold text-white">{u.full_name || 'Academic User'}</p>
+                          <p className="font-semibold text-white break-words">{u.full_name || 'Academic User'}</p>
                           {u.is_suspended && (
-                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
                               Suspended
                             </span>
                           )}
                         </div>
-                        <p className="text-slate-400 text-[11px] font-mono">{u.email}</p>
+                        <p className="text-slate-400 text-[11px] font-mono break-all">{u.email}</p>
                         <span className="text-[10px] text-slate-500 font-mono">ID: {u.id}</span>
                       </div>
                     </td>

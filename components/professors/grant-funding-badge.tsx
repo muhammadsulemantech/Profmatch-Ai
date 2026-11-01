@@ -122,30 +122,30 @@ export default function GrantFundingBadge({ profName, institutionName }: GrantFu
 
         <div className="space-y-3.5 text-xs leading-relaxed">
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
               <span className="text-slate-400">Target Faculty:</span>
-              <span className="font-semibold text-white text-right truncate max-w-[260px]">{profName}</span>
+              <span className="font-semibold text-white sm:text-right break-words">{profName}</span>
             </div>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
               <span className="text-slate-400">Funding Agency:</span>
-              <span className="font-semibold text-emerald-400 text-right">{grant.agency} (National Science Foundation)</span>
+              <span className="font-semibold text-emerald-400 sm:text-right">{grant.agency} (National Science Foundation)</span>
             </div>
             {grant.awardAmount && (
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
                 <span className="text-slate-400">Obligated Budget:</span>
-                <span className="font-bold text-emerald-300 font-mono text-sm">{grant.awardAmount}</span>
+                <span className="font-bold text-emerald-300 font-mono text-sm sm:text-right">{grant.awardAmount}</span>
               </div>
             )}
             {grant.validThrough && (
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4">
                 <span className="text-slate-400">Active Cycle Through:</span>
-                <span className="font-semibold text-slate-200">{grant.validThrough}</span>
+                <span className="font-semibold text-slate-200 sm:text-right">{grant.validThrough}</span>
               </div>
             )}
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-4">
               <span className="text-slate-400">PhD Sponsorship Likelihood:</span>
               <span
-                className={`font-bold px-2 py-0.5 rounded text-[10px] tracking-wide ${
+                className={`font-bold px-2 py-0.5 rounded text-[10px] tracking-wide inline-block w-fit ${
                   grant.likelihoodToSponsorPhDs === 'HIGH'
                     ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/40'
                     : 'bg-amber-500/20 text-amber-400 border border-amber-500/40'
@@ -159,7 +159,7 @@ export default function GrantFundingBadge({ profName, institutionName }: GrantFu
           {grant.awardTitle && (
             <div className="space-y-1">
               <span className="text-slate-400 font-medium">Award Title / Research Scope:</span>
-              <p className="text-slate-200 italic p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 leading-relaxed">
+              <p className="text-slate-200 italic p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 leading-relaxed break-words">
                 &ldquo;{grant.awardTitle}&rdquo;
               </p>
             </div>
@@ -167,7 +167,7 @@ export default function GrantFundingBadge({ profName, institutionName }: GrantFu
 
           <div className="p-3.5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 space-y-1.5">
             <div className="flex items-center gap-1.5 font-bold text-xs text-emerald-400">
-              <Sparkles className="w-3.5 h-3.5" />
+              <Sparkles className="w-3.5 h-3.5 shrink-0" />
               Outreach Strategy Tip:
             </div>
             <p className="text-[11px] leading-relaxed text-slate-300">
@@ -180,7 +180,7 @@ export default function GrantFundingBadge({ profName, institutionName }: GrantFu
           <button
             type="button"
             onClick={() => setIsModalOpen(false)}
-            className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors cursor-pointer"
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs transition-colors cursor-pointer text-center"
           >
             Close Report
           </button>

@@ -24,9 +24,9 @@ interface PreparedDraftsListProps {
 export function PreparedDraftsList({ contactedHistory }: PreparedDraftsListProps) {
   return (
     <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-      <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800 pb-3">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-emerald-400" />
+          <FileText className="w-4 h-4 text-emerald-400 shrink-0" />
           <h3 className="font-bold text-sm text-white">
             Prepared Gmail Drafts ({contactedHistory.length})
           </h3>
@@ -58,12 +58,12 @@ export function PreparedDraftsList({ contactedHistory }: PreparedDraftsListProps
           {contactedHistory.map((item) => (
             <div
               key={item.id}
-              className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs flex items-center justify-between gap-3"
+              className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
             >
               <div className="min-w-0 space-y-0.5">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold text-white truncate">{item.name}</span>
-                  <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 bg-cyan-500/15 text-cyan-400 border-cyan-500/30">
+                  <span className="font-bold text-white break-words">{item.name}</span>
+                  <span className="text-[10px] px-1.5 py-0.5 rounded font-semibold border flex items-center gap-1 bg-cyan-500/15 text-cyan-400 border-cyan-500/30 shrink-0">
                     <FileText className="w-2.5 h-2.5" /> Draft in {item.sentVia}
                   </span>
                   {item.attachmentName && (
@@ -72,11 +72,11 @@ export function PreparedDraftsList({ contactedHistory }: PreparedDraftsListProps
                     </span>
                   )}
                 </div>
-                <p className="text-[11px] text-slate-400 truncate">
+                <p className="text-[11px] text-slate-400 break-all">
                   {item.university} &bull; {item.email}
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
                 {item.draftUrl && (
                   <a
                     href={item.draftUrl}

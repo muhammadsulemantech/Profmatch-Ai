@@ -71,13 +71,13 @@ export function ResearchFocusSection({
               {interests.map((item) => (
                 <span
                   key={item}
-                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-medium break-words max-w-full"
                 >
-                  {item}
+                  <span className="break-words">{item}</span>
                   <button
                     type="button"
                     onClick={() => handleRemoveInterest(item)}
-                    className="text-slate-400 hover:text-rose-400 transition-colors"
+                    className="text-slate-400 hover:text-rose-400 transition-colors shrink-0"
                     title="Remove keyword"
                   >
                     <Trash2 className="w-3 h-3" />

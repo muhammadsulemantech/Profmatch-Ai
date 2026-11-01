@@ -124,11 +124,11 @@ export default function InteractivePlatformShowcase() {
         </div>
 
         {/* Console Mode Selector Tabs */}
-        <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+        <div className="flex items-center gap-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800 overflow-x-auto max-w-full no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('match')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'match'
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -139,7 +139,7 @@ export default function InteractivePlatformShowcase() {
           <button
             type="button"
             onClick={() => setActiveTab('papers')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'papers'
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -151,7 +151,7 @@ export default function InteractivePlatformShowcase() {
           <button
             type="button"
             onClick={() => setActiveTab('proposal')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'proposal'
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -163,7 +163,7 @@ export default function InteractivePlatformShowcase() {
           <button
             type="button"
             onClick={() => setActiveTab('pipeline')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
               activeTab === 'pipeline'
                 ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
@@ -350,12 +350,12 @@ export default function InteractivePlatformShowcase() {
               </div>
             </div>
 
-            <div className="p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-900/60 border border-slate-800 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 break-words w-fit">
                   IEEE Transactions on Sustainable Energy (2026)
                 </span>
-                <span className="text-xs text-slate-400">DOI: 10.1109/TSTE.2026.0491</span>
+                <span className="text-xs text-slate-400 break-all">DOI: 10.1109/TSTE.2026.0491</span>
               </div>
               <h4 className="text-base font-semibold text-white">
                 Decentralized Microgrid Dispatch with Deep Reinforcement Learning and Solid-State Storage
@@ -406,10 +406,10 @@ export default function InteractivePlatformShowcase() {
               </span>
             </div>
 
-            <div className="p-5 rounded-xl bg-slate-900/70 border border-slate-800 font-sans space-y-3.5 text-xs text-slate-300 leading-relaxed">
+            <div className="p-4 sm:p-5 rounded-xl bg-slate-900/70 border border-slate-800 font-sans space-y-3.5 text-xs text-slate-300 leading-relaxed overflow-hidden">
               <div className="border-b border-slate-800 pb-3 space-y-1 font-mono text-[11px] text-slate-400">
-                <div><span className="text-slate-500">To:</span> a.keller@tum.de (Official TUM Institutional Directory)</div>
-                <div><span className="text-slate-500">Subject:</span> Prospective PhD Research &bull; Synergy with Decentralized Microgrid Dispatch (IEEE 2026)</div>
+                <div className="break-all"><span className="text-slate-500">To:</span> a.keller@tum.de (Official TUM Institutional Directory)</div>
+                <div className="break-words"><span className="text-slate-500">Subject:</span> Prospective PhD Research &bull; Synergy with Decentralized Microgrid Dispatch (IEEE 2026)</div>
               </div>
 
               <p>Dear Professor Keller,</p>
@@ -423,7 +423,7 @@ export default function InteractivePlatformShowcase() {
                 I have attached my academic CV and summary of publications for your review. Thank you for your time and continued contributions to the discipline.
               </p>
 
-              <div className="pt-3 border-t border-slate-800 flex items-center justify-between text-slate-400 text-[11px]">
+              <div className="pt-3 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-slate-400 text-[11px]">
                 <span className="text-emerald-400 font-medium">&check; Tailored to Professor&apos;s verified grant &amp; recent paper</span>
                 <span>Drafted in accordance with ethical outreach standards</span>
               </div>
@@ -479,8 +479,8 @@ export default function InteractivePlatformShowcase() {
       </div>
 
       {/* Console Bottom Status Bar */}
-      <div className="bg-slate-900/90 px-6 py-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400">
-        <div className="flex items-center gap-4">
+      <div className="bg-slate-900/90 px-4 sm:px-6 py-3 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs text-slate-400">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <span className="flex items-center gap-1.5 text-emerald-400">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             Registry Live (50,000+ Profiles)

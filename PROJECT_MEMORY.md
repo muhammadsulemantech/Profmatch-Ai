@@ -626,6 +626,65 @@ profmatch-ai/
   - `tests/password-reset.test.mjs`: All 6 tests passing.
   - `npx tsc --noEmit`: 0 errors.
 
+### 15.6 Tier 17: Comprehensive Full-Platform Mobile & Cross-Device Responsiveness Audit (COMPLETED 2026-11-01)
+- **Problem Statement & Scope:**
+  - Audited every single page and component across all screen viewports (320px–360px ultra-narrow mobile, 640px sm, 768px md tablet, 1024px lg, and 1280px+ desktop).
+  - Addressed text overflowing containers, rigid flex rows pushing cards beyond mobile viewports, unscrollable fixed modals on short screens, rigid OTP verification boxes, and awkward button clipping.
+- **Systematic Page-by-Page Remediations Applied:**
+  1. **Landing & Platform Showcase (`app/page.tsx`, `components/home/interactive-platform-showcase.tsx`, `components/home/home-pricing-section.tsx`):**
+     - Made console tabs bar horizontally scrollable with `overflow-x-auto no-scrollbar` and `whitespace-nowrap`.
+     - Applied `break-all` to recipient emails and `break-words` to long academic publication titles and DOIs.
+     - Changed status footer action rows to `flex-col sm:flex-row`.
+     - Made student acceptance live ticker wrap responsively (`flex-col sm:flex-row sm:items-center` with `min-w-0 flex-1`).
+  2. **Search & Professor Cards (`app/search/page.tsx`, `components/search/professor-card.tsx`):**
+     - Added `min-w-0 flex-1` on professor card body wrapper.
+     - Added `break-words` on faculty names and research interests tags, and `break-all` on university email addresses.
+     - Changed action buttons (Generate Draft, View Profile, Save) to `flex-wrap sm:flex-nowrap w-full sm:w-auto`.
+     - Converted search results counter and verification legend to `flex-col sm:flex-row sm:items-center justify-between gap-1.5`.
+  3. **Professor Detail Page & Grant Modal (`app/professors/[id]/page.tsx`, `components/professors/grant-funding-badge.tsx`):**
+     - Converted profile header action buttons to full width on mobile (`flex-col sm:flex-row items-stretch sm:items-center w-full md:w-auto`).
+     - Removed rigid `shrink-0` from office address, added `break-all` on professor email, and added responsive layout to publications header.
+     - Fixed Federal Grant modal popover: added `max-h-[90vh] overflow-y-auto`, changed key-value pairs to `flex-col sm:flex-row sm:items-center sm:justify-between`, and made the close button full width on mobile.
+  4. **Workspace Dashboard (`app/dashboard/page.tsx`):**
+     - Enhanced top 4 metric cards with `break-words`, `min-w-0`, and adjusted mobile font sizing (`text-xl sm:text-2xl`).
+     - Made shortlisted faculty actions wrap responsively (`flex-col sm:flex-row sm:items-center justify-between gap-2`).
+  5. **AutoPilot Engine & Prepared Drafts (`app/autopilot/page.tsx`, `components/autopilot/campaign-terminal.tsx`, `components/autopilot/prepared-drafts-list.tsx`):**
+     - Added `break-all` to terminal log outputs and `flex-col sm:flex-row` to live status bar and anti-spam cooldown banner.
+     - Updated draft cards to `flex-col sm:flex-row sm:items-center` with `break-words` on candidate names and `break-all` on emails.
+  6. **Kanban & Application Tracker (`app/tracker/page.tsx`, `app/applications/page.tsx`):**
+     - Added `break-words` on professor names, titles, university names, and notes inside Kanban cards.
+     - In applications pipeline: made filter and add buttons wrap on mobile (`flex-wrap sm:flex-nowrap w-full sm:w-auto`), and converted application modal form fields from rigid `grid-cols-2` to `grid-cols-1 sm:grid-cols-2` with `max-h-[90vh] overflow-y-auto`.
+  7. **Outreach Email Review Modal (`components/outreach/email-review-modal.tsx`):**
+     - Converted modal to `max-h-[90vh] overflow-y-auto p-4 sm:p-6 md:p-8` to eliminate vertical clipping on mobile devices.
+     - Added `truncate` and `min-w-0` to header faculty name, and converted action buttons to `flex-col sm:flex-row items-stretch sm:items-center` with full width on mobile.
+  8. **Outreach Generator (`app/outreach/generate/page.tsx`):**
+     - Added `break-all` to verified professor email banner.
+     - Converted tone selector and follow-up day buttons to `flex-wrap`.
+  9. **Inbox & Reply Analyzer (`components/inbox/reply-detail-view.tsx`):**
+     - Added `break-words` to subject, `break-all` to sender email, and `flex-col sm:flex-row` to AI summary header and response action button row.
+  10. **Profile Page (`components/profile/avatar-section.tsx`, `components/profile/research-focus-section.tsx`):**
+      - Added `flex-wrap` to avatar action buttons ("Upload New Picture", "Remove Photo").
+      - Added `break-words max-w-full` to keyword interest chips and made the delete button `shrink-0`.
+  11. **Billing, Pricing & Checkout (`app/billing/page.tsx`, `app/checkout/page.tsx`, `app/pricing/page.tsx`):**
+      - Made billing action buttons wrap responsively (`flex-wrap sm:flex-nowrap w-full sm:w-auto`).
+      - In checkout page: converted input labels from rigid `flex items-center justify-between` to `flex-col sm:flex-row sm:items-center justify-between gap-1`.
+      - In pricing page: converted trust indicators to `flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-center`.
+  12. **Gmail OAuth Connector (`app/connectors/page.tsx`):**
+      - Added `flex-col sm:flex-row sm:items-center` to header and connection details card, and `break-all` on connected email.
+  13. **Onboarding Pipeline (`app/onboarding/page.tsx`):**
+      - Made step indicator scrollable on ultra-narrow mobile (`overflow-x-auto no-scrollbar`) with `hidden sm:inline` labels.
+  14. **Authentication Pages (`app/(auth)/login`, `app/(auth)/signup`, `app/(auth)/forgot-password`, `app/(auth)/reset-password`):**
+      - Fixed 6-digit OTP code overflow on 320px–360px mobile viewports: changed card padding from `p-8` to `p-5 sm:p-8` and OTP inputs from rigid `w-11` (44px) to responsive `w-9 sm:w-11 md:w-12 h-11 sm:h-12 md:h-14` with `gap-1.5 sm:gap-2.5` and `shrink min-w-0`.
+      - Added `break-all` to displayed email addresses.
+  15. **Campaigns (`app/campaigns/page.tsx`):**
+      - Added `break-words`, `min-w-0`, and `flex-wrap` to campaign title and metric cards.
+      - Made campaign creation modal responsive with `grid-cols-1 sm:grid-cols-2` and `max-h-[90vh] overflow-y-auto`.
+  16. **Admin Telemetry (`components/admin/users-tab.tsx`):**
+      - Added `overflow-x-auto max-w-full no-scrollbar` to user filter bar and `break-all` to user email column.
+- **Verification:**
+  - Automated Tests: 97/97 tests passing across 11 test suites (`npm test`).
+  - Next.js Production Build: 76/76 static & dynamic pages successfully compiled with 0 errors (`npm run build`).
+
 
 
 

@@ -210,28 +210,28 @@ export default function CampaignsPage() {
         {/* Campaign Container */}
         <div className="p-6 sm:p-8 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-6 shadow-sm">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-            <div>
-              <div className="flex items-center gap-2.5">
-                <h2 className="font-heading text-xl font-bold text-white">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2.5">
+                <h2 className="font-heading text-lg sm:text-xl font-bold text-white break-words">
                   Global Verified Faculty Outreach — Fall 2027
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider shrink-0">
                   ACTIVE
                 </span>
               </div>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1 leading-relaxed">
                 Global campaign connecting with verified faculty across USA, Europe, and Asia for funded graduate supervision.
               </p>
             </div>
-            <div className="text-xs text-slate-400">
+            <div className="text-xs text-slate-400 shrink-0">
               Target Intake: <strong className="text-emerald-400 font-semibold">Fall 2027</strong>
             </div>
           </div>
 
           {/* Metric Strip */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-center space-y-1">
-              <p className="text-xs font-medium text-slate-400">Shortlisted Faculty</p>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-center space-y-1 min-w-0">
+              <p className="text-xs font-medium text-slate-400 break-words">Shortlisted Faculty</p>
               <p className="font-heading text-3xl font-bold text-white">{shortlistedCount}</p>
             </div>
             <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800 text-center space-y-1">
@@ -373,21 +373,21 @@ export default function CampaignsPage() {
       {/* New Campaign Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh] p-5 sm:p-8 space-y-5">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                   <Layers className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="font-heading font-bold text-lg text-white">Create Outreach Campaign</h3>
+                <div className="min-w-0">
+                  <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">Create Outreach Campaign</h3>
                   <p className="text-xs text-slate-400">Organize faculty targets by intake, domain, and geography.</p>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors shrink-0"
               >
                 ✕
               </button>
@@ -406,7 +406,7 @@ export default function CampaignsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">Target Intake</label>
                   <select
@@ -445,17 +445,17 @@ export default function CampaignsPage() {
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition-colors"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition-colors text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all text-center"
                 >
                   Create Campaign
                 </button>

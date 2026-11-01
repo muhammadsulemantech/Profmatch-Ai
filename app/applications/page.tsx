@@ -218,12 +218,12 @@ export default function ApplicationsPage() {
               Systematically monitor faculty contact, portal submissions, funding agreements, and official institutional deadlines.
             </p>
           </div>
-          <div className="flex items-center gap-2.5">
-            <div className="relative">
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
+            <div className="relative flex-1 sm:flex-none">
               <button
                 type="button"
                 onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-                className={`px-4 py-2 text-xs font-medium rounded-xl border transition-all flex items-center gap-1.5 shadow-sm ${
+                className={`w-full sm:w-auto px-4 py-2 text-xs font-medium rounded-xl border transition-all flex items-center justify-center gap-1.5 shadow-sm ${
                   filterStatus !== 'ALL'
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                     : 'bg-slate-900 text-slate-200 border-slate-800 hover:bg-slate-800'
@@ -263,7 +263,7 @@ export default function ApplicationsPage() {
             <button
               type="button"
               onClick={() => requireAuth('add new application', openAddModal)}
-              className="px-4 py-2 text-xs font-semibold text-slate-950 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 rounded-xl transition-all flex items-center gap-1.5 shadow-lg shadow-emerald-500/20"
+              className="flex-1 sm:flex-none px-4 py-2 text-xs font-semibold text-slate-950 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 rounded-xl transition-all flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/20"
             >
               <Plus className="w-4 h-4" />
               Add Application
@@ -465,14 +465,14 @@ export default function ApplicationsPage() {
       {/* Add / Edit Application Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-hidden p-6 sm:p-8 space-y-5">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+          <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-800 shadow-2xl overflow-y-auto max-h-[90vh] p-5 sm:p-8 space-y-5">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                   <GraduationCap className="w-5 h-5" />
                 </div>
-                <div>
-                  <h3 className="font-heading font-bold text-lg text-white">
+                <div className="min-w-0">
+                  <h3 className="font-heading font-bold text-base sm:text-lg text-white truncate">
                     {editingAppId ? 'Edit Application File' : 'Add Graduate Application'}
                   </h3>
                   <p className="text-xs text-slate-400">Track portal submission deadlines and advisor agreements.</p>
@@ -482,7 +482,7 @@ export default function ApplicationsPage() {
                 type="button"
                 onClick={() => setIsModalOpen(false)}
                 aria-label="Close dialog"
-                className="text-slate-400 hover:text-white min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-slate-400 hover:text-white min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg hover:bg-slate-800 transition-colors shrink-0"
               >
                 ✕
               </button>
@@ -501,7 +501,7 @@ export default function ApplicationsPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">Program &amp; Department</label>
                   <input
@@ -528,7 +528,7 @@ export default function ApplicationsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">Target Intake</label>
                   <select
@@ -552,7 +552,7 @@ export default function ApplicationsPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-slate-300 font-medium mb-1">Pipeline Status</label>
                   <select
@@ -594,17 +594,17 @@ export default function ApplicationsPage() {
                 />
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2.5">
+              <div className="pt-2 flex flex-col-reverse sm:flex-row items-stretch sm:items-center sm:justify-end gap-2.5">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition-colors"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-slate-800 text-slate-400 hover:text-white hover:bg-slate-800 font-medium transition-colors text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-semibold shadow-lg shadow-emerald-500/20 transition-all text-center"
                 >
                   {editingAppId ? 'Save Changes' : 'Add Application'}
                 </button>

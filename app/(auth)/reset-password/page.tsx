@@ -104,8 +104,8 @@ function ResetPasswordForm() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-4 pt-24 sm:pt-28 pb-16 selection:bg-emerald-500/25 selection:text-emerald-300">
-      <div className="max-w-md w-full bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
+    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-3 sm:px-4 pt-24 sm:pt-28 pb-16 selection:bg-emerald-500/25 selection:text-emerald-300">
+      <div className="max-w-md w-full bg-slate-900 rounded-2xl p-5 sm:p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 border border-emerald-500/30 flex items-center justify-center mx-auto text-emerald-400 mb-3 shadow-lg shadow-emerald-500/10">
             <KeyRound className="w-6 h-6" />
@@ -115,7 +115,7 @@ function ResetPasswordForm() {
           </div>
           <h1 className="text-2xl font-heading font-bold text-white tracking-tight">Set New Password</h1>
           <p className="text-xs text-slate-400">
-            Choose a strong password for <span className="text-slate-200 font-mono font-medium">{email || 'your account'}</span>
+            Choose a strong password for <span className="text-slate-200 font-mono font-medium break-all">{email || 'your account'}</span>
           </p>
         </div>
 

@@ -308,8 +308,8 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-4 pt-24 sm:pt-28 pb-16 selection:bg-emerald-500/25 selection:text-emerald-300">
-      <div className="max-w-md w-full bg-slate-900 rounded-2xl p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
+    <div className="min-h-[85vh] bg-[#080B11] flex items-center justify-center px-3 sm:px-4 pt-24 sm:pt-28 pb-16 selection:bg-emerald-500/25 selection:text-emerald-300">
+      <div className="max-w-md w-full bg-slate-900 rounded-2xl p-5 sm:p-8 border border-slate-800 shadow-2xl shadow-emerald-500/5 space-y-6">
         
         {/* Header */}
         <div className="text-center space-y-2">
@@ -505,7 +505,7 @@ export default function SignupPage() {
               <label className="block text-xs font-semibold text-center text-slate-300">
                 Enter 6-Digit Code
               </label>
-              <div className="flex justify-between gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
+              <div className="flex justify-between gap-1.5 sm:gap-2.5 max-w-full" onPaste={handleOtpPaste}>
                 {otp.map((digit, idx) => (
                   <input
                     key={idx}
@@ -519,7 +519,7 @@ export default function SignupPage() {
                     value={digit}
                     onChange={(e) => handleOtpChange(idx, e.target.value)}
                     onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                    className="w-11 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-bold font-mono text-white bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all selection:bg-transparent"
+                    className="w-9 h-11 sm:w-11 sm:h-12 md:w-12 md:h-14 text-center text-base sm:text-lg md:text-xl font-bold font-mono text-white bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/30 transition-all selection:bg-transparent shrink min-w-0"
                   />
                 ))}
               </div>

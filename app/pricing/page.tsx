@@ -204,13 +204,13 @@ export default function PricingPage() {
           <p className="text-sm sm:text-base text-slate-400 max-w-2xl mx-auto leading-relaxed">
             Choose the plan that fits your intake stage. No surprise subscription lock-ins. Upgrade or downgrade anytime with instantaneous access activation.
           </p>
-          <div className="pt-2 flex items-center justify-center gap-6 text-xs text-slate-400">
+          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6 text-center text-xs text-slate-400">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Verified Institutional Directories</span>
             </div>
             <div className="flex items-center gap-2">
-              <Globe className="w-4 h-4 text-emerald-400" />
+              <Globe className="w-4 h-4 text-emerald-400 shrink-0" />
               <span>Over <strong className="text-emerald-400">1,420+ MS &amp; PhD candidates</strong> matched with verified faculty worldwide.</span>
             </div>
           </div>

@@ -156,11 +156,11 @@ export default function OnboardingPage() {
     <div className="max-w-3xl mx-auto px-4 py-12">
       {/* Step Indicator Header */}
       <div className="mb-8">
-        <div className="flex items-center justify-between mb-3 text-xs font-semibold text-slate-400">
-          <span className={step >= 1 ? 'text-emerald-400' : ''}>1. Target & Geography</span>
-          <span className={step >= 2 ? 'text-emerald-400' : ''}>2. Academic History</span>
-          <span className={step >= 3 ? 'text-emerald-400' : ''}>3. Research & Projects</span>
-          <span className={step >= 4 ? 'text-emerald-400' : ''}>4. Documents & Finish</span>
+        <div className="flex items-center justify-between mb-3 text-[11px] sm:text-xs font-semibold text-slate-400 gap-1 overflow-x-auto no-scrollbar">
+          <span className={`whitespace-nowrap ${step >= 1 ? 'text-emerald-400 font-bold' : ''}`}>1. <span className="hidden sm:inline">Target &amp; </span>Geography</span>
+          <span className={`whitespace-nowrap ${step >= 2 ? 'text-emerald-400 font-bold' : ''}`}>2. <span className="hidden sm:inline">Academic </span>History</span>
+          <span className={`whitespace-nowrap ${step >= 3 ? 'text-emerald-400 font-bold' : ''}`}>3. Research<span className="hidden sm:inline"> &amp; Projects</span></span>
+          <span className={`whitespace-nowrap ${step >= 4 ? 'text-emerald-400 font-bold' : ''}`}>4. <span className="hidden sm:inline">Documents &amp; </span>Finish</span>
         </div>
         <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
           <div

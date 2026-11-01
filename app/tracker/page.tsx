@@ -355,11 +355,11 @@ export default function ApplicationTrackerPage() {
                         className="p-4 rounded-xl bg-slate-900 border border-slate-800/90 shadow-lg hover:border-slate-700 transition-all space-y-3 group"
                       >
                         <div>
-                          <h3 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors">
+                          <h3 className="text-xs font-bold text-white group-hover:text-emerald-400 transition-colors break-words">
                             {card.professorName}
                           </h3>
-                          <p className="text-[11px] text-slate-400 truncate">{card.title}</p>
-                          <p className="text-[11px] font-semibold text-emerald-400 truncate mt-0.5">
+                          <p className="text-[11px] text-slate-400 break-words">{card.title}</p>
+                          <p className="text-[11px] font-semibold text-emerald-400 break-words mt-0.5">
                             {card.universityName} &bull; {card.country}
                           </p>
                         </div>
@@ -367,12 +367,12 @@ export default function ApplicationTrackerPage() {
                         {card.stage === 'OUTREACH_SENT' && (
                           <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center justify-between text-[11px] text-amber-300">
                             <div className="flex items-center gap-1.5 font-semibold">
-                              <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
+                              <Clock className="w-3.5 h-3.5 text-amber-400 animate-pulse shrink-0" />
                               <span>Follow-up Recommended</span>
                             </div>
                             <Link
                               href={`/professors/${card.professorId}`}
-                              className="text-[10px] font-bold text-amber-400 hover:text-amber-200 underline"
+                              className="text-[10px] font-bold text-amber-400 hover:text-amber-200 underline shrink-0"
                             >
                               Draft &rarr;
                             </Link>
@@ -380,7 +380,7 @@ export default function ApplicationTrackerPage() {
                         )}
 
                         {card.notes && (
-                          <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] text-slate-300 font-light leading-snug">
+                          <div className="p-2.5 rounded-lg bg-slate-950 border border-slate-800/80 text-[11px] text-slate-300 font-light leading-snug break-words">
                             {card.notes}
                           </div>
                         )}

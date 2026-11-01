@@ -697,32 +697,32 @@ export default function DashboardPage() {
             </div>
 
             {/* Metrics Row */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-xs font-medium text-slate-400">Professors Shortlisted</span>
-                <p className="font-heading text-3xl font-bold text-white">{savedCount}</p>
-                <span className="text-[11px] text-emerald-400 block font-medium">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1 min-w-0">
+                <span className="text-xs font-medium text-slate-400 break-words block">Professors Shortlisted</span>
+                <p className="font-heading text-2xl sm:text-3xl font-bold text-white">{savedCount}</p>
+                <span className="text-[11px] text-emerald-400 block font-medium break-words">
                   {savedCount > 0 ? `${savedCount} saved faculty` : '0 saved'}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-xs font-medium text-slate-400">Emails Sent</span>
-                <p className="font-heading text-3xl font-bold text-white">{sentCount}</p>
-                <span className="text-[11px] text-emerald-400 block font-medium">
-                  {sentCount > 0 ? `${sentCount} sent all-time • verified delivered` : '0 emails sent'}
+              <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1 min-w-0">
+                <span className="text-xs font-medium text-slate-400 break-words block">Emails Sent</span>
+                <p className="font-heading text-2xl sm:text-3xl font-bold text-white">{sentCount}</p>
+                <span className="text-[11px] text-emerald-400 block font-medium break-words">
+                  {sentCount > 0 ? `${sentCount} sent all-time` : '0 emails sent'}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-xs font-medium text-slate-400">Replies</span>
-                <p className="font-heading text-3xl font-bold text-emerald-400">{repliesCount}</p>
-                <span className="text-[11px] text-emerald-400 block font-medium">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1 min-w-0">
+                <span className="text-xs font-medium text-slate-400 break-words block">Replies</span>
+                <p className="font-heading text-2xl sm:text-3xl font-bold text-emerald-400">{repliesCount}</p>
+                <span className="text-[11px] text-emerald-400 block font-medium break-words">
                   {sentCount > 0 ? `${Math.round((repliesCount / sentCount) * 100)}% response rate` : '0% response rate'}
                 </span>
               </div>
-              <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1">
-                <span className="text-xs font-medium text-slate-400">Positive Responses</span>
-                <p className="font-heading text-3xl font-bold text-cyan-400">{positiveCount}</p>
-                <span className="text-[11px] text-cyan-400 block font-medium">
+              <div className="p-3.5 sm:p-4 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1 min-w-0">
+                <span className="text-xs font-medium text-slate-400 break-words block">Positive Responses</span>
+                <p className="font-heading text-2xl sm:text-3xl font-bold text-cyan-400">{positiveCount}</p>
+                <span className="text-[11px] text-cyan-400 block font-medium break-words">
                   {positiveCount > 0 ? `${positiveCount} positive replies` : '0 interviews'}
                 </span>
               </div>
@@ -844,12 +844,12 @@ export default function DashboardPage() {
                             </div>
                           )}
 
-                          <div className="pt-2 flex items-center justify-between border-t border-slate-800 text-xs">
+                          <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-800 text-xs">
                             <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                               Saved in Faculty Shortlist
                             </span>
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 self-end sm:self-auto">
                               <button
                                 type="button"
                                 onClick={() => handleProtectedAction(`view profile for ${prof.name}`, `/professors/${prof.id}`)}

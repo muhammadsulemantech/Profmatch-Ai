@@ -33,8 +33,8 @@ export function CampaignTerminal({
   return (
     <div className="space-y-6">
       {/* Live Status & Progress Bar */}
-      <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between">
+      <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-4 sm:p-6 space-y-4 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
               {isRunning && (
@@ -46,7 +46,7 @@ export function CampaignTerminal({
                 }`}
               />
             </span>
-            <h3 className="font-bold text-sm text-white uppercase tracking-wider">
+            <h3 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wider">
               Engine Status: <span className="text-emerald-400">{engineStatus}</span>
             </h3>
           </div>
@@ -66,12 +66,12 @@ export function CampaignTerminal({
 
         {/* Live Sub-Status Box */}
         {engineStatus === 'COOLDOWN' && remainingCooldown > 0 && (
-          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex items-center justify-between">
+          <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <span className="flex items-center gap-2 font-medium">
-              <Clock className="w-4 h-4 animate-spin text-amber-400" />
+              <Clock className="w-4 h-4 animate-spin text-amber-400 shrink-0" />
               Anti-spam protection active. Holding queue...
             </span>
-            <span className="font-mono font-bold text-sm bg-amber-950/60 px-2.5 py-0.5 rounded border border-amber-500/40">
+            <span className="font-mono font-bold text-sm bg-amber-950/60 px-2.5 py-0.5 rounded border border-amber-500/40 shrink-0 self-start sm:self-auto">
               {remainingCooldown}s remaining
             </span>
           </div>
@@ -100,10 +100,10 @@ export function CampaignTerminal({
             </div>
           ) : (
             logs.map((log) => (
-              <div key={log.id} className="flex items-start gap-2">
+              <div key={log.id} className="flex items-start gap-2 min-w-0">
                 <span className="text-slate-600 shrink-0 select-none">[{log.time}]</span>
                 <span
-                  className={
+                  className={`break-all ${
                     log.type === 'SUCCESS'
                       ? 'text-emerald-400 font-bold'
                       : log.type === 'AI'
@@ -115,7 +115,7 @@ export function CampaignTerminal({
                       : log.type === 'ERROR'
                       ? 'text-rose-400'
                       : 'text-slate-300'
-                  }
+                  }`}
                 >
                   {log.message}
                 </span>

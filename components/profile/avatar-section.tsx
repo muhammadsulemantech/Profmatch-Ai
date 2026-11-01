@@ -93,7 +93,7 @@ export function AvatarSection({
           <p className="text-xs text-slate-400 leading-relaxed max-w-md">
             Upload your picture from your PC, laptop, or mobile device. It will appear on your workspace dashboard and header navigation pill.
           </p>
-          <div className="flex items-center justify-center sm:justify-start gap-3 pt-1">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 pt-1">
             <button
               type="button"
               onClick={() => profileAvatarInputRef.current?.click()}

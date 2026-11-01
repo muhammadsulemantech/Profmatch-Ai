@@ -54,28 +54,28 @@ export function ReplyDetailView({
       {/* Selected Reply Details Card */}
       <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-4">
-          <div className="space-y-1">
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Mail className="w-4 h-4 text-emerald-400" />
-              {selectedReply.subject || 'Faculty Response'}
+          <div className="space-y-1 min-w-0 flex-1">
+            <h2 className="text-base font-bold text-white flex items-center gap-2 break-words">
+              <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span>{selectedReply.subject || 'Faculty Response'}</span>
             </h2>
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
-              <span className="font-semibold text-slate-200">
+              <span className="font-semibold text-slate-200 break-words">
                 {selectedReply.professor_name || 'Professor'}
               </span>
               <span>&bull;</span>
-              <span className="font-mono text-slate-400">
+              <span className="font-mono text-slate-400 break-all">
                 {selectedReply.sender_email || 'faculty@university.edu'}
               </span>
               {selectedReply.university_name && (
                 <>
                   <span>&bull;</span>
-                  <span className="text-emerald-400">{selectedReply.university_name}</span>
+                  <span className="text-emerald-400 break-words">{selectedReply.university_name}</span>
                 </>
               )}
             </div>
           </div>
-          <span className="text-xs text-slate-500 shrink-0 font-mono">
+          <span className="text-xs text-slate-500 shrink-0 font-mono self-start sm:self-auto">
             {selectedReply.received_at ? new Date(selectedReply.received_at).toLocaleString() : ''}
           </span>
         </div>
@@ -85,7 +85,7 @@ export function ReplyDetailView({
           <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block">
             Original Faculty Message
           </span>
-          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans select-text">
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans select-text break-words">
             {selectedReply.body_text}
           </div>
         </div>
@@ -93,11 +93,11 @@ export function ReplyDetailView({
 
       {/* AI Intent & Sentiment Card */}
       <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-cyan-400" /> AI Classification &amp; Core Takeaway
+            <Sparkles className="w-4 h-4 text-cyan-400 shrink-0" /> AI Classification &amp; Core Takeaway
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <span
               className={`px-2.5 py-1 rounded-full text-[11px] font-bold border ${
                 selectedReply.sentiment === 'POSITIVE'
@@ -113,18 +113,18 @@ export function ReplyDetailView({
           </div>
         </div>
 
-        <div className="p-3.5 bg-slate-950/70 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed">
+        <div className="p-3.5 bg-slate-950/70 rounded-xl border border-slate-800 text-xs text-slate-300 leading-relaxed break-words">
           {selectedReply.summary || 'Summary generated based on key faculty directives.'}
         </div>
       </div>
 
       {/* Suggested Response Draft Card */}
       <div className="glass-panel rounded-2xl p-6 border border-slate-800 space-y-4 shadow-xl">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-white flex items-center gap-2">
-            <Edit3 className="w-4 h-4 text-emerald-400" /> Suggested Professional Response
+            <Edit3 className="w-4 h-4 text-emerald-400 shrink-0" /> Suggested Professional Response
           </h3>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 self-start sm:self-auto">
             <button
               type="button"
               onClick={() => setIsEditing(!isEditing)}
@@ -151,17 +151,17 @@ export function ReplyDetailView({
             className="w-full p-4 bg-slate-950 border border-emerald-500/50 rounded-xl text-xs text-white leading-relaxed focus:outline-none focus:ring-1 focus:ring-emerald-500"
           />
         ) : (
-          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans">
+          <div className="p-4 bg-slate-950 rounded-xl border border-slate-800 text-xs text-slate-200 leading-relaxed whitespace-pre-line font-sans break-words">
             {suggestedDraft}
           </div>
         )}
 
-        <div className="flex items-center justify-between gap-4 pt-2 border-t border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-800">
           <button
             type="button"
             onClick={onSendResponse}
             disabled={isSending || !suggestedDraft.trim()}
-            className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all"
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 text-xs font-bold flex items-center justify-center gap-1.5 shadow-md shadow-emerald-500/20 disabled:opacity-50 transition-all shrink-0"
           >
             {isSending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
             {isSending ? 'Sending Response...' : 'Send Response'}

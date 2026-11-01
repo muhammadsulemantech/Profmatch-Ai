@@ -87,17 +87,17 @@ export default function BillingPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2.5 w-full sm:w-auto">
           <button
             onClick={refreshBillingData}
             disabled={isRefreshing}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-xs transition-all"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-300 font-semibold text-xs transition-all"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin' : ''}`} /> Sync Status
           </button>
           <Link
             href="/pricing"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all"
+            className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 transition-all text-center"
           >
             Change / Upgrade Plan
           </Link>
@@ -125,10 +125,10 @@ export default function BillingPage() {
           </div>
 
           <div className="flex items-baseline gap-2">
-            <h2 className="text-3xl font-extrabold text-white flex items-center gap-2">
-              {activeTier === 'PRO' && <Zap className="w-6 h-6 text-emerald-400" />}
-              {activeTier === 'ELITE' && <Sparkles className="w-6 h-6 text-teal-400" />}
-              {planConfig.name}
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-white flex flex-wrap items-center gap-2 break-words">
+              {activeTier === 'PRO' && <Zap className="w-6 h-6 text-emerald-400 shrink-0" />}
+              {activeTier === 'ELITE' && <Sparkles className="w-6 h-6 text-teal-400 shrink-0" />}
+              <span>{planConfig.name}</span>
             </h2>
           </div>
 

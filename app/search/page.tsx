@@ -688,7 +688,7 @@ export default function SearchPage() {
 
             return (
               <>
-                <div className="flex items-center justify-between text-xs text-slate-400 pb-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 text-xs text-slate-400 pb-1">
                   <span>
                     Showing{' '}
                     <strong className="text-white font-semibold">
@@ -698,8 +698,8 @@ export default function SearchPage() {
                     </strong>{' '}
                     {savedOnly ? 'saved' : 'verified'} faculty records
                   </span>
-                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
-                    <ShieldCheck className="w-3.5 h-3.5" /> Cross-verified with official registries
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium shrink-0">
+                    <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Cross-verified with official registries
                   </span>
                 </div>
 

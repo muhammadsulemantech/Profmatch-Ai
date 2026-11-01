@@ -301,15 +301,15 @@ export default function OutreachGeneratePage() {
                   <span className="font-heading font-bold text-sm text-white">{prof.name}</span>
                   <span className="text-slate-400 ml-1">&bull; {prof.university_name}</span>
                 </div>
-                <div className="sm:text-right">
+                <div className="sm:text-right min-w-0">
                   <span className="text-slate-400 block text-[11px] font-medium">Verified Faculty Email:</span>
-                  <span className="font-mono text-xs text-emerald-400 font-medium select-all">{prof.email || 'admissions@university.edu'}</span>
+                  <span className="font-mono text-xs text-emerald-400 font-medium select-all break-all">{prof.email || 'admissions@university.edu'}</span>
                 </div>
               </div>
 
               {/* Tone Selector & Editing Actions */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800">
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs font-semibold text-slate-200">Tone:</span>
                   {(['academic', 'formal', 'direct', 'concise'] as const).map((t) => (
                     <button
@@ -391,9 +391,9 @@ export default function OutreachGeneratePage() {
                 </div>
 
                 {enableFollowUpReminder && (
-                  <div className="flex items-center gap-3 pt-1 text-xs text-slate-300">
-                    <span>Remind me to send a polite follow-up in:</span>
-                    <div className="flex items-center gap-1">
+                  <div className="flex flex-wrap items-center gap-2 pt-1 text-xs text-slate-300">
+                    <span className="w-full sm:w-auto">Remind me to send a polite follow-up in:</span>
+                    <div className="flex items-center gap-1.5">
                       {[7, 14].map(days => (
                         <button
                           key={days}

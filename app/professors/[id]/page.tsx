@@ -332,31 +332,31 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
         </div>
 
         {/* Professor Header Profile Card */}
-        <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6 shadow-xl">
+        <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-5 sm:p-8 space-y-6 shadow-xl">
           <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-            <div className="flex items-start gap-5">
-              <div className="w-16 h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-400 text-2xl shadow-sm shrink-0">
+            <div className="flex items-start gap-4 sm:gap-5 min-w-0 flex-1">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-emerald-400 text-xl sm:text-2xl shadow-sm shrink-0">
                 {prof.name.split(' ').filter(n => !n.includes('.')).map((n) => n[0]).slice(0, 2).join('')}
               </div>
-              <div className="space-y-1.5">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">{prof.name}</h1>
+              <div className="space-y-1.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl sm:text-3xl font-extrabold text-white tracking-tight break-words">{prof.name}</h1>
                   {prof.verification_status === 'VERIFIED' ? (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                      <Check className="w-3.5 h-3.5 text-emerald-400" /> Verified University Profile
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 shrink-0">
+                      <Check className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Verified University Profile
                     </span>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25">
+                    <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/25 shrink-0">
                       Unverified Web Record
                     </span>
                   )}
-                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                  <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
                     {prof.recruiting_status === 'ACTIVELY_RECRUITING' ? 'Actively Recruiting' : 'Recruiting Status Unknown'}
                   </span>
                   <GrantFundingBadge profName={prof.name} institutionName={prof.university_name} />
                 </div>
-                <p className="text-xs sm:text-sm text-slate-400 font-medium">{prof.title} &bull; {prof.position}</p>
-                <p className="text-xs sm:text-sm font-semibold text-emerald-400">
+                <p className="text-xs sm:text-sm text-slate-400 font-medium break-words">{prof.title} &bull; {prof.position}</p>
+                <p className="text-xs sm:text-sm font-semibold text-emerald-400 break-words">
                   <Link
                     href={`/search?country=${encodeURIComponent(prof.university_country || '')}&q=${encodeURIComponent(prof.university_name || '')}`}
                     className="hover:underline transition-colors"
@@ -369,42 +369,42 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
             </div>
 
             {/* Header Action Buttons */}
-            <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto shrink-0">
               <button
                 type="button"
                 onClick={handleOpenAnalysisModal}
-                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 border border-amber-500/30 font-bold text-xs shadow-sm flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
               >
-                <Sparkles className="w-4 h-4 text-amber-400" />
+                <Sparkles className="w-4 h-4 text-amber-400 shrink-0" />
                 AI Match Analysis
               </button>
 
               <button
                 type="button"
                 onClick={() => setIsEmailModalOpen(true)}
-                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-bold text-xs shadow-md shadow-emerald-500/20 flex items-center justify-center gap-1.5 transition-all hover:scale-[1.02]"
               >
-                <Mail className="w-4 h-4" />
+                <Mail className="w-4 h-4 shrink-0" />
                 Create Gmail Draft
               </button>
 
               <Link
                 href={`/outreach/generate?professorId=${prof.id}`}
-                className="flex-1 md:flex-none px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
+                className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-800 font-semibold text-xs flex items-center justify-center gap-1.5 transition-all"
               >
-                Outreach Studio <ArrowRight className="w-3.5 h-3.5" />
+                Outreach Studio <ArrowRight className="w-3.5 h-3.5 shrink-0" />
               </Link>
             </div>
           </div>
 
           {/* Contact & Official Verification Links */}
-          <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-slate-800 text-xs">
-            <div className="flex items-center gap-2 text-slate-300 min-w-0 max-w-full">
+          <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-slate-800 text-xs">
+            <div className="flex flex-wrap items-center gap-2 text-slate-300 min-w-0 max-w-full">
               <Mail className="w-4 h-4 text-emerald-400 shrink-0" />
-              <span className="font-mono text-emerald-300 select-all truncate">
+              <span className="font-mono text-emerald-300 select-all break-all">
                 {cleanEmail}
               </span>
-              <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
+              <span className={`text-[10px] px-1.5 py-0.5 rounded border shrink-0 ${
                 prof.email_verification_status === 'VERIFIED'
                   ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
                   : 'bg-amber-500/10 text-amber-400 border-amber-500/25'
@@ -413,20 +413,20 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-400 shrink-0">
+            <div className="flex items-center gap-2 text-slate-400 min-w-0">
               <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="text-slate-300 font-medium">
+              <span className="text-slate-300 font-medium break-words">
                 Office: {prof.office || `${prof.department_name || 'Department'} Main Hall`}
               </span>
             </div>
 
-            <div className="flex items-center gap-2 text-slate-400 shrink-0">
+            <div className="flex items-center gap-2 text-slate-400 min-w-0">
               <ExternalLink className="w-4 h-4 text-emerald-400 shrink-0" />
               <a
                 href={prof.profile_url || `https://scholar.google.com/scholar?q=${encodeURIComponent(prof.name + ' ' + (prof.university_name || ''))}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-emerald-400 hover:underline font-medium"
+                className="text-emerald-400 hover:underline font-medium break-all"
               >
                 Official University Faculty Webpage
               </a>
@@ -517,12 +517,12 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
 
             {/* Verified Publications */}
             <div className="glass-panel bg-slate-900/60 border border-slate-800 rounded-2xl p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                  <BookOpen className="w-4.5 h-4.5 text-emerald-400" />
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <h3 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+                  <BookOpen className="w-4.5 h-4.5 text-emerald-400 shrink-0" />
                   Selected Recent Publications ({livePublications.length > 0 ? livePublications.length : (prof.publications?.length || 0)})
                 </h3>
-                <span className="text-[11px] text-slate-400">Targeted Google Scholar Search Sync</span>
+                <span className="text-[11px] text-slate-400 shrink-0">Targeted Google Scholar Search Sync</span>
               </div>
 
               <div className="space-y-3">
@@ -534,8 +534,8 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
                       className="p-4 rounded-xl bg-slate-950/70 border border-slate-800/80 hover:border-slate-700 transition-all space-y-2 group"
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="space-y-1">
-                          <h4 className="text-xs sm:text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors leading-snug">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <h4 className="text-xs sm:text-sm font-semibold text-white group-hover:text-emerald-300 transition-colors leading-snug break-words">
                             {pub.title}
                           </h4>
                           <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">

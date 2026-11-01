@@ -138,11 +138,11 @@ export default function ConnectorsPage() {
 
         {/* Section: Email Integration */}
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <Mail className="w-5 h-5 text-emerald-400" /> Email Integrations (Google OAuth)
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h2 className="text-lg sm:text-xl font-bold text-white flex items-center gap-2">
+              <Mail className="w-5 h-5 text-emerald-400 shrink-0" /> Email Integrations (Google OAuth)
             </h2>
-            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+            <span className="px-2.5 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 w-fit">
               Direct Gmail Drafts Active
             </span>
           </div>
@@ -162,7 +162,7 @@ export default function ConnectorsPage() {
               </div>
 
               {/* Status & Action */}
-              <div className="shrink-0">
+              <div className="shrink-0 w-full sm:w-auto">
                 {checkingStatus ? (
                   <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-400">
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-400" /> Checking Status...
@@ -173,7 +173,7 @@ export default function ConnectorsPage() {
                       type="button"
                       onClick={handleDisconnectGmail}
                       disabled={disconnecting}
-                      className="px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                      className="w-full sm:w-auto px-3.5 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors disabled:opacity-50"
                     >
                       {disconnecting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       Disconnect Gmail
@@ -183,7 +183,7 @@ export default function ConnectorsPage() {
                   <button
                     type="button"
                     onClick={handleConnectGmail}
-                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center gap-2 transition-all hover:scale-[1.02]"
+                    className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
                   >
                     <Sparkles className="w-4 h-4 text-slate-950" /> Connect Gmail
                   </button>
@@ -194,16 +194,16 @@ export default function ConnectorsPage() {
             {/* Connection Details Box */}
             {connectedStatus.connected && connectedStatus.account && (
               <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/30 space-y-3 text-xs">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 font-bold text-emerald-400 text-sm">
-                    <CheckCircle2 className="w-4.5 h-4.5" />
-                    <span>Connected as {connectedStatus.account.email}</span>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-start sm:items-center gap-2 font-bold text-emerald-400 text-xs sm:text-sm min-w-0">
+                    <CheckCircle2 className="w-4.5 h-4.5 shrink-0 mt-0.5 sm:mt-0" />
+                    <span className="break-all">Connected as {connectedStatus.account.email}</span>
                   </div>
                   <a
                     href="https://mail.google.com/mail/u/0/#drafts"
                     target="_blank"
                     rel="noreferrer"
-                    className="text-emerald-400 hover:underline font-semibold flex items-center gap-1 text-[11px]"
+                    className="text-emerald-400 hover:underline font-semibold flex items-center gap-1 text-[11px] shrink-0 self-start sm:self-auto"
                   >
                     Open Gmail Drafts <ExternalLink className="w-3 h-3" />
                   </a>

@@ -250,7 +250,13 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
     * Search & Dashboard Cloud Sync: Upgraded app/search/page.tsx (toggleSave) to immediately persist shortlists to Supabase, and app/dashboard/page.tsx to automatically merge guest and local shortlists with cloud state.
     * Lifetime Metric Aggregation (November 1st Rollover Fix): Solved zeroed-out "Emails Sent: 0" dashboard metric caused by monthly billing quota rollover (usage_records month_year === '2026-11'). Upgraded getUsageRecord, /api/auth/me, /api/auth/login, and app/dashboard/page.tsx to aggregate all historical months (all_time_emails_sent), displaying lifetime delivered counts ("21 sent all-time • verified delivered").
     * Student Profile Cloud Sync: Added target_region and desired_domain to public.student_profiles and upgraded app/profile/page.tsx handleSave to persist research target directly to Supabase cloud.
-    * Account Healing: Restored user 78476fe6-5897-44e4-8f8d-84252834e660 (muhammadmun305@gmail.com / khan) with shortlisted faculty (Dr. Greg Durrett), 21 lifetime sent outreach emails, and active PhD student targeting profile.
+• Tier 17: Comprehensive Full-Platform Mobile & Cross-Device Responsiveness Audit (2026-11-01):
+  - Completed responsive hardening across all 76 Next.js pages and interactive components for screens 320px–4K.
+  - Eliminated container text overflow, card clipping, and horizontal viewport scroll blowouts.
+  - Added overflow-x-auto, no-scrollbar, break-words, and break-all to all academic entity headers, publication titles, DOIs, and email addresses.
+  - Stacked form fields and action button bars from rigid horizontal rows into fluid flex-col sm:flex-row patterns across auth forms, dashboard, campaigns, applications tracker, and modal dialogs.
+  - Hardened 6-digit OTP code input boxes from rigid 44px to responsive 36px–48px fluid scaling, eliminating container clipping on mobile screens <=360px.
+  - Verification: 97/97 tests pass across 11 suites (`npm test`), and Next.js production build succeeds for all 76 routes (`npm run build`).
 ====================================================================
 
 

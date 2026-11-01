@@ -471,7 +471,7 @@ function CheckoutContent() {
 
                   {/* Transaction ID */}
                   <div className="space-y-1.5">
-                    <label className="text-xs font-semibold text-white flex items-center justify-between">
+                    <label className="text-xs font-semibold text-white flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <span>Transaction ID / Reference Number *</span>
                       <span className="text-[10px] text-slate-400">e.g. TID, TRX ID, or Reference from receipt</span>
                     </label>
@@ -487,7 +487,7 @@ function CheckoutContent() {
 
                   {/* Screenshot / Slip Upload Box */}
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-white flex items-center justify-between">
+                    <label className="text-xs font-semibold text-white flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <span>Upload Payment Screenshot / Slip *</span>
                       <span className="text-[10px] text-emerald-400">Required for fast verification</span>
                     </label>
