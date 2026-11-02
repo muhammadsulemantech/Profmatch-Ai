@@ -3,7 +3,7 @@
 > **Repository:** `suleman197/Profmatch-Ai` (branch: `main`)  
 > **Tech Stack:** Next.js 14 (App Router), TypeScript, Tailwind CSS, Supabase, Gemini AI, Resend Email, Gmail SMTP, Google OAuth 2.0, Tavily Search, OpenAlex API  
 > **Memory File Location:** [`PROJECT_MEMORY.md`](file:///e:/profmatch%20ai%20project/PROJECT_MEMORY.md)  
-> **Last Updated:** 2026-11-01 (Tier 15: Global Countries API Integration, Security Audit & LLMs.txt AI Discovery)
+> **Last Updated:** 2026-11-02 (Tier 18: AutoPilot Country Plan Entitlements & Dynamic Lock/Unlock Indicators)
 
 ---
 
@@ -685,11 +685,29 @@ profmatch-ai/
   - Automated Tests: 97/97 tests passing across 11 test suites (`npm test`).
   - Next.js Production Build: 76/76 static & dynamic pages successfully compiled with 0 errors (`npm run build`).
 
+---
 
-
-
-
-
-
-
-
+### 🌐 Tier 18: AutoPilot Country Plan Entitlements & Dynamic Lock/Unlock Indicators (COMPLETED 2026-11-02)
+- **Problem Statement & Scope:**
+  - In the AutoPilot campaign configuration panel (`components/autopilot/campaign-config-panel.tsx`), all 250+ global countries and Worldwide were listed without indicating which countries were included in the student's active plan tier (`FREE`, `STARTER`, `PRO`, `ELITE`) versus which required an upgrade.
+  - Selecting locked destinations (such as Egypt on a Pro plan or global destinations on a Free plan) gave no immediate feedback, causing confusing backend authorization failures at runtime.
+- **Architectural Implementation & Remediations:**
+  1. **Country Entitlement Resolution Helpers (`lib/services/usage-service.ts`):**
+     - Enhanced `isCountryUnlockedForTier(tier, countryName)`: added explicit support for Worldwide (`Global (All Countries)`, `Worldwide`, case-insensitive trimming) restricting global pool to `ELITE` while allowing plan-specific countries for `STARTER` and `PRO`.
+     - Implemented `getRequiredTierForCountry(countryName)`: dynamically resolves the lowest subscription tier required (`FREE`, `STARTER`, `PRO`, or `ELITE`) to target any given country.
+     - Implemented `getRequiredTierLabelForCountry(countryName)`: returns concise display labels (`Free`, `Starter`, `Pro`, `Elite`).
+     - Implemented `getRequiredPlanNameForCountry(countryName)`: returns full academic plan names (`Free Explorer`, `Scholar Starter`, `Pro Researcher`, `PhD Elite (Worldwide Ultra)`).
+  2. **Campaign Configuration Panel (`components/autopilot/campaign-config-panel.tsx`):**
+     - Updated `CountryOption` interface with optional `flag` and `continent` metadata.
+     - Enriched destination select options with real-time plan signs:
+       - Unlocked countries: `${flag} ${countryName} ✅` (e.g., `🇺🇸 United States ✅`, `🇩🇪 Germany ✅`).
+       - Locked countries: `${flag} ${countryName} 🔒 ${requiredTierLabel}` (e.g., `🇪🇬 Egypt 🔒 Elite`, `🇯🇵 Japan 🔒 Pro`).
+       - Worldwide option: `🌐 Worldwide (Global Universities) ${isWorldwideUnlocked ? '✅' : '🔒 Elite'}`.
+     - Added real-time Destination Status Badge in label row (`✅ Unlocked (${planName})` or `🔒 Locked • Requires ${requiredTier}`).
+     - Added dynamic Amber Locked Destination Alert box directly beneath dropdown with 1-click `/pricing` upgrade button when a locked country is selected.
+     - Converted Launch CTA button into an upgrade CTA (`{targetCountry} Locked — Upgrade to {requiredPlanName}`) when a locked country is selected, preventing accidental dispatch.
+  3. **AutoPilot Autonomous Engine Safeguard (`app/autopilot/page.tsx`):**
+     - Pre-flight check in `runAutoPilotCampaign` validates `isCountryUnlockedForTier(planConfig.tier, targetCountry)` before triggering autonomous faculty discovery, logging an error and presenting a polite alert prompt directing user to select an unlocked destination or upgrade.
+- **Verification:**
+  - TypeScript type check (`npx tsc --noEmit`): 0 errors.
+  - End-to-end plan checks verified across Free, Starter, Pro, and Elite tiers.

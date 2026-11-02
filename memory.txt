@@ -1,7 +1,7 @@
 ====================================================================
 PROFMATCH AI — PROJECT MEMORY & ARCHITECTURE INDEX
 ====================================================================
-Last Updated: 2026-11-01 (Tier 16: Profile Avatar, Saved Faculty Shortlists & Lifetime Activity Persistence)
+Last Updated: 2026-11-02 (Tier 18: AutoPilot Country Plan Entitlements & Dynamic Lock/Unlock Indicators)
 Repository: suleman197/Profmatch-Ai (branch: main)
 Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabase (PostgreSQL + Auth + RLS), Gemini 1.5 Pro, Gmail SMTP & OAuth 2.0, Resend, Tavily Search, OpenAlex API, Node.js Test Runner
 
@@ -257,6 +257,17 @@ Technology Stack: Next.js 14 (App Router), TypeScript 5.5, Tailwind CSS, Supabas
   - Stacked form fields and action button bars from rigid horizontal rows into fluid flex-col sm:flex-row patterns across auth forms, dashboard, campaigns, applications tracker, and modal dialogs.
   - Hardened 6-digit OTP code input boxes from rigid 44px to responsive 36px–48px fluid scaling, eliminating container clipping on mobile screens <=360px.
   - Verification: 97/97 tests pass across 11 suites (`npm test`), and Next.js production build succeeds for all 76 routes (`npm run build`).
+• Tier 18: AutoPilot Country Plan Entitlements & Dynamic Lock/Unlock Indicators (2026-11-02):
+  - In AutoPilot campaign config panel (components/autopilot/campaign-config-panel.tsx), enriched all 250+ country destination options with dynamic lock/unlock signs based on student's active plan:
+    * Unlocked destinations: {flag} {countryName} ✅ (e.g., 🇺🇸 United States ✅, 🇩🇪 Germany ✅).
+    * Locked destinations: {flag} {countryName} 🔒 {Required Tier} (e.g., 🇪🇬 Egypt 🔒 Elite, 🇯🇵 Japan 🔒 Pro).
+    * Worldwide destination: 🌐 Worldwide (Global Universities) {isUnlocked ? '✅' : '🔒 Elite'}.
+  - Added live Destination Status Badge in label header row (✅ Unlocked ({Plan}) or 🔒 Locked • Requires {Tier}).
+  - Added interactive amber Locked Destination Notice Card below dropdown when a locked country is selected, explaining required tier with 1-click /pricing upgrade CTA.
+  - Converted Launch CTA button into an upgrade CTA ({targetCountry} Locked — Upgrade to {Required Plan}) when locked country is selected, preventing accidental dispatch.
+  - Hardened Autonomous Engine (app/autopilot/page.tsx) with pre-flight isCountryUnlockedForTier check preventing launch of locked countries.
+  - Extended lib/services/usage-service.ts with isCountryUnlockedForTier, getRequiredTierForCountry, getRequiredTierLabelForCountry, and getRequiredPlanNameForCountry.
+  - Verified with npx tsc --noEmit (0 errors).
 ====================================================================
 
 

@@ -22,10 +22,18 @@ import {
   Minus,
   Plus,
 } from 'lucide-react';
+import {
+  isCountryUnlockedForTier,
+  getRequiredTierLabelForCountry,
+  getRequiredPlanNameForCountry,
+} from '@/lib/services/usage-service';
+import type { PlanTier } from '@/types/database';
 
 interface CountryOption {
   code: string;
   name: string;
+  flag?: string;
+  continent?: string;
 }
 
 export type EngineStatus =
@@ -122,6 +130,12 @@ export function CampaignConfigPanel({
   const isQuotaExhausted = maxBatchCap > 0 && remainingQuota <= 0;
   const effectiveIsLocked = isLocked || maxBatchCap <= 0 || isQuotaExhausted;
   const effectiveMax = effectiveIsLocked ? 0 : Math.max(1, Math.min(maxBatchCap, remainingQuota > 0 ? remainingQuota : maxBatchCap));
+
+  const currentTier = (planTier || 'FREE') as PlanTier;
+  const isTargetCountryUnlocked = isCountryUnlockedForTier(currentTier, targetCountry);
+  const targetCountryRequiredTier = getRequiredTierLabelForCountry(targetCountry);
+  const targetCountryRequiredPlanName = getRequiredPlanNameForCountry(targetCountry);
+  const isWorldwideUnlocked = isCountryUnlockedForTier(currentTier, 'Worldwide');
 
   return (
     <div className="space-y-6">
@@ -220,22 +234,65 @@ export function CampaignConfigPanel({
           </div>
 
           <div>
-            <label className="block text-slate-300 font-semibold mb-1 flex items-center gap-1.5">
-              <Globe className="w-3.5 h-3.5 text-emerald-400" /> Target Destination Country
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-slate-300 font-semibold flex items-center gap-1.5">
+                <Globe className="w-3.5 h-3.5 text-emerald-400" /> Target Destination Country
+              </label>
+              {isTargetCountryUnlocked ? (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Unlocked ({planName})
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+                  <Lock className="w-3 h-3 text-amber-400" /> Locked • Requires {targetCountryRequiredTier}
+                </span>
+              )}
+            </div>
             <select
               value={targetCountry}
               disabled={isRunning || effectiveIsLocked}
               onChange={(e) => setTargetCountry(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-emerald-500 disabled:opacity-50"
+              className={`w-full px-3 py-2 bg-slate-950 border rounded-xl text-xs text-white focus:outline-none disabled:opacity-50 transition-colors ${
+                !isTargetCountryUnlocked
+                  ? 'border-amber-500/50 focus:border-amber-400'
+                  : 'border-slate-800 focus:border-emerald-500'
+              }`}
             >
-              <option value="Worldwide">Worldwide (Global Universities)</option>
-              {countries.map((c) => (
-                <option key={c.code} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
+              <option value="Worldwide">
+                🌐 Worldwide (Global Universities) {isWorldwideUnlocked ? '✅' : '🔒 Elite'}
+              </option>
+              {countries.map((c) => {
+                const isUnlocked = isCountryUnlockedForTier(currentTier, c.name);
+                const reqTier = getRequiredTierLabelForCountry(c.name);
+                return (
+                  <option key={c.code} value={c.name}>
+                    {c.flag ? `${c.flag} ` : ''}{c.name} {isUnlocked ? '✅' : `🔒 ${reqTier}`}
+                  </option>
+                );
+              })}
             </select>
+
+            {!isTargetCountryUnlocked && (
+              <div className="mt-2.5 p-3 bg-amber-500/10 border border-amber-500/25 rounded-xl space-y-2 animate-in fade-in duration-200">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-amber-400 text-xs flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5" /> {targetCountry} is Locked on {planName}
+                  </span>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    Requires {targetCountryRequiredPlanName}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 leading-relaxed">
+                  Universities and verified faculty in <strong className="text-white">{targetCountry}</strong> are locked on your current <strong className="text-white">{planName}</strong> plan. Upgrade your subscription to <strong className="text-amber-300">{targetCountryRequiredPlanName}</strong> to target this destination.
+                </p>
+                <Link
+                  href="/pricing"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs transition-colors"
+                >
+                  <Zap className="w-3 h-3" /> Upgrade to {targetCountryRequiredTier} to Unlock
+                </Link>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -544,6 +601,19 @@ export function CampaignConfigPanel({
                 </Link>
                 <p className="text-[11px] text-center text-slate-400">
                   You have drafted all {maxBatchCap} allowed emails for this cycle. Upgrade plan to unlock more.
+                </p>
+              </div>
+            ) : !isTargetCountryUnlocked ? (
+              <div className="space-y-2">
+                <Link
+                  href="/pricing"
+                  className="w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
+                >
+                  <Lock className="w-4 h-4" />
+                  {targetCountry} Locked — Upgrade to {targetCountryRequiredPlanName}
+                </Link>
+                <p className="text-[11px] text-center text-slate-400">
+                  AutoPilot targeting {targetCountry} is locked on your {planName} plan. Choose an unlocked destination (marked with ✅) or upgrade to {targetCountryRequiredTier}.
                 </p>
               </div>
             ) : (

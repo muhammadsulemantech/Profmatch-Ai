@@ -21,6 +21,9 @@ import {
   getPlanConfig,
   syncLivePricingFromServer,
   PlanConfig,
+  isCountryUnlockedForTier,
+  getRequiredTierLabelForCountry,
+  getRequiredPlanNameForCountry,
 } from '@/lib/services/usage-service';
 import type { PlanTier } from '@/types/database';
 
@@ -262,6 +265,14 @@ export default function AutoPilotPage() {
 
     if (isLocked) {
       appendLog('ERROR', `⛔ AutoPilot outreach is not available on the ${planConfig.name} (${planConfig.tier}) plan. Please upgrade to Scholar Starter or Pro Researcher.`);
+      return;
+    }
+
+    if (!isCountryUnlockedForTier(planConfig.tier, targetCountry)) {
+      const requiredName = getRequiredPlanNameForCountry(targetCountry);
+      const requiredLabel = getRequiredTierLabelForCountry(targetCountry);
+      appendLog('ERROR', `⛔ Target country "${targetCountry}" is locked on your ${planConfig.name} (${planConfig.tier}) plan. Please upgrade to ${requiredName} (${requiredLabel}) or select an unlocked country.`);
+      alert(`The destination country "${targetCountry}" is locked on your current ${planConfig.name} plan.\n\nIt requires the ${requiredName} (${requiredLabel}) plan. Please select an unlocked country marked with ✅ or upgrade your subscription.`);
       return;
     }
 

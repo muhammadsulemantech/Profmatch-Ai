@@ -362,16 +362,58 @@ export function resetSearchUsage(userId?: string) {
   }
 }
 
-export function isCountryUnlockedForTier(tier: PlanTier, countryName: string): boolean {
-  if (!countryName || countryName === 'Global (All Countries)') {
-    // Free & Starter users only have access to specific countries, not the entire global pool
-    return tier === 'ELITE';
+export function isCountryUnlockedForTier(tier: PlanTier | string, countryName: string): boolean {
+  const normTier = getEffectiveUserTier(tier);
+  const clean = countryName ? countryName.trim().toLowerCase() : '';
+  if (!clean || clean === 'global (all countries)' || clean === 'worldwide' || clean.startsWith('worldwide')) {
+    // Free, Starter & Pro only have access to specific countries, not the entire global pool
+    return normTier === 'ELITE';
   }
 
-  const plan = getPlanConfig(tier);
+  const plan = getPlanConfig(normTier);
   if (plan.allowedCountries === 'ALL') return true;
 
   return plan.allowedCountries.some(
-    c => c.toLowerCase() === countryName.trim().toLowerCase()
+    c => c.toLowerCase() === clean
   );
 }
+
+export function getRequiredTierForCountry(countryName: string): PlanTier {
+  const clean = countryName ? countryName.trim().toLowerCase() : '';
+  if (!clean || clean === 'global (all countries)' || clean === 'worldwide' || clean.startsWith('worldwide')) {
+    return 'ELITE';
+  }
+  if (isCountryUnlockedForTier('FREE', countryName)) {
+    return 'FREE';
+  }
+  if (isCountryUnlockedForTier('STARTER', countryName)) {
+    return 'STARTER';
+  }
+  if (isCountryUnlockedForTier('PRO', countryName)) {
+    return 'PRO';
+  }
+  return 'ELITE';
+}
+
+export function getRequiredTierLabelForCountry(countryName: string): string {
+  const req = getRequiredTierForCountry(countryName);
+  switch (req) {
+    case 'FREE':
+      return 'Free';
+    case 'STARTER':
+      return 'Starter';
+    case 'PRO':
+      return 'Pro';
+    case 'ELITE':
+      return 'Elite';
+    default:
+      return 'Pro';
+  }
+}
+
+export function getRequiredPlanNameForCountry(countryName: string): string {
+  const req = getRequiredTierForCountry(countryName);
+  const cfg = getPlanConfig(req);
+  return cfg?.name || `${getRequiredTierLabelForCountry(countryName)} Plan`;
+}
+
