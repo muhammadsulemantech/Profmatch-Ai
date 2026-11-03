@@ -147,11 +147,15 @@ export async function GET(request: NextRequest) {
       try {
         const cookieJar = cookies();
         cookieJar.getAll().forEach((c) => {
-          redirectResponse.cookies.set({
-            name: c.name,
-            value: c.value,
-            path: '/',
-          });
+          if (c.name.startsWith('sb-') || c.name.startsWith('profmatch_')) {
+            redirectResponse.cookies.set({
+              name: c.name,
+              value: c.value,
+              path: '/',
+              sameSite: 'lax',
+              secure: process.env.NODE_ENV === 'production',
+            });
+          }
         });
       } catch (cookieErr) {
         console.error('[GOOGLE COOKIE ATTACH ERROR]', cookieErr);

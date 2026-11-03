@@ -17,16 +17,23 @@ export async function POST(request: NextRequest) {
       message: 'Logged out successfully.',
     });
 
-    // Clear all auth cookies
-    const cookieNames = [
+    // Dynamically clear all auth & Supabase cookies (including chunked tokens)
+    const allCookies = request.cookies.getAll();
+    const cookiesToClear = new Set([
       'profmatch_session',
       'profmatch_role',
       'profmatch_user',
       'sb-access-token',
       'sb-refresh-token',
-    ];
+    ]);
 
-    for (const name of cookieNames) {
+    for (const c of allCookies) {
+      if (c.name.startsWith('sb-') || c.name.startsWith('profmatch_')) {
+        cookiesToClear.add(c.name);
+      }
+    }
+
+    for (const name of Array.from(cookiesToClear)) {
       response.cookies.set(name, '', {
         path: '/',
         maxAge: 0,

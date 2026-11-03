@@ -22,6 +22,10 @@ const nextConfig = {
         source: "/(.*)",
         headers: [
           {
+            key: "x-vercel-skip-toolbar",
+            value: "1",
+          },
+          {
             key: "X-Content-Type-Options",
             value: "nosniff",
           },
