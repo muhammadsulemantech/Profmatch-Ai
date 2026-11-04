@@ -9,6 +9,7 @@ import AuthModal from '@/components/auth/auth-modal';
 import NavbarAuthControls from '@/components/navigation/navbar-auth-controls';
 import MobileNav from '@/components/navigation/mobile-nav';
 import CookieConsent from '@/components/ui/cookie-consent';
+import NetworkStatusBanner from '@/components/ui/network-status-banner';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { SITE_URL, getOrganizationJsonLd, getWebSiteJsonLd, getSoftwareApplicationJsonLd } from '@/lib/seo/site-config';
 
@@ -101,6 +102,7 @@ export default async function RootLayout({
         />
       </head>
       <body className={`${inter.variable} ${plusJakartaSans.variable} ${inter.className} min-h-screen flex flex-col bg-[#080B11] text-slate-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-300`}>
+        <NetworkStatusBanner />
         <AuthProvider>
           <PostHogProvider>
             <AuthModal />

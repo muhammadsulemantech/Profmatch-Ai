@@ -26,6 +26,7 @@ import {
   Sparkles,
   Zap,
   X,
+  WifiOff,
 } from 'lucide-react';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { formatScore } from '@/lib/utils';
@@ -308,6 +309,7 @@ export default function SearchPage() {
   
   // Progress & loading states
   const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [discoveryStageIndex, setDiscoveryStageIndex] = useState(0);
   const [progressPercent, setProgressPercent] = useState(0);
 
@@ -390,6 +392,7 @@ export default function SearchPage() {
     if (append) {
       setIsLoadingMore(true);
     } else {
+      setSearchError(null);
       incrementSearchUsage(user?.id, usage.limit);
       setUsage(getSearchUsage(user?.id, currentTier));
       setIsSearching(true);
@@ -452,9 +455,23 @@ export default function SearchPage() {
       } else if (res.status === 403) {
         setShowUpgradeModal(true);
         setUsage(getSearchUsage(user?.id, currentTier));
+      } else {
+        setSearchError('Search request could not be completed. Please try again.');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Search request failed', err);
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+      const isNet =
+        isOffline ||
+        err?.name === 'TypeError' ||
+        err?.message?.toLowerCase().includes('fetch') ||
+        err?.message?.toLowerCase().includes('network');
+
+      if (isNet) {
+        setSearchError('No internet connection. Please verify your network and retry.');
+      } else {
+        setSearchError('Search failed due to a network interruption. Please try again.');
+      }
     } finally {
       setTimeout(() => {
         setIsSearching(false);
@@ -632,6 +649,23 @@ export default function SearchPage() {
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Network / Offline Error Alert */}
+        {searchError && (
+          <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex items-center justify-between gap-3 shadow-lg">
+            <div className="flex items-center gap-2.5">
+              <WifiOff className="w-4 h-4 text-amber-400 shrink-0 animate-pulse" />
+              <span>{searchError}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => runSearchPayload()}
+              className="px-3 py-1.5 rounded-lg bg-amber-500 text-slate-950 font-semibold text-[11px] hover:bg-amber-400 transition-colors shrink-0"
+            >
+              Retry Search
+            </button>
           </div>
         )}
       </div>

@@ -24,7 +24,8 @@ import {
   Award,
   Zap,
   GraduationCap,
-  RefreshCw
+  RefreshCw,
+  WifiOff
 } from 'lucide-react';
 import { Professor } from '@/types/database';
 import EmailReviewModal from '@/components/outreach/email-review-modal';
@@ -50,6 +51,8 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
     );
   });
   const [isNotFound, setIsNotFound] = useState(false);
+  const [isNetworkError, setIsNetworkError] = useState(false);
+  const [fetchAttempt, setFetchAttempt] = useState(0);
   
   // Modals state
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
@@ -106,18 +109,28 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
     if (found) {
       setProf(found);
       setIsNotFound(false);
+      setIsNetworkError(false);
     } else {
       let isMounted = true;
       fetch(`/api/professors/${encodeURIComponent(profId)}`)
         .then((res) => {
-          if (!res.ok) throw new Error('Not found');
+          if (res.status === 404) {
+            if (isMounted) {
+              setProf(null);
+              setIsNotFound(true);
+              setIsNetworkError(false);
+            }
+            return null;
+          }
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
         })
         .then((data) => {
-          if (isMounted) {
+          if (data && isMounted) {
             if (data?.success && data?.professor) {
               setProf(data.professor);
               setIsNotFound(false);
+              setIsNetworkError(false);
               if (typeof window !== 'undefined') {
                 try {
                   sessionStorage.setItem(`profmatch_current_prof_${profId}`, JSON.stringify(data.professor));
@@ -126,13 +139,27 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
             } else {
               setProf(null);
               setIsNotFound(true);
+              setIsNetworkError(false);
             }
           }
         })
-        .catch(() => {
+        .catch((err) => {
           if (isMounted) {
-            setProf(null);
-            setIsNotFound(true);
+            const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+            const isFetchErr =
+              err?.name === 'TypeError' ||
+              err?.message?.toLowerCase().includes('fetch') ||
+              err?.message?.toLowerCase().includes('network') ||
+              err?.message?.toLowerCase().includes('failed to fetch');
+
+            if (isOffline || isFetchErr) {
+              setIsNetworkError(true);
+              setIsNotFound(false);
+            } else {
+              setProf(null);
+              setIsNotFound(true);
+              setIsNetworkError(false);
+            }
           }
         });
 
@@ -140,7 +167,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
         isMounted = false;
       };
     }
-  }, [profId]);
+  }, [profId, fetchAttempt]);
 
   // Live OpenAlex Paper & Thesis Sync for current professor
   useEffect(() => {
@@ -190,6 +217,45 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
         .catch(() => {});
     }
   }, [prof]);
+
+  if (isNetworkError) {
+    return (
+      <div className="min-h-screen bg-[#080B11] text-slate-100 py-20 flex flex-col items-center justify-center px-4">
+        <div className="max-w-md w-full text-center space-y-5 bg-slate-900/60 p-8 rounded-2xl border border-amber-500/30 shadow-2xl">
+          <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto">
+            <WifiOff className="w-7 h-7 animate-pulse" />
+          </div>
+          <div className="space-y-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-500/10 text-amber-400 border border-amber-500/30">
+              <span>Connection Interrupted</span>
+            </div>
+            <h1 className="text-xl font-heading font-bold text-white">No Internet Connection</h1>
+            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+              We couldn&apos;t reach the academic registry because your internet connection appears to be offline. Please check your network and try again.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsNetworkError(false);
+                setFetchAttempt((prev) => prev + 1);
+              }}
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/20 transition-all min-h-[44px]"
+            >
+              <RefreshCw className="w-4 h-4" /> Retry Connection
+            </button>
+            <Link
+              href="/search"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition-colors min-h-[44px]"
+            >
+              <ArrowLeft className="w-4 h-4" /> Return to Search
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (isNotFound) {
     return (
