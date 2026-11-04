@@ -113,8 +113,8 @@ export default function AuthModal() {
           return;
         }
 
-        if (!password || password.length < 6) {
-          setError('Password must be at least 6 characters.');
+        if (!password || password.length < 8) {
+          setError('Password must be at least 8 characters.');
           setLoading(false);
           return;
         }
@@ -560,7 +560,7 @@ export default function AuthModal() {
                       required
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={mode === 'signup' ? 'At least 6 characters' : 'Enter your password'}
+                      placeholder={mode === 'signup' ? 'At least 8 characters' : 'Enter your password'}
                       autoComplete={mode === 'signup' ? 'new-password' : 'current-password'}
                       className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                     />

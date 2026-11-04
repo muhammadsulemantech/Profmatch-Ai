@@ -64,8 +64,8 @@ function ResetPasswordForm() {
     e.preventDefault();
     setFormError(null);
 
-    if (newPassword.length < 6) {
-      setFormError('New password must be at least 6 characters.');
+    if (newPassword.length < 8) {
+      setFormError('New password must be at least 8 characters.');
       return;
     }
 
@@ -180,7 +180,7 @@ function ResetPasswordForm() {
                   required
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="At least 6 characters"
+                  placeholder="At least 8 characters"
                   autoComplete="new-password"
                   className="w-full pl-10 pr-10 py-2.5 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/20 transition-all"
                 />

@@ -10,7 +10,7 @@ import { apiSuccess, apiError } from '@/lib/api/response';
 const SignupSchema = z.object({
   fullName: z.string().trim().min(2, 'Name must be at least 2 characters').max(80),
   email: z.string().trim().email('Please provide a valid email address').toLowerCase(),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   targetDegree: z.string().optional().default('PhD'),
 });
 

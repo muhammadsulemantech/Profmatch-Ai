@@ -10,7 +10,7 @@ import { apiSuccess, apiError } from '@/lib/api/response';
 const ResetPasswordSchema = z.object({
   email: z.string().trim().email('Please provide a valid email address').toLowerCase(),
   token: z.string().trim().min(20, 'Invalid reset token format'),
-  newPassword: z.string().min(6, 'Password must be at least 6 characters').max(100),
+  newPassword: z.string().min(8, 'Password must be at least 8 characters').max(100),
 });
 
 /**

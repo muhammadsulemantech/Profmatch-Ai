@@ -389,6 +389,12 @@ export async function POST(req: NextRequest) {
 
     const fileName = file.name || 'Academic_CV.pdf';
     const fileSize = file.size;
+
+    // Enforce 10MB maximum file size limit
+    if (fileSize > 10 * 1024 * 1024) {
+      return NextResponse.json({ error: 'File size exceeds maximum allowed limit of 10MB.' }, { status: 400 });
+    }
+
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
@@ -397,6 +403,14 @@ export async function POST(req: NextRequest) {
     const isPdf = fileName.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf';
 
     if (isPdf) {
+      // Magic bytes verification: Valid PDF files must begin with '%PDF' (0x25 0x50 0x44 0x46)
+      if (buffer.length < 4 || buffer.subarray(0, 4).toString('ascii') !== '%PDF') {
+        return NextResponse.json(
+          { error: 'Invalid document format. The file header does not match authentic PDF content.' },
+          { status: 400 }
+        );
+      }
+
       try {
         const { PDFParse } = await import('pdf-parse');
         const parser = new PDFParse({ data: buffer });
