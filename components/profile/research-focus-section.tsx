@@ -79,6 +79,7 @@ export function ResearchFocusSection({
                     onClick={() => handleRemoveInterest(item)}
                     className="text-slate-400 hover:text-rose-400 transition-colors shrink-0"
                     title="Remove keyword"
+                    aria-label={`Remove keyword ${item}`}
                   >
                     <Trash2 className="w-3 h-3" />
                   </button>

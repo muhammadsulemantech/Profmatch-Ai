@@ -22,7 +22,13 @@ export class GeminiProvider implements AIProvider {
   }
 
   private async callGeminiApi(promptText: string, temperature: number = 0.2): Promise<string | null> {
-    const candidateModels = [this.modelName, 'gemini-flash-lite-latest'];
+    const candidateModels = Array.from(new Set([
+      this.modelName,
+      'gemini-flash-latest',
+      'gemini-flash-lite-latest',
+      'gemini-3.5-flash-lite',
+      'gemini-3.8-flash'
+    ]));
 
     for (const model of candidateModels) {
       try {
@@ -81,11 +87,13 @@ CRITICAL ACADEMIC PROTOCOLS:
       const text = await this.callGeminiApi(promptText, 0.3);
 
       if (!text) {
-        throw new Error('Gemini API generation failed: Provider returned an empty response or was rate-limited.');
+        console.warn('[GEMINI AI NOTICE] Model unavailable or rate-limited. Falling back to deterministic academic engine.');
+        return this.fallback.generateGroundedEmail(prompt);
       }
       return JSON.parse(text);
     } catch (err: any) {
-      throw new Error(`AI email draft generation failed: ${err.message || 'Gemini model error'}`);
+      console.warn('[GEMINI AI NOTICE] Model error, activating graceful template fallback:', err?.message);
+      return this.fallback.generateGroundedEmail(prompt);
     }
   }
 
@@ -105,11 +113,13 @@ Professor: ${JSON.stringify(prompt.professorProfile)}`;
 
       const text = await this.callGeminiApi(promptText, 0.2);
       if (!text) {
-        throw new Error('Gemini API match analysis failed: Provider returned an empty response.');
+        console.warn('[GEMINI MATCH NOTICE] Model unavailable. Falling back to deterministic match calculation.');
+        return this.fallback.analyzeResearchMatch(prompt);
       }
       return JSON.parse(text);
     } catch (err: any) {
-      throw new Error(`Research match analysis failed: ${err.message || 'Gemini model error'}`);
+      console.warn('[GEMINI MATCH NOTICE] Model error, activating graceful match fallback:', err?.message);
+      return this.fallback.analyzeResearchMatch(prompt);
     }
   }
 
@@ -131,11 +141,13 @@ suggestedResponse (string).`;
 
       const text = await this.callGeminiApi(promptText, 0.2);
       if (!text) {
-        throw new Error('Gemini API reply analysis failed: Provider returned an empty response.');
+        console.warn('[GEMINI REPLY NOTICE] Model unavailable. Falling back to deterministic reply analyzer.');
+        return this.fallback.analyzeProfessorReply(replyText, context);
       }
       return JSON.parse(text);
     } catch (err: any) {
-      throw new Error(`Reply analysis failed: ${err.message || 'Gemini model error'}`);
+      console.warn('[GEMINI REPLY NOTICE] Model error, activating graceful reply fallback:', err?.message);
+      return this.fallback.analyzeProfessorReply(replyText, context);
     }
   }
 }

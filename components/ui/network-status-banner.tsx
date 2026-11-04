@@ -44,7 +44,8 @@ export default function NetworkStatusBanner() {
           ? 'bg-amber-500 text-slate-950 border-b border-amber-600'
           : 'bg-emerald-500 text-slate-950 border-b border-emerald-600'
       }`}
-      role="alert"
+      role="status"
+      aria-live="polite"
     >
       {isOffline ? (
         <>
@@ -67,3 +68,4 @@ export default function NetworkStatusBanner() {
     </div>
   );
 }
+

@@ -429,7 +429,12 @@ export default function OnboardingPage() {
                     className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-300 border border-emerald-500/30"
                   >
                     {interest}
-                    <button type="button" onClick={() => handleRemoveInterest(idx)} className="hover:text-rose-400 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveInterest(idx)}
+                      className="hover:text-rose-400 ml-1"
+                      aria-label={`Remove ${interest}`}
+                    >
                       &times;
                     </button>
                   </span>
