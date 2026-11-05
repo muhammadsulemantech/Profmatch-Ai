@@ -25,6 +25,7 @@ import {
 import { mockDb } from '@/lib/supabase/mock-db';
 import InteractivePlatformShowcase from '@/components/home/interactive-platform-showcase';
 import HomePricingSection from '@/components/home/home-pricing-section';
+import CoreCapabilitiesSection from '@/components/home/core-capabilities-section';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -177,81 +178,7 @@ export default async function HomePage() {
       </section>
 
       {/* 4. CORE CAPABILITIES */}
-      <section id="features" className="py-24 bg-[#080B11] border-b border-slate-800/80">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="max-w-2xl mb-16 space-y-3">
-            <span className="text-xs font-semibold text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
-              <Cpu className="w-3.5 h-3.5" /> Core Capabilities
-            </span>
-            <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white">
-              A serious research platform built for graduate candidates.
-            </h2>
-            <p className="text-sm text-slate-400">
-              Designed with academic precision and verifiable institutional sources at every stage.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[
-              {
-                title: 'Worldwide Institutional Coverage',
-                desc: 'Index accredited faculty appointments across 190+ countries and territories, without regional restrictions.',
-                icon: Globe,
-                color: 'text-emerald-400',
-                bg: 'bg-emerald-500/10 border-emerald-500/20'
-              },
-              {
-                title: 'All Academic Fields & Subfields',
-                desc: 'From computational sustainability and robotics to public health, history, applied economics, and architecture.',
-                icon: BookOpen,
-                color: 'text-cyan-400',
-                bg: 'bg-cyan-500/10 border-cyan-500/20'
-              },
-              {
-                title: 'Verified .edu & .ac Emails Only',
-                desc: 'Every email address is confirmed against official university directories and academic publication registries.',
-                icon: ShieldCheck,
-                color: 'text-emerald-400',
-                bg: 'bg-emerald-500/10 border-emerald-500/20'
-              },
-              {
-                title: 'Interdisciplinary Lab Pairing',
-                desc: 'Bridge traditional departmental boundaries by matching research methods across computer science, engineering, and life sciences.',
-                icon: Layers,
-                color: 'text-purple-400',
-                bg: 'bg-purple-500/10 border-purple-500/20'
-              },
-              {
-                title: 'Fact-Grounded Outreach Drafts',
-                desc: 'Draft thoughtful correspondence citing specific recent papers and datasets, completely avoiding generic AI templates.',
-                icon: FileText,
-                color: 'text-amber-400',
-                bg: 'bg-amber-500/10 border-amber-500/20'
-              },
-              {
-                title: 'Unified Application Tracker',
-                desc: 'Track faculty replies, prospective advisor interviews, and graduate school deadlines in one organized workspace.',
-                icon: BarChart3,
-                color: 'text-teal-400',
-                bg: 'bg-teal-500/10 border-teal-500/20'
-              },
-            ].map((feature, idx) => {
-              const Icon = feature.icon;
-              return (
-                <div key={idx} className="p-6 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 transition-all space-y-4 group">
-                  <div className={`w-11 h-11 rounded-xl ${feature.bg} border flex items-center justify-center ${feature.color}`}>
-                    <Icon className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-base font-semibold text-white group-hover:text-emerald-300 transition-colors">
-                    {feature.title}
-                  </h3>
-                  <p className="text-xs text-slate-400 leading-relaxed">{feature.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+      <CoreCapabilitiesSection />
 
       {/* 5. ACADEMIC PRICING (4-TIER WORLDWIDE PLANS WITH CURRENCY SWITCHER) */}
       <HomePricingSection initialPlans={Array.isArray(pricing?.content?.plans) ? pricing.content.plans : undefined} />
