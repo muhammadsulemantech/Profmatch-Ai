@@ -5,6 +5,34 @@ import { Search, ChevronDown, Check, Globe, Lock, X } from 'lucide-react';
 import { isCountryUnlockedForTier } from '@/lib/services/usage-service';
 import { PlanTier } from '@/types/database';
 
+const TOP_DESTINATIONS = new Set([
+  'Germany',
+  'United States',
+  'United Kingdom',
+  'Canada',
+  'Australia',
+  'France',
+  'Netherlands',
+  'Switzerland',
+  'Sweden',
+  'Japan',
+  'China',
+  'Singapore',
+  'South Korea',
+  'Italy',
+  'Spain',
+  'Norway',
+  'Finland',
+  'Denmark',
+  'Ireland',
+  'New Zealand',
+  'Austria',
+  'Belgium',
+]);
+
+const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+
+
 export interface SearchableCountrySelectProps {
   country: string;
   onCountryChange: (val: string) => void;
@@ -42,26 +70,35 @@ export function SearchableCountrySelect({
     const q = searchQuery.trim().toLowerCase();
     if (!q) return countries;
 
-    const startsWith: typeof countries = [];
+    const topStartsWith: typeof countries = [];
+    const otherStartsWith: typeof countries = [];
     const contains: typeof countries = [];
 
     for (const c of countries) {
       const nameLower = c.name.toLowerCase();
       if (nameLower.startsWith(q)) {
-        startsWith.push(c);
+        if (TOP_DESTINATIONS.has(c.name)) {
+          topStartsWith.push(c);
+        } else {
+          otherStartsWith.push(c);
+        }
       } else if (nameLower.includes(q)) {
         contains.push(c);
       }
     }
 
-    return [...startsWith, ...contains];
+    topStartsWith.sort((a, b) => a.name.localeCompare(b.name));
+    otherStartsWith.sort((a, b) => a.name.localeCompare(b.name));
+    contains.sort((a, b) => a.name.localeCompare(b.name));
+
+    return [...topStartsWith, ...otherStartsWith, ...contains];
   }, [countries, searchQuery]);
 
   // Whether Global option matches search
   const showGlobalOption = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
-    return 'global (all countries) worldwide'.includes(q) || 'all'.includes(q);
+    return q.startsWith('glo') || q === 'all' || q === 'worldwide';
   }, [searchQuery]);
 
   // Total selectable items count
@@ -244,6 +281,48 @@ export function SearchableCountrySelect({
               <span className="text-emerald-400/80 text-[9px]">↑↓ navigate · Enter to select</span>
             </div>
           </div>
+
+          {/* Quick Alphabet Jump Strip */}
+          <div className="px-2 py-1.5 bg-slate-950/90 border-b border-slate-800 flex items-center gap-1 overflow-x-auto text-[10px] select-none no-scrollbar">
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setHighlightedIndex(0);
+                searchInputRef.current?.focus();
+              }}
+              className={`px-1.5 py-0.5 rounded transition-all text-[10px] shrink-0 font-medium ${
+                !searchQuery
+                  ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              }`}
+            >
+              All
+            </button>
+            {ALPHABET.map((letter) => {
+              const isMatch = searchQuery.toUpperCase() === letter;
+              return (
+                <button
+                  key={letter}
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery(letter.toLowerCase());
+                    setHighlightedIndex(0);
+                    searchInputRef.current?.focus();
+                  }}
+                  className={`w-5 h-5 rounded flex items-center justify-center shrink-0 font-medium transition-all ${
+                    isMatch
+                      ? 'bg-emerald-500 text-slate-950 font-bold shadow-sm'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={`Show countries starting with ${letter} (e.g. ${letter === 'G' ? 'Germany' : letter === 'U' ? 'USA, UK' : letter})`}
+                >
+                  {letter}
+                </button>
+              );
+            })}
+          </div>
+
 
           {/* Options List */}
           <ul

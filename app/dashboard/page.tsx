@@ -32,6 +32,7 @@ import {
   Lock,
   LogOut,
   User,
+  UserCheck,
   ShieldAlert,
   Link2,
   Camera,
@@ -637,10 +638,16 @@ export default function DashboardPage() {
                 <button
                   type="button"
                   onClick={() => handleProtectedAction('edit profile and research preferences', '/profile')}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors text-left"
+                  className="w-full flex items-center justify-between px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors text-left group"
+                  title="Input and update your research profile, target degree, academic data, and CV"
                 >
-                  <GraduationCap className="w-4 h-4 text-emerald-400" />
-                  Research Profile
+                  <span className="flex items-center gap-2.5">
+                    <UserCheck className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                    <span>Profile &amp; Academic Data</span>
+                  </span>
+                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 font-semibold">
+                    Input Data
+                  </span>
                 </button>
               </nav>
 
