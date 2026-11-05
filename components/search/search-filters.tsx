@@ -5,6 +5,7 @@ import { SlidersHorizontal, ShieldCheck, Mail, Sparkles, Bookmark, Check } from 
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
 import { isCountryUnlockedForTier } from '@/lib/services/usage-service';
 import { PlanTier } from '@/types/database';
+import { SearchableCountrySelect } from '@/components/ui/searchable-country-select';
 
 export interface SearchFiltersProps {
   country: string;
@@ -85,23 +86,12 @@ export function SearchFilters({
         <label className="block text-xs font-medium text-slate-400">
           Country / Territory
         </label>
-        <select
-          value={country}
-          onChange={e => onCountryChange(e.target.value)}
-          className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-emerald-500"
-        >
-          <option value="Global (All Countries)">
-            🌐 Global (All 250 Countries & Territories) {userTier === 'ELITE' ? '✅' : '🔒 Elite'}
-          </option>
-          {countries.map(c => {
-            const isUnlocked = isCountryUnlockedForTier(userTier, c.name);
-            return (
-              <option key={c.code} value={c.name}>
-                {c.flag ? `${c.flag} ` : ''}{c.name} {isUnlocked ? '✅' : '🔒 Pro'}
-              </option>
-            );
-          })}
-        </select>
+        <SearchableCountrySelect
+          country={country}
+          onCountryChange={onCountryChange}
+          countries={countries}
+          userTier={userTier}
+        />
       </div>
 
       {/* 2. Region / Province Selector */}
