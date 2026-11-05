@@ -253,15 +253,20 @@ export default function InboxPage() {
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-8 selection:bg-emerald-500/25 selection:text-emerald-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Back to Dashboard Navigation */}
+        <div>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-medium text-slate-300 hover:text-white border border-slate-800 transition-all shadow-sm group w-fit"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Dashboard</span>
+          </Link>
+        </div>
+
         {/* Navigation & Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
           <div className="space-y-1">
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors mb-2"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
-            </Link>
             <h1 className="font-heading text-2xl sm:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
               <MessageSquare className="w-7 h-7 text-emerald-400" /> Messages &amp; AI Reply Assistant
             </h1>

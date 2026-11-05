@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { mockDb } from '@/lib/supabase/mock-db';
 import { useAuth } from '@/lib/auth/auth-context';
-import { User, Globe, Save, CheckCircle2 } from 'lucide-react';
+import { User, Globe, Save, CheckCircle2, ArrowLeft, GraduationCap } from 'lucide-react';
 import {
   getAllCountries,
   getRegionsForCountry,
@@ -656,17 +657,28 @@ export default function ProfilePage() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8 bg-[#080B11] text-slate-100 min-h-screen selection:bg-emerald-500/25 selection:text-emerald-300">
+      {/* Back to Dashboard Navigation */}
+      <div>
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-medium text-slate-300 hover:text-white border border-slate-800 transition-all shadow-sm group w-fit"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+          <span>Back to Dashboard</span>
+        </Link>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
         <div>
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 mb-2">
-            <Globe className="w-3 h-3" /> Universal Academic Grounding Profile
+            <Globe className="w-3 h-3" /> Candidate Research &amp; Academic Data
           </div>
-          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2">
-            <User className="w-6 h-6 text-emerald-400" /> Student Research &amp; Geographic Profile
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-2.5">
+            <GraduationCap className="w-7 h-7 text-emerald-400" /> Research Profile &amp; Background
           </h1>
-          <p className="text-xs text-slate-400 mt-1">
-            This profile data is directly injected into the Cold Email Generator to guarantee personalized, fact-checked professor outreach across all countries and disciplines.
+          <p className="text-xs text-slate-400 mt-1 max-w-2xl leading-relaxed">
+            Configure your target degree, research interests, thesis abstract, and upload your CV here. This data is directly used by AI to find matched professors and ground your outreach emails.
           </p>
         </div>
 

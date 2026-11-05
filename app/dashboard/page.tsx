@@ -20,6 +20,7 @@ import {
   Award,
   Bookmark,
   Calendar,
+  GraduationCap,
   Settings,
   CreditCard,
   Inbox,
@@ -638,8 +639,8 @@ export default function DashboardPage() {
                   onClick={() => handleProtectedAction('edit profile and research preferences', '/profile')}
                   className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors text-left"
                 >
-                  <Settings className="w-4 h-4" />
-                  Settings
+                  <GraduationCap className="w-4 h-4 text-emerald-400" />
+                  Research Profile
                 </button>
               </nav>
 

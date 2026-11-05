@@ -392,9 +392,21 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
             <span className="text-slate-200 font-medium truncate max-w-[200px]">{prof.name}</span>
           </nav>
 
-          <Link href="/search" className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors">
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Faculty Search
-          </Link>
+          <div className="flex items-center gap-2.5">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-medium text-slate-300 hover:text-white border border-slate-800 transition-all shadow-sm group w-fit"
+            >
+              <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+              <span>Back to Dashboard</span>
+            </Link>
+            <Link
+              href="/search"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs font-medium text-slate-400 hover:text-white border border-slate-800/80 transition-colors"
+            >
+              Faculty Search
+            </Link>
+          </div>
         </div>
 
         {/* Professor Header Profile Card */}

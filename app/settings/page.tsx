@@ -150,9 +150,10 @@ export default function SettingsPage() {
         <div>
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-white transition-colors"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-medium text-slate-300 hover:text-white border border-slate-800 transition-all shadow-sm group w-fit"
           >
-            <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
+            <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Dashboard</span>
           </Link>
         </div>
 

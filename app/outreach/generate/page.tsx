@@ -252,15 +252,26 @@ export default function OutreachGeneratePage() {
   return (
     <div className="min-h-screen bg-[#080B11] text-slate-100 py-10 selection:bg-emerald-500/25 selection:text-emerald-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+        {/* Navigation Breadcrumb / Actions */}
+        <div className="flex items-center gap-2.5">
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-slate-900/90 hover:bg-slate-800 text-xs font-medium text-slate-300 hover:text-white border border-slate-800 transition-all shadow-sm group w-fit"
+          >
+            <ArrowLeft className="w-3.5 h-3.5 text-emerald-400 group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Dashboard</span>
+          </Link>
+          <Link
+            href={`/professors/${prof.id}`}
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-900/60 hover:bg-slate-800 text-xs font-medium text-slate-400 hover:text-white border border-slate-800/80 transition-colors"
+          >
+            Back to {prof.name}
+          </Link>
+        </div>
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div className="space-y-1">
-            <Link
-              href={`/professors/${prof.id}`}
-              className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-emerald-400 transition-colors"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to {prof.name}
-            </Link>
             <h1 className="font-heading text-3xl sm:text-4xl font-bold tracking-tight text-white">
               Academic Outreach Composer &amp; Deliverability Engine
             </h1>
