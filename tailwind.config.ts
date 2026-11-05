@@ -11,9 +11,9 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        serif: ["var(--font-heading)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
-        heading: ["var(--font-heading)", "Plus Jakarta Sans", "system-ui", "sans-serif"],
-        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
+        serif: ["var(--font-heading)", "Sora", "system-ui", "sans-serif"],
+        heading: ["var(--font-heading)", "Sora", "system-ui", "sans-serif"],
+        sans: ["var(--font-sans)", "Outfit", "system-ui", "sans-serif"],
       },
       colors: {
         background: "hsl(var(--background))",

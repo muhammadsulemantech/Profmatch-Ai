@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { Inter, Plus_Jakarta_Sans } from 'next/font/google';
+import { Sora, Outfit } from 'next/font/google';
 import './globals.css';
 import { getSiteSettings } from '@/lib/cms/settings-service';
 import Link from 'next/link';
@@ -13,8 +13,13 @@ import NetworkStatusBanner from '@/components/ui/network-status-banner';
 import { PostHogProvider } from '@/components/providers/posthog-provider';
 import { SITE_URL, getOrganizationJsonLd, getWebSiteJsonLd, getSoftwareApplicationJsonLd } from '@/lib/seo/site-config';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-sans' });
-const plusJakartaSans = Plus_Jakarta_Sans({
+const outfit = Outfit({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const sora = Sora({
   subsets: ['latin'],
   variable: '--font-heading',
   display: 'swap',
@@ -101,7 +106,7 @@ export default async function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} ${plusJakartaSans.variable} ${inter.className} min-h-screen flex flex-col bg-[#080B11] text-slate-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-300`}>
+      <body className={`${outfit.variable} ${sora.variable} ${outfit.className} min-h-screen flex flex-col bg-[#080B11] text-slate-100 antialiased selection:bg-emerald-500/25 selection:text-emerald-300`}>
         <NetworkStatusBanner />
         <AuthProvider>
           <PostHogProvider>
