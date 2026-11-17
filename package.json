@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "test": "node --env-file=.env.local --test tests/rate-limiting.test.mjs tests/seo-technical-audit.test.mjs tests/tier2-observability-critical-paths.test.mjs tests/admin-plan-tiers.test.mjs tests/build-integrity.test.mjs tests/db-service.test.mjs tests/otp-security.test.mjs tests/schema-reconciliation.test.mjs tests/verified-pipeline.test.mjs tests/email-delivery-failure.test.mjs tests/auth-confirmation.test.mjs tests/admin-database-connectivity.test.mjs tests/password-reset.test.mjs tests/openalex-integration.test.mjs",
-    "test:all": "node --env-file=.env.local --test tests/*.test.mjs"
+    "test:all": "node --env-file=.env.local --test tests/*.test.mjs",
+    "test:unit": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.1",
@@ -29,15 +31,20 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20.14.10",
     "@types/nodemailer": "^8.0.2",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.7.0",
     "autoprefixer": "^10.4.20",
     "eslint": "^8.57.0",
     "eslint-config-next": "14.2.15",
+    "jsdom": "^31.0.1",
     "postcss": "^8.4.47",
     "tailwindcss": "^3.4.14",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vitest": "^3.2.7"
   }
 }
