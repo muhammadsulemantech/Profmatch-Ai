@@ -88,7 +88,8 @@ export default function ConnectorsPage() {
   };
 
   const handleConnectGmail = () => {
-    window.location.href = '/api/auth/google/gmail?redirectTo=/connectors';
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/connectors';
+    window.location.href = `/api/auth/google/gmail?redirectTo=${encodeURIComponent(currentPath)}`;
   };
 
   const handleDisconnectGmail = async () => {
