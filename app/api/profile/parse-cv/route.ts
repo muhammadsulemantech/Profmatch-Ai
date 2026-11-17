@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
+import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
+import { logger } from '@/lib/logger';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
@@ -362,8 +364,16 @@ function analyzeCvText(text: string, fileName: string): ParsedCvData {
 
 export async function POST(req: NextRequest) {
   try {
+    const session = await verifyAuthSession(req);
+    if (!session || !session.user || !session.user.id) {
+      return NextResponse.json(
+        { error: 'Unauthorized: Authentication required to parse CV documents.' },
+        { status: 401 }
+      );
+    }
+
     const ip = getClientIp(req);
-    const rl = checkRateLimit(`parse_cv:${ip}`, RATE_LIMIT_PRESETS.CV_PARSE);
+    const rl = checkRateLimit(`parse_cv:${session.user.id}:${ip}`, RATE_LIMIT_PRESETS.CV_PARSE);
     if (!rl.success) {
       const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000));
       return NextResponse.json(
@@ -442,7 +452,7 @@ export async function POST(req: NextRequest) {
       parsed: parsedData,
     });
   } catch (error: any) {
-    console.error('[CV PARSER API ERROR]', error);
+    logger.error('[CV PARSER API ERROR]', error);
     return NextResponse.json(
       {
         error: 'Failed to parse CV document',
