@@ -8,8 +8,14 @@ function getEncryptionKey(): Buffer {
   const secret =
     process.env.ENCRYPTION_SECRET ||
     process.env.ADMIN_SECRET_PASSPHRASE ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    'profmatch-default-dev-secret-key-min-32-chars!!';
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: ENCRYPTION_SECRET must be configured in production.');
+    }
+    return crypto.createHash('sha256').update('profmatch-default-dev-secret-key-min-32-chars!!').digest();
+  }
 
   // Derive a consistent 32-byte (256-bit) key using SHA-256
   return crypto.createHash('sha256').update(secret).digest();
