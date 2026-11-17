@@ -4,11 +4,18 @@ import { validateSafeRedirect } from './url-validation.ts';
 const STATE_MAX_AGE_MS = 15 * 60 * 1000; // 15 minutes
 
 function getStateSecret(): string {
-  return (
+  const secret =
+    process.env.ENCRYPTION_SECRET ||
     process.env.ADMIN_SECRET_PASSPHRASE ||
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    'profmatch-oauth-state-signing-secret-key-2026'
-  );
+    process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!secret) {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('CRITICAL SECURITY ERROR: OAuth state signing secret must be configured in production.');
+    }
+    return 'profmatch-oauth-state-signing-secret-key-2026';
+  }
+  return secret;
 }
 
 export interface OAuthStatePayload {
