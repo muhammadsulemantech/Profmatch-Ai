@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { verifyQStashSignature } from '@/lib/services/qstash-service';
 import { logger } from '@/lib/logger';
 import { discoverFacultyByKeywords, upsertProfessorsBatch } from '@/lib/services/professor-service';
-import { mockDb } from '@/lib/supabase/mock-db';
 
 export async function POST(req: NextRequest) {
   try {
