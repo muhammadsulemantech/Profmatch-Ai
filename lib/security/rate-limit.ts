@@ -51,8 +51,10 @@ export function getClientIp(request: Request | { headers: Headers }): string {
   return '127.0.0.1';
 }
 
+const MAX_RATE_LIMIT_ENTRIES = 5000;
+
 /**
- * Opportunistically prunes expired records when store size grows
+ * Opportunistically prunes expired records when store size grows, and bounds memory
  */
 function pruneExpiredRecords(now: number): void {
   if (rateLimitStore.size > 2000) {
@@ -61,6 +63,11 @@ function pruneExpiredRecords(now: number): void {
         rateLimitStore.delete(key);
       }
     });
+  }
+  while (rateLimitStore.size >= MAX_RATE_LIMIT_ENTRIES) {
+    const oldestKey = rateLimitStore.keys().next().value;
+    if (!oldestKey) break;
+    rateLimitStore.delete(oldestKey);
   }
 }
 
