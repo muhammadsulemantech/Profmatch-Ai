@@ -120,11 +120,15 @@ export async function saveUserProfile(
         .single();
 
       if (!error && data) {
-        // Also mirror avatar to Supabase Auth metadata so session token carries it
-        if (finalAvatarUrl) {
+        // Mirror lightweight HTTP(S) avatar URL to Auth metadata (never mirror base64 data URIs to avoid JWT/cookie bloat)
+        const safeAuthAvatarUrl = finalAvatarUrl && !finalAvatarUrl.startsWith('data:') ? finalAvatarUrl : undefined;
+        if (safeAuthAvatarUrl || profile.full_name) {
           try {
             await supabase.auth.admin.updateUserById(profile.id, {
-              user_metadata: { avatar_url: finalAvatarUrl, full_name: profile.full_name || data.full_name },
+              user_metadata: {
+                ...(safeAuthAvatarUrl ? { avatar_url: safeAuthAvatarUrl } : {}),
+                full_name: profile.full_name || data.full_name,
+              },
             });
           } catch {}
         }
