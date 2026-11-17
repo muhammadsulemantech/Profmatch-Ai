@@ -21,11 +21,34 @@ import {
   getPlanConfig,
   isCountryUnlockedForTier,
 } from '../lib/services/usage-service.ts';
-import { mockDb } from '../lib/supabase/mock-db.ts';
+import { createAdminClient } from '../lib/supabase/admin.ts';
 
 test('End-to-End Comprehensive Subscription & Entitlements Suite', async (t) => {
-  const testUserId = `usr_test_e2e_${Date.now()}`;
+  const supabase = createAdminClient();
+  let testUserId = `usr_test_e2e_${Date.now()}`;
   const testUserEmail = `test.applicant.${Date.now()}@example.com`;
+  let createdAuthUser = false;
+
+  if (supabase) {
+    const { data: authData, error: authErr } = await supabase.auth.admin.createUser({
+      email: testUserEmail,
+      password: 'TestPassword123!',
+      email_confirm: true,
+      user_metadata: { full_name: 'Test Candidate' },
+    });
+    if (!authErr && authData?.user?.id) {
+      testUserId = authData.user.id;
+      createdAuthUser = true;
+    }
+  }
+
+  t.after(async () => {
+    if (supabase && createdAuthUser) {
+      await supabase.from('subscriptions').delete().eq('user_id', testUserId);
+      await supabase.from('profiles').delete().eq('id', testUserId);
+      await supabase.auth.admin.deleteUser(testUserId);
+    }
+  });
 
   await t.test('1. New user registration defaults to Free Explorer tier', async () => {
     await saveUserProfile({
