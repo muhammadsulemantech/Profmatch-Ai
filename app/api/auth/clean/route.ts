@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export async function GET(request: NextRequest) {
+export async function POST(request: NextRequest) {
   const origin = process.env.NEXT_PUBLIC_APP_URL || request.nextUrl.origin || 'http://localhost:3000';
-  const response = NextResponse.redirect(`${origin}/`);
+  const response = NextResponse.json({ success: true, redirectTo: `${origin}/` });
 
   // Clear any existing cookies that could accumulate or cause header issues
   const allCookies = request.cookies.getAll();
