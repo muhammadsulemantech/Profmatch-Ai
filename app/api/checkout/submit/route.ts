@@ -4,18 +4,26 @@ import { submitPaymentProof, getPaymentMethodById } from '@/lib/services/payment
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { apiSuccess, apiError } from '@/lib/api/response';
 import { checkRateLimit, getClientIp, RATE_LIMIT_PRESETS } from '@/lib/security/rate-limit';
+import { logger } from '@/lib/logger';
 import {
   sendPaymentAdminAlertEmail,
   sendPaymentCustomerReceiptEmail,
 } from '@/lib/email/payment-admin-alert';
 
+const isSafeProofUrl = (val: string): boolean => {
+  if (!val) return true;
+  if (val.length > 12 * 1024 * 1024) return false; // Cap at ~12MB base64
+  if (val.startsWith('https://')) return true;
+  return /^data:(image\/(png|jpeg|jpg|webp|gif)|application\/pdf);base64,[A-Za-z0-9+/=]+$/i.test(val);
+};
+
 const SubmitCheckoutSchema = z.object({
   planTier: z.string().default('STUDENT'),
   paymentMethodId: z.string().min(1, 'Payment method is required'),
   transactionId: z.string().trim().min(3, 'A valid Transaction ID or Reference Number is required'),
-  paymentNote: z.string().optional(),
-  proofFileName: z.string().optional(),
-  proofFileUrl: z.string().optional(),
+  paymentNote: z.string().max(500).optional(),
+  proofFileName: z.string().max(255).optional(),
+  proofFileUrl: z.string().refine(isSafeProofUrl, 'Invalid or oversized payment proof file URL').optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -85,7 +93,7 @@ export async function POST(request: NextRequest) {
         // 2. Send receipt confirmation to student
         await sendPaymentCustomerReceiptEmail(emailParams);
       } catch (emailErr) {
-        console.error('[PAYMENT EMAIL DISPATCH ERROR]', emailErr);
+        logger.error('[PAYMENT EMAIL DISPATCH ERROR]', { error: emailErr instanceof Error ? emailErr.message : String(emailErr) });
       }
     })();
 
