@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getProfessorById } from '@/lib/services/professor-service';
+import { logger } from '@/lib/logger';
 
 export async function GET(
   request: NextRequest,
@@ -32,7 +33,7 @@ export async function GET(
       professor,
     });
   } catch (error: any) {
-    console.error('[API PROFESSOR BY ID ERROR]', error);
+    logger.error('[API PROFESSOR BY ID ERROR]', error);
     return NextResponse.json(
       {
         success: false,
