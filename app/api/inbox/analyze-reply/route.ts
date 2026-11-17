@@ -3,6 +3,7 @@ import { ReplyAnalysisAgent } from '@/lib/agents';
 import { verifyAuthSession } from '@/lib/auth/server-auth';
 import { checkRateLimit } from '@/lib/security/rate-limit';
 import { apiSuccess, apiError } from '@/lib/api/response';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +54,7 @@ export async function POST(request: NextRequest) {
       reply: newReply,
     });
   } catch (error: any) {
-    console.error('Error analyzing reply:', error);
+    logger.error('Error analyzing reply:', error);
     return apiError(error.message || 'Failed to analyze professor reply', 500);
   }
 }
