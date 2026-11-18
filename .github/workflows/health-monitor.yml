@@ -1,0 +1,30 @@
+name: Production Health Monitor
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # Every 6 hours
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    name: Verify Live /api/health Endpoint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check live application health
+        env:
+          LIVE_APP_URL: ${{ vars.LIVE_APP_URL }}
+        run: |
+          if [ -z "$LIVE_APP_URL" ]; then
+            echo "LIVE_APP_URL repository variable is not set yet. Skipping live ping."
+            exit 0
+          fi
+
+          STATUS_CODE=$(curl -s -o /tmp/health.json -w "%{http_code}" "${LIVE_APP_URL%/}/api/health")
+          echo "HTTP Status: $STATUS_CODE"
+          cat /tmp/health.json
+
+          if [ "$STATUS_CODE" -ne 200 ]; then
+            echo "Health check failed with status $STATUS_CODE"
+            exit 1
+          fi
