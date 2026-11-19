@@ -4,7 +4,13 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { mockDb } from '@/lib/supabase/mock-db';
+import {
+  DEMO_EMAILS,
+  DEMO_PROFESSORS,
+  DEMO_REPLIES,
+  DEMO_RESEARCH_MATCHES,
+  DEMO_STUDENT_PROFILES,
+} from '@/lib/data/demo-seed';
 import { formatScore } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-context';
 import {
@@ -72,7 +78,7 @@ export default function DashboardPage() {
         desired_field: studentProfile.desired_field || studentProfile.desiredField || 'Artificial Intelligence & NLP',
       };
     }
-    const defaultStudent = mockDb.studentProfiles.find(s => s.user_id === user?.id) || mockDb.studentProfiles[0];
+    const defaultStudent = DEMO_STUDENT_PROFILES.find(s => s.user_id === user?.id) || DEMO_STUDENT_PROFILES[0];
     return {
       target_degree: (user as any)?.target_degree || defaultStudent?.target_degree || 'PhD',
       target_country: defaultStudent?.target_country || 'USA',
@@ -80,7 +86,7 @@ export default function DashboardPage() {
       desired_field: defaultStudent?.desired_field || 'Artificial Intelligence & NLP',
     };
   }, [studentProfile, user]);
-  const matches = mockDb.researchMatches;
+  const matches = DEMO_RESEARCH_MATCHES;
 
   const displayName = React.useMemo(() => {
     if (user?.full_name) return user.full_name;
@@ -160,7 +166,7 @@ export default function DashboardPage() {
     }
 
     setSavedCount(savedIds.length);
-    const userSavedProfs = mockDb.professors.filter(p => savedIds.includes(p.id));
+    const userSavedProfs = DEMO_PROFESSORS.filter(p => savedIds.includes(p.id));
     setSavedProfessors(userSavedProfs);
 
     // 2. Sent Emails Count & List (with Cross-Device Cloud Sync & Lifetime Aggregation)
@@ -171,7 +177,7 @@ export default function DashboardPage() {
       if (storedSent) localSent = JSON.parse(storedSent);
     } catch {}
 
-    const mockUserEmails = mockDb.emails.filter(e => e.user_id === user.id);
+    const mockUserEmails = DEMO_EMAILS.filter(e => e.user_id === user.id);
     const combinedEmailsMap = new Map();
     [...localSent, ...mockUserEmails].forEach(e => combinedEmailsMap.set(e.id || e.email_id || Math.random(), e));
     let userEmails = Array.from(combinedEmailsMap.values());
@@ -200,7 +206,7 @@ export default function DashboardPage() {
             try {
               localStorage.setItem(savedKey, JSON.stringify(combinedSavedIds));
             } catch {}
-            const allSavedProfs = mockDb.professors.filter(p => combinedSavedIds.includes(p.id));
+            const allSavedProfs = DEMO_PROFESSORS.filter(p => combinedSavedIds.includes(p.id));
             setSavedProfessors(allSavedProfs);
           }
 
@@ -262,9 +268,9 @@ export default function DashboardPage() {
       if (storedReplies) userReplies = JSON.parse(storedReplies);
     } catch {}
 
-    // Only seed mock replies for demo account usr_student_001 if empty
+    // Only seed demo replies for demo account usr_student_001 if empty
     if (user.id === 'usr_student_001' && userReplies.length === 0) {
-      userReplies = mockDb.replies;
+      userReplies = DEMO_REPLIES;
     }
 
     setRepliesCount(userReplies.length);
@@ -276,24 +282,16 @@ export default function DashboardPage() {
 
     // 4. Pending Payment Order Check
     try {
-      mockDb.loadFromDisk();
-      const userPending = (mockDb.orders || []).find(
-        (o: any) => (o.user_id === user.id || o.user_email === user.email) && o.status === 'PENDING'
-      );
-      if (userPending) {
-        setPendingOrder(userPending);
-      } else {
-        const localLastOrderStr = localStorage.getItem('profmatch_last_order');
-        if (localLastOrderStr) {
-          const parsed = JSON.parse(localLastOrderStr);
-          if (parsed && (parsed.status === 'PENDING' || parsed.orderReference)) {
-            setPendingOrder(parsed);
-          } else {
-            setPendingOrder(null);
-          }
+      const localLastOrderStr = localStorage.getItem('profmatch_last_order');
+      if (localLastOrderStr) {
+        const parsed = JSON.parse(localLastOrderStr);
+        if (parsed && (parsed.status === 'PENDING' || parsed.orderReference)) {
+          setPendingOrder(parsed);
         } else {
           setPendingOrder(null);
         }
+      } else {
+        setPendingOrder(null);
       }
     } catch {
       setPendingOrder(null);
