@@ -163,7 +163,7 @@ export async function GET() {
 }
 
 const UpdatePricingSchema = z.object({
-  plans: z.array(z.record(z.any())),
+  plans: z.array(z.record(z.string(), z.any())),
 });
 
 export async function PUT(request: NextRequest) {
