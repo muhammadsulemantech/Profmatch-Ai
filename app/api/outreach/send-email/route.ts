@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { sendOutreachEmail } from '@/lib/services/outreach-service';
-import { verifyAuthSession } from '@/lib/auth/server-auth';
+import { verifyAuthSession, isAdminEmail } from '@/lib/auth/server-auth';
 import { checkRateLimit } from '@/lib/security/rate-limit';
+import { checkAndIncrementQuotaAsync } from '@/lib/services/quota-service';
+import { getUserPlanTier } from '@/lib/services/db-service';
 import { apiSuccess, apiError } from '@/lib/api/response';
 
 const SendEmailSchema = z.object({
@@ -39,6 +41,26 @@ export async function POST(request: NextRequest) {
         'Duplicate send prevented. Please wait 15 seconds before emailing this professor again.',
         429,
         'DUPLICATE_SEND_PREVENTED'
+      );
+    }
+
+    // 3. Daily user send rate limit & subscription plan quota check
+    const dailyRl = checkRateLimit(`outreach_daily:${session.user.id}`, { limit: 50, windowMs: 24 * 60 * 60 * 1000 });
+    if (!dailyRl.success) {
+      return apiError('Daily outreach sending limit reached. Please resume tomorrow.', 429, 'RATE_LIMIT_EXCEEDED');
+    }
+
+    const tier = (session.user as any)?.tier || await getUserPlanTier(session.user.id);
+    const effectiveTier = (session.user.role === 'ADMIN' || isAdminEmail(session.user.email)) && tier === 'FREE' ? 'PRO' : tier;
+    const quotaCheck = await checkAndIncrementQuotaAsync(session.user.id, 'draft', {
+      tier: effectiveTier,
+      increment: true,
+    });
+    if (!quotaCheck.allowed) {
+      return apiError(
+        quotaCheck.message || 'Outreach quota reached for your current subscription plan.',
+        403,
+        quotaCheck.error || 'QUOTA_EXCEEDED'
       );
     }
 
