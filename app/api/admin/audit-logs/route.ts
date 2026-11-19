@@ -35,7 +35,7 @@ const CreateAuditLogSchema = z.object({
   action: z.string().optional().default('ADMIN_ACTION'),
   resourceType: z.string().optional().default('SYSTEM'),
   resourceId: z.string().optional(),
-  metadata: z.record(z.any()).optional(),
+  metadata: z.record(z.string(), z.any()).optional(),
 });
 
 export async function POST(request: NextRequest) {
