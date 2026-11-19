@@ -2,7 +2,12 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { mockDb } from '@/lib/supabase/mock-db';
+import {
+  DEMO_ACADEMIC_PROFILES,
+  DEMO_RESEARCH_PROFILES,
+  DEMO_STUDENT_DOCUMENTS,
+  DEMO_STUDENT_PROFILES,
+} from '@/lib/data/demo-seed';
 import { useAuth } from '@/lib/auth/auth-context';
 import { User, Globe, Save, CheckCircle2, ArrowLeft, GraduationCap } from 'lucide-react';
 import {
@@ -143,10 +148,10 @@ const KEYWORD_SUGGESTIONS = Array.from(
 
 export default function ProfilePage() {
   const { user, setAuthenticatedUser } = useAuth();
-  const student = mockDb.studentProfiles[0];
-  const academic = mockDb.academicProfiles[0];
-  const research = mockDb.researchProfiles[0];
-  const cvDoc = mockDb.studentDocuments[0];
+  const student = DEMO_STUDENT_PROFILES[0];
+  const academic = DEMO_ACADEMIC_PROFILES[0];
+  const research = DEMO_RESEARCH_PROFILES[0];
+  const cvDoc = DEMO_STUDENT_DOCUMENTS[0];
 
   const countries = useMemo(() => getAllCountries(), []);
 
@@ -482,8 +487,6 @@ export default function ProfilePage() {
     if (typeof window !== 'undefined') {
       localStorage.setItem(`profmatch_user_cv_${userKey}`, JSON.stringify(newCv));
     }
-    mockDb.studentDocuments[0].file_name = file.name;
-    mockDb.studentDocuments[0].file_size = file.size;
 
     try {
       const formData = new FormData();
