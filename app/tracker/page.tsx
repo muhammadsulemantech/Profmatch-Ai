@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/lib/auth/auth-context';
-import { mockDb } from '@/lib/supabase/mock-db';
 import Link from 'next/link';
 import {
   Layers,
