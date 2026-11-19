@@ -21,7 +21,7 @@ import {
   Layers,
   ArrowLeft
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_APPLICATIONS } from '@/lib/data/demo-seed';
 import { useAuth } from '@/lib/auth/auth-context';
 import { ApplicationTrackerItem } from '@/types/database';
 
@@ -64,13 +64,13 @@ export default function ApplicationsPage() {
       if (stored) localApps = JSON.parse(stored);
     } catch {}
 
-    const mockUserApps = mockDb.applications.filter((a) => a.user_id === user.id);
+    const mockUserApps = DEMO_APPLICATIONS.filter((a) => a.user_id === user.id);
     const combinedMap = new Map();
     [...localApps, ...mockUserApps].forEach((a) => combinedMap.set(a.id, a));
     let finalApps = Array.from(combinedMap.values());
 
     if (isSampleDemoStudent && finalApps.length === 0) {
-      finalApps = mockDb.applications;
+      finalApps = DEMO_APPLICATIONS;
     }
 
     setApplications(finalApps);
@@ -156,7 +156,6 @@ export default function ApplicationsPage() {
       };
       const updated = [newApp, ...applications];
       saveApplicationsToStorage(updated);
-      mockDb.applications.unshift(newApp as any);
     }
 
     setIsModalOpen(false);
