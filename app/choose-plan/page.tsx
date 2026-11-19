@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,130 +17,14 @@ import {
   Clock,
   Compass,
 } from 'lucide-react';
-import { ACADEMIC_PLANS, getStoredCustomPlans } from '@/lib/services/usage-service';
+import { useLivePricingPlans } from '@/lib/services/pricing-client';
 import { useAuth } from '@/lib/auth/auth-context';
 
 export default function ChoosePlanPage() {
   const router = useRouter();
   const { user } = useAuth();
   const [currency, setCurrency] = useState<'PKR' | 'USD'>('PKR');
-  const [plans, setPlans] = useState<any[]>([]);
-
-  useEffect(() => {
-    // 1. Only check local storage if explicitly saved on this browser (e.g. admin preview)
-    try {
-      const stored = getStoredCustomPlans();
-      if (stored && Object.keys(stored).length > 0) {
-        const localPlans = Object.values(stored);
-        if (localPlans.length >= 3) {
-          setPlans(localPlans);
-        }
-      }
-    } catch {}
-
-    const refreshPlans = async () => {
-      try {
-        const res = await fetch(`/api/pricing?t=${Date.now()}`, {
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-          },
-        });
-        if (!res.ok) return;
-        const data = await res.json();
-        const incomingPlans = (Array.isArray(data.plans) && data.plans.length > 0)
-          ? data.plans
-          : (Array.isArray(data.data?.plans) && data.data.plans.length > 0)
-          ? data.data.plans
-          : null;
-        if (incomingPlans && incomingPlans.length >= 3) {
-          setPlans(incomingPlans);
-        }
-      } catch (err) {
-        console.warn('Live pricing sync warning:', err);
-      }
-    };
-
-    refreshPlans();
-
-    const onPricingSync = () => refreshPlans();
-    window.addEventListener('profmatch_pricing_updated', onPricingSync);
-    window.addEventListener('storage', onPricingSync);
-
-    return () => {
-      window.removeEventListener('profmatch_pricing_updated', onPricingSync);
-      window.removeEventListener('storage', onPricingSync);
-    };
-  }, []);
-
-  const freePlan = plans.find(p => p.tier === 'FREE') || {
-    name: 'Free Explorer',
-    badge: 'Preview Tier',
-    pricePkr: 0,
-    priceUsd: 0,
-    description: 'Basic sample preview with restricted country access and limited searches.',
-    features: [
-      '2 Preview Countries (Pakistan, Germany)',
-      '3 Faculty Searches Total',
-      '2 Sample Email Outreach Drafts',
-      'Worldwide professors blurred after limit',
-      'No autonomous AutoPilot engine',
-    ],
-    ctaText: 'Continue Free',
-    highlighted: false,
-  };
-
-  const starterPlan = plans.find(p => p.tier === 'STARTER') || {
-    name: 'Scholar Starter',
-    badge: 'Focused Intake',
-    pricePkr: 3500,
-    priceUsd: 12,
-    description: 'Essential tools for graduate applicants targeting top 10 academic nations.',
-    features: [
-      '10+ Major Academic Countries (USA, UK, Canada, Germany, etc.)',
-      '50 Grounded Searches / mo',
-      '30 AI Cold Email Drafts / mo',
-      'Basic AutoPilot (5 drafts/batch)',
-      'Direct Institutional Email Access',
-    ],
-    ctaText: 'Get Starter',
-    highlighted: true,
-  };
-
-  const proPlan = plans.find(p => p.tier === 'PRO') || {
-    name: 'Pro Researcher',
-    badge: 'Recommended for 2026/2027',
-    pricePkr: 8000,
-    priceUsd: 29,
-    description: 'Broad international reach across 45+ countries with autonomous Gmail drafts.',
-    features: [
-      '45+ Global Destinations (Europe, US, UK, East Asia, Oceania)',
-      '250 Grounded Searches / mo',
-      '150 AI Grounded Drafts / mo',
-      'Full AutoPilot (20 drafts/batch + Gmail)',
-      'Phone & Lab Appointment Indexing',
-    ],
-    ctaText: 'Get Pro Researcher',
-    highlighted: true,
-  };
-
-  const elitePlan = plans.find(p => p.tier === 'ELITE') || {
-    name: 'PhD Elite',
-    badge: '100% Worldwide Ultra',
-    pricePkr: 16000,
-    priceUsd: 59,
-    description: 'Unrestricted worldwide access to all 190+ countries with high-capacity autonomous outreach.',
-    features: [
-      '🌐 100% Worldwide Access (190+ Countries)',
-      'Unlimited Faculty Searches',
-      'Unlimited AI Grounded Drafts',
-      'AutoPilot Engine (Up to 500 Emails / mo)',
-      'Direct Phone/Office & 1-on-1 Support',
-    ],
-    ctaText: 'Get PhD Elite',
-    highlighted: false,
-  };
+  const { freePlan, starterPlan, proPlan, elitePlan } = useLivePricingPlans();
 
   const isFreeHighlighted = Boolean(freePlan.highlighted);
   const isStarterHighlighted = Boolean(starterPlan.highlighted);
