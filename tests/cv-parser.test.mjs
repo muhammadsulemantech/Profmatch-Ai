@@ -4,9 +4,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 test('CV Parser & Zero-Keyword Profile Validation Suite', async (t) => {
-  await t.test('1. Default research profile in mock-db.ts has 0 research interests and empty thesis', () => {
-    const mockDbPath = path.join(process.cwd(), 'lib', 'supabase', 'mock-db.ts');
-    const content = fs.readFileSync(mockDbPath, 'utf-8');
+  await t.test('1. Default research profile in demo-seed.ts has 0 research interests and empty thesis', () => {
+    const demoSeedPath = path.join(process.cwd(), 'lib', 'data', 'demo-seed.ts');
+    const content = fs.readFileSync(demoSeedPath, 'utf-8');
 
     assert.ok(content.includes('research_interests: []'), 'research_interests in mockDb must be initialized to empty array []');
     assert.ok(content.includes("thesis_title: ''"), 'thesis_title in mockDb must be empty string');
