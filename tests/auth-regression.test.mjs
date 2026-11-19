@@ -1,9 +1,20 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { ensureTestServer } from './helpers/test-server.mjs';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+let BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3012';
+let closeServer = async () => {};
 
 describe('Tier 0.2 Authentication Security Regression Suite', () => {
+  before(async () => {
+    const srv = await ensureTestServer(3012);
+    BASE_URL = srv.baseUrl;
+    closeServer = srv.close;
+  });
+
+  after(async () => {
+    await closeServer();
+  });
   test('1. Arbitrary/garbage profmatch_session cookie is treated as unauthenticated (401)', async () => {
     const res = await fetch(`${BASE_URL}/api/auth/me`, {
       headers: {
