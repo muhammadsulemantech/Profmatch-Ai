@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
 
 const ReviewPaymentSchema = z.object({
   paymentId: z.string().min(1, 'paymentId is required'),
-  action: z.enum(['APPROVE', 'REJECT'], { errorMap: () => ({ message: 'Action must be APPROVE or REJECT' }) }),
+  action: z.enum(['APPROVE', 'REJECT'], { message: 'Action must be APPROVE or REJECT' }),
   adminNote: z.string().optional(),
 });
 
