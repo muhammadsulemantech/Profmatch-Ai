@@ -15,7 +15,6 @@ import {
   Layers,
   ArrowLeft
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
 import { Order, Payment } from '@/types/database';
 
 export default function OrderStatusPage() {
@@ -27,15 +26,25 @@ export default function OrderStatusPage() {
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchStatus = useCallback(() => {
+  const fetchStatus = useCallback(async () => {
     setLoading(true);
-    // Fetch from mock database
-    const ord = mockDb.orders.find((o: Order) => o.order_reference === reference);
-    const pay = mockDb.payments.find((p: Payment) => p.order_reference === reference);
-
-    setOrder(ord ? { ...ord } : null);
-    setPayment(pay ? { ...pay } : null);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/checkout/status/${encodeURIComponent(reference)}`);
+      if (res.ok) {
+        const json = await res.json();
+        const data = json?.data || json;
+        setOrder(data?.order || null);
+        setPayment(data?.payment || null);
+      } else {
+        setOrder(null);
+        setPayment(null);
+      }
+    } catch {
+      setOrder(null);
+      setPayment(null);
+    } finally {
+      setLoading(false);
+    }
   }, [reference]);
 
   useEffect(() => {
