@@ -12,7 +12,7 @@ import {
   ArrowLeft,
   CheckCircle2,
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_EMAILS, DEMO_REPLIES } from '@/lib/data/demo-seed';
 import { useAuth } from '@/lib/auth/auth-context';
 import { InboundEmailModal } from '@/components/inbox/inbound-email-modal';
 import { ReplyDetailView } from '@/components/inbox/reply-detail-view';
@@ -57,9 +57,9 @@ export default function InboxPage() {
       if (stored) loadedReplies = JSON.parse(stored);
     } catch {}
 
-    // Only fallback to mockDb for demo student profile if empty
+    // Only fallback to demo seed for demo student profile if empty
     if (userId === 'usr_student_001' && loadedReplies.length === 0) {
-      loadedReplies = [...mockDb.replies];
+      loadedReplies = [...DEMO_REPLIES];
       try {
         localStorage.setItem(repliesKey, JSON.stringify(loadedReplies));
       } catch {}
@@ -85,7 +85,7 @@ export default function InboxPage() {
       if (storedSent) loadedSent = JSON.parse(storedSent);
     } catch {}
 
-    const mockEmails = mockDb.emails.filter((e) => e.user_id === userId);
+    const mockEmails = DEMO_EMAILS.filter((e) => e.user_id === userId);
     const combinedSent = [...loadedSent, ...mockEmails];
     setSentMessages(combinedSent);
     if (combinedSent[0] && !selectedSentMessage) {
