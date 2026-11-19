@@ -87,7 +87,7 @@ export const AdminCmsUpdateSchema = z.object({
   sectionKey: z.string().min(1),
   title: z.string().min(1),
   subtitle: z.string().optional(),
-  content: z.record(z.any()),
+  content: z.record(z.string(), z.any()),
   isPublished: z.boolean().default(true),
 });
 
@@ -103,5 +103,5 @@ export const AdminSiteSettingsUpdateSchema = z.object({
     message: z.string(),
     link: z.string(),
   }).optional(),
-  socialLinks: z.record(z.string()).optional(),
+  socialLinks: z.record(z.string(), z.string()).optional(),
 });
