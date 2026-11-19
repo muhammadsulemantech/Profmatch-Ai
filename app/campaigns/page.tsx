@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   ArrowLeft,
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_EMAILS, DEMO_PROFESSORS, DEMO_REPLIES, DEMO_RESEARCH_MATCHES } from '@/lib/data/demo-seed';
 import { formatScore } from '@/lib/utils';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Professor } from '@/types/database';
@@ -76,7 +76,7 @@ export default function CampaignsPage() {
 
     let userProfs: Professor[] = [];
     if (savedIds.length > 0) {
-      userProfs = mockDb.professors.filter((p) => savedIds.includes(p.id));
+      userProfs = DEMO_PROFESSORS.filter((p) => savedIds.includes(p.id));
     }
 
     fetch('/api/user/saved-professors')
@@ -84,7 +84,7 @@ export default function CampaignsPage() {
       .then((res) => {
         if (res?.success && Array.isArray(res.savedProfessors)) {
           const combined = Array.from(new Set([...savedIds, ...res.savedProfessors.map(String)]));
-          const matched = mockDb.professors.filter((p) => combined.includes(p.id));
+          const matched = DEMO_PROFESSORS.filter((p) => combined.includes(p.id));
           setSavedProfessors(matched);
         }
       })
@@ -98,7 +98,7 @@ export default function CampaignsPage() {
       if (storedSent) localSent = JSON.parse(storedSent);
     } catch {}
 
-    const mockUserEmails = mockDb.emails.filter((e) => e.user_id === user.id);
+    const mockUserEmails = DEMO_EMAILS.filter((e) => e.user_id === user.id);
     const combinedEmailsMap = new Map();
     [...localSent, ...mockUserEmails].forEach((e) =>
       combinedEmailsMap.set(e.id || e.email_id || Math.random(), e)
@@ -106,12 +106,12 @@ export default function CampaignsPage() {
     const userEmailsList = Array.from(combinedEmailsMap.values());
 
     if (isSampleDemoStudent && userEmailsList.length === 0) {
-      setSentEmails(mockDb.emails);
-      setReplies(mockDb.replies);
+      setSentEmails(DEMO_EMAILS);
+      setReplies(DEMO_REPLIES);
     } else {
       setSentEmails(userEmailsList);
-      const userReps = mockDb.replies.filter((r) => {
-        const matchingEmail = mockDb.emails.find((e) => e.id === r.email_id);
+      const userReps = DEMO_REPLIES.filter((r) => {
+        const matchingEmail = DEMO_EMAILS.find((e) => e.id === r.email_id);
         return matchingEmail?.user_id === user.id;
       });
       setReplies(userReps);
@@ -162,7 +162,6 @@ export default function CampaignsPage() {
     if (typeof window !== 'undefined') {
       localStorage.setItem(campKey, JSON.stringify(updated));
     }
-    mockDb.campaigns.unshift(newCampaign as any);
 
     setIsModalOpen(false);
     setCampaignName('');
@@ -173,7 +172,7 @@ export default function CampaignsPage() {
   const pipelineProfMap = new Map<string, Professor>();
   savedProfessors.forEach((p) => pipelineProfMap.set(p.id, p));
   sentEmails.forEach((e) => {
-    const prof = mockDb.professors.find((p) => p.id === e.professor_id);
+    const prof = DEMO_PROFESSORS.find((p) => p.id === e.professor_id);
     if (prof) pipelineProfMap.set(prof.id, prof);
   });
   const pipelineProfessors = Array.from(pipelineProfMap.values());
@@ -288,7 +287,7 @@ export default function CampaignsPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-800/80 bg-slate-900/40">
                     {pipelineProfessors.map((prof) => {
-                      const match = mockDb.researchMatches.find((m) => m.professor_id === prof.id);
+                      const match = DEMO_RESEARCH_MATCHES.find((m) => m.professor_id === prof.id);
                       const emailRecord = sentEmails.find((e) => e.professor_id === prof.id);
                       const replyRecord = replies.find((r) => r.professor_id === prof.id);
 
