@@ -23,7 +23,7 @@ import {
   Zap,
   CheckCheck
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_PROFESSORS, DEMO_RESEARCH_MATCHES } from '@/lib/data/demo-seed';
 import { EmailPersonalizationAgent, EmailQualityAgent } from '@/lib/agents';
 import { useAuth } from '@/lib/auth/auth-context';
 import { Professor } from '@/types/database';
@@ -33,21 +33,21 @@ export default function OutreachGeneratePage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
-  const professorId = searchParams.get('professorId') || mockDb.professors[0].id;
+  const professorId = searchParams.get('professorId') || DEMO_PROFESSORS[0].id;
 
   const getProfessor = (): Professor => {
-    let p = mockDb.professors.find((item) => item.id === professorId);
+    let p = DEMO_PROFESSORS.find((item) => item.id === professorId);
     if (!p && typeof window !== 'undefined') {
       try {
         const stored = sessionStorage.getItem(`profmatch_current_prof_${professorId}`);
         if (stored) p = JSON.parse(stored);
       } catch {}
     }
-    return p || mockDb.professors[0];
+    return p || DEMO_PROFESSORS[0];
   };
 
   const prof = getProfessor();
-  const match = mockDb.researchMatches.find((m) => m.professor_id === prof.id) || mockDb.researchMatches[0];
+  const match = DEMO_RESEARCH_MATCHES.find((m) => m.professor_id === prof.id) || DEMO_RESEARCH_MATCHES[0];
 
   const [tone, setTone] = useState<'academic' | 'formal' | 'direct' | 'concise'>('academic');
   const [subject, setSubject] = useState('');
@@ -216,7 +216,6 @@ export default function OutreachGeneratePage() {
           localStorage.setItem(kanbanKey, JSON.stringify(cards));
         } catch {}
       }
-      mockDb.emails.unshift(sentRecord as any);
     };
 
     try {
