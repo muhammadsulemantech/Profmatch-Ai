@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_PROFESSORS, DEMO_RESEARCH_MATCHES } from '@/lib/data/demo-seed';
 import { useAuth } from '@/lib/auth/auth-context';
 import Link from 'next/link';
 import {
@@ -43,9 +43,8 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
   const { user } = useAuth();
   const profId = params.id;
   const [prof, setProf] = useState<Professor | null>(() => {
-    mockDb.loadFromDisk();
     return (
-      mockDb.professors.find(
+      DEMO_PROFESSORS.find(
         (p) => p.id === profId || p.id.includes(profId) || profId.includes(p.id)
       ) || null
     );
@@ -69,12 +68,12 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
   useEffect(() => {
     let found: Professor | undefined = undefined;
 
-    // 1. Direct match in mockDb
-    found = mockDb.professors.find((p) => p.id === profId);
+    // 1. Direct match in demo seed
+    found = DEMO_PROFESSORS.find((p) => p.id === profId);
 
-    // 2. Partial match in mockDb
+    // 2. Partial match in demo seed
     if (!found) {
-      found = mockDb.professors.find((p) => p.id.includes(profId) || profId.includes(p.id));
+      found = DEMO_PROFESSORS.find((p) => p.id.includes(profId) || profId.includes(p.id));
     }
 
     // 3. Direct sessionStorage lookup by profId key
@@ -287,7 +286,7 @@ export default function ProfessorDetailPage({ params }: { params: { id: string }
     );
   }
 
-  const existingMatch = mockDb.researchMatches.find((m) => m.professor_id === prof.id);
+  const existingMatch = DEMO_RESEARCH_MATCHES.find((m) => m.professor_id === prof.id);
   const match = matchData || existingMatch || null;
 
   const runRealtimeMatchAnalysis = async () => {
