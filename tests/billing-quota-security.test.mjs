@@ -1,12 +1,23 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { getEffectiveUserTier, ACADEMIC_PLANS, isCountryUnlockedForTier, getPlanConfig } from '../lib/services/usage-service.ts';
+import { ensureTestServer } from './helpers/test-server.mjs';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+let BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3013';
+let closeServer = async () => {};
 
 describe('Tier 0.5 Billing & Quota Security Suite', () => {
+  before(async () => {
+    const srv = await ensureTestServer(3013);
+    BASE_URL = srv.baseUrl;
+    closeServer = srv.close;
+  });
+
+  after(async () => {
+    await closeServer();
+  });
   describe('1. Code Integrity: Fake Stripe & Client Overrides Elimination', () => {
     test('lib/providers/payment/index.ts does NOT mint fake cs_stripe_ session IDs', () => {
       const paymentProviderCode = fs.readFileSync(
