@@ -24,7 +24,7 @@
     "next": "^14.2.15",
     "nodemailer": "^10.0.10",
     "pdf-parse": "^2.4.5",
-    "posthog-js": "^1.438.12",
+    "posthog-js": "^1.450.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^2.12.7",
