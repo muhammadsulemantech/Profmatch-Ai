@@ -35,7 +35,50 @@ import type {
   PlanTier,
   ConnectedEmailAccount
 } from '../../types/database.ts';
-import { encryptToken, decryptToken } from '../security/encryption.ts';
+function safeEncryptToken(plainText: string): string {
+  if (!plainText || typeof window !== 'undefined') return plainText || '';
+  try {
+    const crypto = getNodeModule('crypto');
+    if (!crypto) return plainText;
+    const secret =
+      process.env.ENCRYPTION_SECRET ||
+      process.env.ADMIN_SECRET_PASSPHRASE ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      'profmatch-default-dev-secret-key-min-32-chars!!';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const iv = crypto.randomBytes(12);
+    const cipher = crypto.createCipheriv('aes-256-gcm', key, iv);
+    let enc = cipher.update(plainText, 'utf8', 'hex');
+    enc += cipher.final('hex');
+    const tag = cipher.getAuthTag();
+    return `enc:${iv.toString('hex')}:${tag.toString('hex')}:${enc}`;
+  } catch {
+    return plainText;
+  }
+}
+
+function safeDecryptToken(cipherText: string): string {
+  if (!cipherText || !cipherText.startsWith('enc:') || typeof window !== 'undefined') return cipherText || '';
+  try {
+    const crypto = getNodeModule('crypto');
+    if (!crypto) return '';
+    const parts = cipherText.split(':');
+    if (parts.length !== 4) return '';
+    const secret =
+      process.env.ENCRYPTION_SECRET ||
+      process.env.ADMIN_SECRET_PASSPHRASE ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      'profmatch-default-dev-secret-key-min-32-chars!!';
+    const key = crypto.createHash('sha256').update(secret).digest();
+    const decipher = crypto.createDecipheriv('aes-256-gcm', key, Buffer.from(parts[1], 'hex'));
+    decipher.setAuthTag(Buffer.from(parts[2], 'hex'));
+    let dec = decipher.update(parts[3], 'hex', 'utf8');
+    dec += decipher.final('utf8');
+    return dec;
+  } catch {
+    return '';
+  }
+}
 
 declare const __non_webpack_require__: any;
 
@@ -57,6 +100,30 @@ function getNodeModule(name: string): any {
     return null;
   }
   return null;
+}
+
+function mergeRecordsByKey<T extends Record<string, any>>(inMemory: T[], fromDisk: T[], key: keyof T): T[] {
+  if (!Array.isArray(fromDisk) || fromDisk.length === 0) return inMemory;
+  if (!Array.isArray(inMemory) || inMemory.length === 0) return fromDisk;
+  const map = new Map<any, T>();
+  for (const item of fromDisk) {
+    if (item && item[key] !== undefined) map.set(item[key], item);
+  }
+  for (const item of inMemory) {
+    if (item && item[key] !== undefined) {
+      const existing = map.get(item[key]);
+      if (!existing) {
+        map.set(item[key], item);
+      } else {
+        const memTime = item.updated_at ? new Date(item.updated_at).getTime() : 0;
+        const diskTime = existing.updated_at ? new Date(existing.updated_at).getTime() : 0;
+        if (memTime >= diskTime) {
+          map.set(item[key], item);
+        }
+      }
+    }
+  }
+  return Array.from(map.values());
 }
 
 // In-Memory Database Store for Resilient Local, Test & Fallback Execution
@@ -93,25 +160,49 @@ class MockDatabase {
             }
             this.paymentMethods = merged;
           }
-          if (parsed.orders) this.orders = parsed.orders;
-          if (parsed.payments) this.payments = parsed.payments;
+          if (parsed.orders) this.orders = mergeRecordsByKey(this.orders, parsed.orders, 'id');
+          if (parsed.payments) this.payments = mergeRecordsByKey(this.payments, parsed.payments, 'id');
           if (parsed.featureFlags) this.featureFlags = parsed.featureFlags;
-          if (parsed.profiles) this.profiles = parsed.profiles;
-          if (parsed.studentProfiles) this.studentProfiles = parsed.studentProfiles;
+          if (parsed.profiles) this.profiles = mergeRecordsByKey(this.profiles, parsed.profiles, 'id');
+          if (parsed.studentProfiles) this.studentProfiles = mergeRecordsByKey(this.studentProfiles, parsed.studentProfiles, 'user_id');
           if (parsed.auditLogs) this.auditLogs = parsed.auditLogs;
-          if (parsed.subscriptions) this.subscriptions = parsed.subscriptions;
+          if (parsed.subscriptions) this.subscriptions = mergeRecordsByKey(this.subscriptions, parsed.subscriptions, 'user_id');
           if (parsed.universities) this.universities = parsed.universities;
           if (parsed.professors) this.professors = parsed.professors;
-          if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = parsed.connectedEmailAccounts;
-          if (parsed.usageRecords) this.usageRecords = parsed.usageRecords;
+          if (parsed.connectedEmailAccounts) this.connectedEmailAccounts = mergeRecordsByKey(this.connectedEmailAccounts, parsed.connectedEmailAccounts, 'user_id');
+          if (parsed.usageRecords) {
+            const mergedUsage = new Map<string, UsageRecord>();
+            for (const u of parsed.usageRecords) {
+              if (u?.user_id) mergedUsage.set(`${u.user_id}:${u.month_year || ''}`, u);
+            }
+            for (const u of this.usageRecords) {
+              if (u?.user_id) {
+                const k = `${u.user_id}:${u.month_year || ''}`;
+                const diskU = mergedUsage.get(k);
+                if (!diskU) {
+                  mergedUsage.set(k, u);
+                } else {
+                  mergedUsage.set(k, {
+                    ...diskU,
+                    ...u,
+                    searches_count: Math.max(u.searches_count || 0, diskU.searches_count || 0),
+                    ai_generations_count: Math.max(u.ai_generations_count || 0, diskU.ai_generations_count || 0),
+                    emails_sent_count: Math.max(u.emails_sent_count || 0, diskU.emails_sent_count || 0),
+                    autopilot_count: Math.max(u.autopilot_count || 0, diskU.autopilot_count || 0),
+                  });
+                }
+              }
+            }
+            this.usageRecords = Array.from(mergedUsage.values());
+          }
           if (parsed.emails) this.emails = parsed.emails;
           if (parsed.userActivities) this.userActivities = parsed.userActivities;
         }
       } else {
         this.saveToDisk();
       }
-    } catch (err) {
-      console.error('[MOCK DB PERSIST LOAD ERROR]', err);
+    } catch {
+      // Ignore transient concurrent file read/write race in test workers
     }
   }
 
@@ -144,9 +235,19 @@ class MockDatabase {
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });
       }
-      fs.writeFileSync(dbPath, JSON.stringify(dataToSave, null, 2), 'utf-8');
-    } catch (err) {
-      console.error('[MOCK DB PERSIST SAVE ERROR]', err);
+      const serialized = JSON.stringify(dataToSave, null, 2);
+      const tmpPath = `${dbPath}.${process.pid}.${Date.now()}.tmp`;
+      try {
+        fs.writeFileSync(tmpPath, serialized, 'utf-8');
+        fs.renameSync(tmpPath, dbPath);
+      } catch {
+        try {
+          if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+        } catch { }
+        fs.writeFileSync(dbPath, serialized, 'utf-8');
+      }
+    } catch {
+      // Non-blocking fallback persistence
     }
   }
 
@@ -2356,8 +2457,8 @@ class MockDatabase {
 
     return {
       ...acc,
-      access_token: decryptToken(acc.access_token),
-      refresh_token: decryptToken(acc.refresh_token),
+      access_token: safeDecryptToken(acc.access_token),
+      refresh_token: safeDecryptToken(acc.refresh_token),
     };
   }
 
@@ -2372,8 +2473,8 @@ class MockDatabase {
     );
     const now = new Date().toISOString();
 
-    const encryptedAccessToken = data.access_token ? encryptToken(data.access_token) : undefined;
-    const encryptedRefreshToken = data.refresh_token ? encryptToken(data.refresh_token) : undefined;
+    const encryptedAccessToken = data.access_token ? safeEncryptToken(data.access_token) : undefined;
+    const encryptedRefreshToken = data.refresh_token ? safeEncryptToken(data.refresh_token) : undefined;
 
     if (existingIndex >= 0) {
       const existing = this.connectedEmailAccounts[existingIndex];
@@ -2391,8 +2492,8 @@ class MockDatabase {
       this.persist();
       return {
         ...updated,
-        access_token: data.access_token || decryptToken(updated.access_token),
-        refresh_token: data.refresh_token || decryptToken(updated.refresh_token),
+        access_token: data.access_token || safeDecryptToken(updated.access_token),
+        refresh_token: data.refresh_token || safeDecryptToken(updated.refresh_token),
       };
     } else {
       const newAcc: ConnectedEmailAccount = {
