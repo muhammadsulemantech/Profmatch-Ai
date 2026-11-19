@@ -18,7 +18,7 @@ import {
   Globe,
   Layers
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_STUDENT_PROFILES } from '@/lib/data/demo-seed';
 import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@/lib/geography/global-geography';
 import { ACADEMIC_DOMAINS } from '@/lib/taxonomy/academic-taxonomy';
 
@@ -117,33 +117,35 @@ export default function OnboardingPage() {
   const handleComplete = async () => {
     setLoading(true);
     try {
-      // Sync with in-memory store
-      const sp = mockDb.studentProfiles[0];
-      sp.target_degree = formData.targetDegree;
-      sp.target_country = formData.targetCountry;
-      sp.target_state = formData.targetRegion;
-      sp.target_region = formData.targetRegion;
-      sp.target_intake = formData.targetIntake;
-      sp.funding_preference = formData.fundingPreference;
-      sp.desired_field = formData.desiredField;
-      sp.desired_domain = formData.academicDomain;
-      sp.bio = formData.bio;
-
-      const ap = mockDb.academicProfiles[0];
-      ap.current_degree = formData.currentDegree;
-      ap.major = formData.major;
-      ap.university = formData.university;
-      ap.graduation_year = formData.graduationYear;
-      ap.cgpa = formData.cgpa;
-      ap.grading_scale = formData.gradingScale;
-      ap.achievements = formData.achievements;
-
-      const rp = mockDb.researchProfiles[0];
-      rp.research_interests = formData.researchInterests;
-      rp.thesis_title = formData.thesisTitle;
-      rp.thesis_abstract = formData.thesisAbstract;
-      rp.academic_domain = formData.academicDomain;
-      rp.primary_discipline = formData.desiredField;
+      const sp = DEMO_STUDENT_PROFILES[0];
+      if (typeof window !== 'undefined') {
+        const profilePayload = {
+          target_degree: formData.targetDegree,
+          target_country: formData.targetCountry,
+          target_state: formData.targetRegion,
+          target_region: formData.targetRegion,
+          target_intake: formData.targetIntake,
+          funding_preference: formData.fundingPreference,
+          desired_field: formData.desiredField,
+          desired_domain: formData.academicDomain,
+          bio: formData.bio,
+          current_degree: formData.currentDegree,
+          major: formData.major,
+          university: formData.university,
+          graduation_year: formData.graduationYear,
+          cgpa: formData.cgpa,
+          grading_scale: formData.gradingScale,
+          achievements: formData.achievements,
+          research_interests: formData.researchInterests,
+          thesis_title: formData.thesisTitle,
+          thesis_abstract: formData.thesisAbstract,
+          academic_domain: formData.academicDomain,
+          primary_discipline: formData.desiredField,
+        };
+        try {
+          localStorage.setItem(`profmatch_user_profile_${sp.user_id}`, JSON.stringify(profilePayload));
+        } catch {}
+      }
 
       router.push('/dashboard');
       router.refresh();
