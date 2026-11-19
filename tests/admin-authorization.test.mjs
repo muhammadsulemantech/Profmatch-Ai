@@ -1,9 +1,20 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import { ensureTestServer } from './helpers/test-server.mjs';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+let BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3011';
+let closeServer = async () => {};
 
 describe('Tier 0.3 Admin Authorization Security Suite', () => {
+  before(async () => {
+    const srv = await ensureTestServer(3011);
+    BASE_URL = srv.baseUrl;
+    closeServer = srv.close;
+  });
+
+  after(async () => {
+    await closeServer();
+  });
   const adminEndpoints = [
     { name: 'payment-methods (GET)', url: '/api/admin/payment-methods', method: 'GET' },
     { name: 'payment-methods (POST)', url: '/api/admin/payment-methods', method: 'POST', body: { name: 'Test' } },
