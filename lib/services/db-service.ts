@@ -22,8 +22,13 @@ import type {
 
 // --- PROFILES ---
 
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isValidUuid(id?: string | null): boolean {
+  return Boolean(id && UUID_REGEX.test(id));
+}
+
 export async function getUserProfile(userId: string): Promise<UserProfile | null> {
-  const supabase = createAdminClient();
+  const supabase = isValidUuid(userId) ? createAdminClient() : null;
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -72,7 +77,7 @@ export async function getProfileByEmail(email: string): Promise<UserProfile | nu
 export async function saveUserProfile(
   profile: Partial<UserProfile> & { id: string; email: string; remove_avatar?: boolean }
 ): Promise<UserProfile> {
-  const supabase = createAdminClient();
+  const supabase = isValidUuid(profile.id) ? createAdminClient() : null;
 
   // 1. Fetch current profile to preserve existing avatar_url if not provided or undefined
   let existingAvatarUrl: string | null = null;
@@ -188,7 +193,7 @@ export async function getUserSubscription(userId: string): Promise<SubscriptionR
     if (prof) effectiveUserId = prof.id;
   }
 
-  const supabase = createAdminClient();
+  const supabase = isValidUuid(effectiveUserId) ? createAdminClient() : null;
   let sub: SubscriptionRecord | null = null;
 
   if (supabase) {
@@ -292,7 +297,7 @@ export async function saveUserSubscription(
     : null;
   const status = data.status || 'active';
 
-  const supabase = createAdminClient();
+  const supabase = isValidUuid(data.user_id) ? createAdminClient() : null;
 
   if (supabase) {
     try {
@@ -936,7 +941,7 @@ export async function getUserSavedProfessors(userId: string): Promise<string[]> 
 
 export async function saveUserSavedProfessors(userId: string, professorIds: string[]): Promise<string[]> {
   const cleaned = Array.from(new Set(professorIds.map(String).filter(Boolean)));
-  const supabase = createAdminClient();
+  const supabase = isValidUuid(userId) ? createAdminClient() : null;
 
   if (supabase) {
     try {
