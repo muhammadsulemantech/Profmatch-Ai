@@ -29,7 +29,7 @@ import {
   WifiOff,
   ArrowLeft,
 } from 'lucide-react';
-import { mockDb } from '@/lib/supabase/mock-db';
+import { DEMO_PROFESSORS, DEMO_RESEARCH_MATCHES } from '@/lib/data/demo-seed';
 import { formatScore } from '@/lib/utils';
 import { getAllCountries, getRegionsForCountry, getCountryByNameOrCode } from '@/lib/geography/global-geography';
 import { ACADEMIC_DOMAINS, parseNaturalLanguageQuery } from '@/lib/taxonomy/academic-taxonomy';
@@ -105,7 +105,7 @@ export default function SearchPage() {
   const [emailVerifiedOnly, setEmailVerifiedOnly] = useState(false);
   const [savedOnly, setSavedOnly] = useState(false);
   const [savedProfIds, setSavedProfIds] = useState<string[]>([]);
-  const [professorsList, setProfessorsList] = useState<Professor[]>(mockDb.professors);
+  const [professorsList, setProfessorsList] = useState<Professor[]>(DEMO_PROFESSORS);
   const [visibleCount, setVisibleCount] = useState(10);
   const [searchPage, setSearchPage] = useState(1);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -275,9 +275,6 @@ export default function SearchPage() {
           sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
         } catch {}
       }
-      if (!mockDb.professors.some(p => p.id === prof.id)) {
-        mockDb.professors.push(prof);
-      }
       router.push(`/professors/${prof.id}`);
     });
   };
@@ -288,9 +285,6 @@ export default function SearchPage() {
         try {
           sessionStorage.setItem(`profmatch_current_prof_${prof.id}`, JSON.stringify(prof));
         } catch {}
-      }
-      if (!mockDb.professors.some(p => p.id === prof.id)) {
-        mockDb.professors.push(prof);
       }
       router.push(`/outreach/generate?professorId=${prof.id}`);
     });
@@ -503,7 +497,7 @@ export default function SearchPage() {
     setInterdisciplinary(true);
     setSavedOnly(false);
     setNaturalQuery('');
-    setProfessorsList(mockDb.professors);
+    setProfessorsList(DEMO_PROFESSORS);
     setVisibleCount(10);
     setSearchPage(1);
   };
@@ -852,7 +846,7 @@ export default function SearchPage() {
                       className="filter blur-[6px] opacity-30 select-none pointer-events-none transition-all duration-300 space-y-4 cursor-pointer"
                     >
                       {visibleProfessors.slice(0, 3).map(prof => {
-                        const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
+                        const match = DEMO_RESEARCH_MATCHES.find(m => m.professor_id === prof.id);
                         return (
                           <div
                             key={prof.id}
@@ -883,7 +877,7 @@ export default function SearchPage() {
                 ) : (
                   <>
                     {visibleProfessors.map(prof => {
-                      const match = mockDb.researchMatches.find(m => m.professor_id === prof.id);
+                      const match = DEMO_RESEARCH_MATCHES.find(m => m.professor_id === prof.id);
                       const isSaved = savedProfIds.includes(prof.id);
 
                       return (
