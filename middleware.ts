@@ -13,15 +13,20 @@ export async function middleware(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   response.headers.set('Strict-Transport-Security', 'max-age=63072000; includeSubDomains; preload');
   response.headers.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  const scriptSrc =
+    process.env.NODE_ENV === 'production'
+      ? "script-src 'self' 'unsafe-inline'"
+      : "script-src 'self' 'unsafe-eval' 'unsafe-inline'";
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'none';"
+    `default-src 'self'; ${scriptSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https:; connect-src 'self' https:; frame-ancestors 'none';`
   );
 
-  // 1b. Enforce HTTPS in production behind reverse proxies terminating TLS (HTTP -> HTTPS 301)
+  // 1b. Enforce HTTPS in production behind reverse proxies terminating TLS (never redirect localhost/127.0.0.1)
   const proto = request.headers.get('x-forwarded-proto');
   const host = request.headers.get('host') || '';
-  if (process.env.NODE_ENV === 'production' && proto === 'http') {
+  const isLocalHost = host.startsWith('localhost') || host.startsWith('127.0.0.1') || host.startsWith('[::1]');
+  if (process.env.NODE_ENV === 'production' && proto === 'http' && !isLocalHost) {
     const httpsUrl = `https://${host}${pathname}${request.nextUrl.search}`;
     return NextResponse.redirect(httpsUrl, 301);
   }
