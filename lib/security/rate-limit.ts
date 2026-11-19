@@ -116,6 +116,67 @@ export function checkRateLimit(
 }
 
 /**
+ * Distributed rate limiter using Upstash Redis REST API when UPSTASH_REDIS_REST_URL
+ * and UPSTASH_REDIS_REST_TOKEN are configured, falling back to in-memory checkRateLimit.
+ */
+export async function checkRateLimitAsync(
+  identifier: string,
+  options: RateLimitOptions = { limit: 60, windowMs: 60 * 1000 }
+): Promise<RateLimitResult> {
+  const redisUrl = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, '');
+  const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!redisUrl || !redisToken) {
+    return checkRateLimit(identifier, options);
+  }
+
+  const key = `rl:${identifier}`;
+  const windowSec = Math.max(1, Math.ceil(options.windowMs / 1000));
+
+  try {
+    const res = await fetch(`${redisUrl}/pipeline`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${redisToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify([
+        ['INCR', key],
+        ['EXPIRE', key, windowSec, 'NX'],
+        ['TTL', key],
+      ]),
+    });
+
+    if (!res.ok) {
+      return checkRateLimit(identifier, options);
+    }
+
+    const data = (await res.json()) as Array<{ result?: number }>;
+    const count = Number(data?.[0]?.result ?? 1);
+    const ttlSec = Math.max(1, Number(data?.[2]?.result ?? windowSec));
+    const reset = Date.now() + ttlSec * 1000;
+
+    if (count > options.limit) {
+      return {
+        success: false,
+        limit: options.limit,
+        remaining: 0,
+        reset,
+      };
+    }
+
+    return {
+      success: true,
+      limit: options.limit,
+      remaining: Math.max(0, options.limit - count),
+      reset,
+    };
+  } catch {
+    return checkRateLimit(identifier, options);
+  }
+}
+
+/**
  * Helper to construct an HTTP 429 Too Many Requests response with standard headers
  */
 export function rateLimitResponse(
