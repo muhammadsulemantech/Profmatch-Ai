@@ -1,12 +1,23 @@
-import { test, describe } from 'node:test';
+import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { encryptToken, decryptToken } from '../lib/security/encryption.ts';
 import { createSignedOAuthState, verifySignedOAuthState } from '../lib/security/oauth-state.ts';
 import { validateSafeRedirect } from '../lib/security/url-validation.ts';
+import { ensureTestServer } from './helpers/test-server.mjs';
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3001';
+let BASE_URL = process.env.BASE_URL || 'http://127.0.0.1:3014';
+let closeServer = async () => {};
 
 describe('Tier 0.4 Gmail OAuth & Multi-Tenancy Security Suite', () => {
+  before(async () => {
+    const srv = await ensureTestServer(3014);
+    BASE_URL = srv.baseUrl;
+    closeServer = srv.close;
+  });
+
+  after(async () => {
+    await closeServer();
+  });
   describe('1. Token Encryption & Decryption (AES-256-GCM)', () => {
     test('Encrypts plaintext token and decrypts back to original', () => {
       const originalToken = 'ya29.a0AfH6SMD_secret_google_oauth_token_1234567890';
